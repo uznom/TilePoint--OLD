@@ -287,24 +287,51 @@ export function useDbSyncModule({
   );
 
   const triggerSystemProcessing = useCallback(
-    (options: {
-      message: string;
-      subtext?: string;
-      type?: "spinner" | "progress" | "verification" | "db";
-      progress?: number;
-      duration?: number;
-    }) => {
-      setIsSystemProcessing(true);
-      setSystemProcessingMessage(options.message);
-      setSystemProcessingSubtext(options.subtext || "");
-      setSystemProcessingType(options.type || "spinner");
-      setSystemProcessingProgress(options.progress || 0);
+    (
+      param1: string | { message: string; subtext?: string; type?: "spinner" | "progress" | "verification" | "db"; progress?: number; duration?: number },
+      param2?: number,
+      param3?: "spinner" | "progress" | "verification" | "db",
+      param4?: () => void,
+      param5?: string
+    ): Promise<void> => {
+      let message = "Processing System Task";
+      let durationMs = 1200;
+      let type: "spinner" | "progress" | "verification" | "db" = "spinner";
+      let onComplete: (() => void) | undefined = undefined;
+      let subtext = "";
+      let progress = 0;
 
-      if (options.duration) {
+      if (typeof param1 === "object" && param1 !== null) {
+        message = param1.message || message;
+        durationMs = param1.duration !== undefined ? param1.duration : 1200;
+        type = param1.type || "spinner";
+        subtext = param1.subtext || "";
+        progress = param1.progress || 0;
+      } else {
+        message = typeof param1 === "string" ? param1 : message;
+        durationMs = typeof param2 === "number" ? param2 : 1200;
+        type = param3 || "spinner";
+        onComplete = typeof param4 === "function" ? param4 : undefined;
+        subtext = param5 || "";
+      }
+
+      setIsSystemProcessing(true);
+      setSystemProcessingMessage(message);
+      setSystemProcessingSubtext(subtext);
+      setSystemProcessingType(type);
+      setSystemProcessingProgress(progress);
+
+      return new Promise<void>((resolve) => {
         setTimeout(() => {
           setIsSystemProcessing(false);
-        }, options.duration);
-      }
+          if (onComplete) {
+            try {
+              onComplete();
+            } catch (_) {}
+          }
+          resolve();
+        }, durationMs);
+      });
     },
     []
   );
@@ -934,17 +961,51 @@ export function useDbSyncModule({
     async (silent: boolean = false): Promise<void> => {
       try {
         if (!silent) setDbSyncStatus("syncing");
-        const res = await safeApiFetch("/api/db/status");
+        const res = await safeApiFetch("/api/db/full");
         if (res.ok) {
+          const body = await res.json().catch(() => ({}));
+          if (body && body.data) {
+            const d = body.data;
+            if (Array.isArray(d.tp_branches) && d.tp_branches.length > 0) {
+              setBranches(d.tp_branches);
+              try { localStorage.setItem("tp_branches", JSON.stringify(d.tp_branches)); } catch (_) {}
+            }
+            if (Array.isArray(d.tp_suppliers) && d.tp_suppliers.length > 0) {
+              setSuppliers(d.tp_suppliers);
+              try { localStorage.setItem("tp_suppliers", JSON.stringify(d.tp_suppliers)); } catch (_) {}
+            }
+            if (Array.isArray(d.tp_brands) && d.tp_brands.length > 0) {
+              setBrands(d.tp_brands);
+              try { localStorage.setItem("tp_brands", JSON.stringify(d.tp_brands)); } catch (_) {}
+            }
+            if (Array.isArray(d.tp_products) && d.tp_products.length > 0) {
+              setProducts(d.tp_products);
+              try { localStorage.setItem("tp_products", JSON.stringify(d.tp_products)); } catch (_) {}
+            }
+            if (Array.isArray(d.tp_users) && d.tp_users.length > 0) {
+              setUsers(d.tp_users);
+              try { localStorage.setItem("tp_users", JSON.stringify(d.tp_users)); } catch (_) {}
+            }
+            if (Array.isArray(d.tp_branch_stock)) {
+              setBranchStock(d.tp_branch_stock);
+              try { localStorage.setItem("tp_branch_stock", JSON.stringify(d.tp_branch_stock)); } catch (_) {}
+            }
+          }
           setServerConnected(true);
           setDbSyncStatus("synced");
+        } else {
+          const statusRes = await safeApiFetch("/api/db/status");
+          if (statusRes.ok) {
+            setServerConnected(true);
+            setDbSyncStatus("synced");
+          }
         }
       } catch (err) {
         setServerConnected(false);
         setDbSyncStatus("offline");
       }
     },
-    [safeApiFetch]
+    [safeApiFetch, setBranches, setSuppliers, setBrands, setProducts, setUsers, setBranchStock]
   );
 
   const forceSyncAll = useCallback(async () => {

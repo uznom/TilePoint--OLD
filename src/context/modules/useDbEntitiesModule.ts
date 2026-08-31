@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   User,
   Branch,
@@ -110,8 +110,34 @@ export function useDbEntitiesModule({
   });
 
   const [branches, setBranches] = useState<Branch[]>(() => {
-    return safeParse<Branch[]>("tp_branches", SEED_BRANCHES);
+    const parsed = safeParse<Branch[]>("tp_branches", SEED_BRANCHES);
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : SEED_BRANCHES;
   });
+
+  // Automatically synchronize branches from backend database on mount
+  useEffect(() => {
+    let isMounted = true;
+    const fetchServerBranches = async () => {
+      try {
+        const res = await fetch("/api/db/branches");
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}));
+          if (data && data.success && Array.isArray(data.branches) && data.branches.length > 0 && isMounted) {
+            setBranches(data.branches);
+            try {
+              localStorage.setItem("tp_branches", JSON.stringify(data.branches));
+            } catch (_) {}
+          }
+        }
+      } catch (err) {
+        console.debug("[DbContext] Branches background sync notice:", err);
+      }
+    };
+    fetchServerBranches();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
     return safeParse<Supplier[]>("tp_suppliers", SEED_SUPPLIERS);

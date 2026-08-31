@@ -96,8 +96,13 @@ export function registerServiceWorker(): Promise<ServiceWorkerRegistration | nul
         await refreshCacheStats();
         notifyListeners();
         resolve(registration);
-      } catch (err) {
-        console.warn('[PWA Service Worker] Registration warning (app running in fallback mode):', err);
+      } catch (err: any) {
+        const isLocalDev = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+        if (isLocalDev && String(err).includes('SSL certificate error')) {
+          console.debug('[PWA Service Worker] Local self-signed SSL detected. Offline caching running in in-memory fallback mode (Use https://localhost:3000 for full PWA support).');
+        } else {
+          console.warn('[PWA Service Worker] Registration notice (app running in online/direct fallback mode):', err);
+        }
         currentStatus.isRegistered = false;
         notifyListeners();
         resolve(null);

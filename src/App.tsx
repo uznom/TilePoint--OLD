@@ -371,6 +371,13 @@ function AppContent() {
     }
   }, [isLoggedIn, currentUser, isRouteValid, setActiveTab]);
 
+  // Synchronize full database state from server upon login
+  useEffect(() => {
+    if (isLoggedIn && currentUser) {
+      syncFromSharedServer(true).catch(() => {});
+    }
+  }, [isLoggedIn, currentUser, syncFromSharedServer]);
+
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(() => {
     return localStorage.getItem("tilepoint_sidebar_expanded") !== "false";
   });

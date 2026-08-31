@@ -59,9 +59,17 @@ export function upsertRecordAlasql(tableName, record) {
   const allowed = TABLE_COLUMNS[tableName];
   if (!allowed) return;
 
-  if (record.id) {
-    alasql(`DELETE FROM \`${tableName}\` WHERE id = ?`, [record.id]);
-  }
+  try {
+    if (!alasql.tables || !alasql.tables[tableName]) {
+      initAlasqlEngine();
+    }
+  } catch (_) {}
+
+  try {
+    if (record.id) {
+      alasql(`DELETE FROM \`${tableName}\` WHERE id = ?`, [record.id]);
+    }
+  } catch (_) {}
 
   const validCols = allowed.filter(col => record[col] !== undefined);
   if (validCols.length === 0) return;

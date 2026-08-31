@@ -29,7 +29,23 @@ import {
 } from './common/ui';
 
 export const SetupModule: React.FC = () => {
-  const { setupSystem, triggerSystemProcessing } = useDb();
+  const { setupSystem, triggerSystemProcessing, setIsConfigured, users } = useDb();
+
+  // If database is already configured on server, auto-advance to Login
+  useEffect(() => {
+    fetch("/api/health")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.isConfigured) {
+          setIsConfigured(true);
+          localStorage.setItem("tp_is_configured", "true");
+        } else if (data && data.isConfigured === false) {
+          setIsConfigured(false);
+          localStorage.removeItem("tp_is_configured");
+        }
+      })
+      .catch(() => {});
+  }, [setIsConfigured]);
 
   // Dark mode & UI Style state for live switching during Setup
   const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {

@@ -13,20 +13,35 @@ export const SystemLoadingOverlay: React.FC = () => {
   } = useDb();
 
   const [simulatedStep, setSimulatedStep] = useState(0);
+  const [showDismiss, setShowDismiss] = useState(false);
+  const { setIsSystemProcessing } = useDb();
 
-  // Auto cycle status tasks while waiting if subtext is empty
+  // Auto cycle status tasks and enforce max display safety limit
   useEffect(() => {
     if (!isSystemProcessing) {
       setSimulatedStep(0);
+      setShowDismiss(false);
       return;
     }
 
     const interval = setInterval(() => {
       setSimulatedStep((prev) => (prev + 1) % 4);
-    }, 100);
+    }, 400);
 
-    return () => clearInterval(interval);
-  }, [isSystemProcessing]);
+    const dismissTimer = setTimeout(() => {
+      setShowDismiss(true);
+    }, 3000);
+
+    const safetyClearTimer = setTimeout(() => {
+      setIsSystemProcessing(false);
+    }, 6000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(dismissTimer);
+      clearTimeout(safetyClearTimer);
+    };
+  }, [isSystemProcessing, setIsSystemProcessing]);
 
   if (!isSystemProcessing) return null;
 
@@ -169,6 +184,18 @@ export const SystemLoadingOverlay: React.FC = () => {
             <p className="mt-4 text-[11px] text-default-500 italic">
               ↳ {systemProcessingSubtext}
             </p>
+          )}
+
+          {showDismiss && (
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={() => setIsSystemProcessing(false)}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-default-100 hover:bg-default-200 text-default-600 transition-colors"
+              >
+                Dismiss & Continue
+              </button>
+            </div>
           )}
 
           {/* Tilepoint Brander Signature */}

@@ -142,6 +142,11 @@ export function useDbAuthModule(options?: UseDbAuthOptions) {
     return cached === "true";
   });
 
+  const [sessionToken, setSessionToken] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return sessionStorage.getItem("tp_session_token") || localStorage.getItem("tp_session_token");
+  });
+
   const isRateLimited = rateLimitTimeLeft > 0 || (lockoutUntil ? Date.now() < lockoutUntil : false);
 
   const getAuthHeaders = useCallback((): Record<string, string> => {
@@ -185,8 +190,14 @@ export function useDbAuthModule(options?: UseDbAuthOptions) {
       headers["x-session-id"] = activeSessionId;
     }
 
+    const token = sessionToken || (typeof window !== "undefined" ? (sessionStorage.getItem("tp_session_token") || localStorage.getItem("tp_session_token")) : null);
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+      headers["x-session-token"] = token;
+    }
+
     return headers;
-  }, [currentUser, activeSessionId]);
+  }, [currentUser, activeSessionId, sessionToken]);
 
   const updateCurrentUser = useCallback((updates: Partial<User>) => {
     setCurrentUser((prev) => {
@@ -256,16 +267,19 @@ export function useDbAuthModule(options?: UseDbAuthOptions) {
     setIsLoggedIn(false);
     setActiveSessionId(null);
     setSessionExpiresAt(null);
+    setSessionToken(null);
     sessionStorage.removeItem("tp_current_user");
     sessionStorage.removeItem("tp_is_logged_in");
     sessionStorage.removeItem("tp_active_session_id");
     sessionStorage.removeItem("tp_session_expires_at");
     sessionStorage.removeItem("tp_session_remaining_seconds");
+    sessionStorage.removeItem("tp_session_token");
     localStorage.removeItem("tp_current_user");
     localStorage.removeItem("tp_is_logged_in");
     localStorage.removeItem("tp_active_session_id");
     localStorage.removeItem("tp_session_expires_at");
     localStorage.removeItem("tp_session_remaining_seconds");
+    localStorage.removeItem("tp_session_token");
   }, [activeSessionId, getAuthHeaders]);
 
   // Daily Midnight & Session Expiry Watcher
@@ -333,11 +347,44 @@ export function useDbAuthModule(options?: UseDbAuthOptions) {
     };
   }, [currentUser, isLoggedIn, sessionExpiresAt, logout]);
 
+  // Initial Server Configuration & Health Check
+  useEffect(() => {
+    let isMounted = true;
+    const checkServerConfiguration = async () => {
+      try {
+        const res = await fetch("/api/health");
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}));
+          if (data && data.isConfigured && isMounted) {
+            setIsConfigured(true);
+            localStorage.setItem("tp_is_configured", "true");
+            setIsConfigured(false);
+            localStorage.removeItem("tp_is_configured");
+            localStorage.removeItem("tp_users");
+            localStorage.removeItem("tp_branches");
+            setCurrentUser(null);
+            setIsLoggedIn(false);
+            setActiveSessionId(null);
+            setSessionToken(null);
+            sessionStorage.clear();
+          }
+        }
+      } catch (err) {
+        console.debug("[DbContext] Initial server configuration check:", err);
+      }
+    };
+    checkServerConfiguration();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const safeApiFetch = useCallback(
     async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
       const authHeaders = getAuthHeaders();
       const customInit: RequestInit = {
         ...init,
+        credentials: init?.credentials || "same-origin",
         headers: {
           ...authHeaders,
           ...(init?.headers || {}),
@@ -455,6 +502,11 @@ export function useDbAuthModule(options?: UseDbAuthOptions) {
           setIsLoggedIn(true);
           setActiveSessionId(body.sessionId || `SES-${Date.now()}`);
           setSessionExpiresAt(finalExpiryIso);
+          if (body.token) {
+            setSessionToken(body.token);
+            sessionStorage.setItem("tp_session_token", body.token);
+            localStorage.setItem("tp_session_token", body.token);
+          }
           resetLockout();
 
           sessionStorage.setItem("tp_current_user", JSON.stringify(body.user));

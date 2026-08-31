@@ -48,13 +48,42 @@ export const LARGE_BODY_ROUTES = new Set([
   '/api/db/sync-batch',
   '/api/mysql/sync-batch',
   '/api/mysql/sync-all',
-  '/api/db/sync-all'
+  '/api/db/sync-all',
+  '/api/db/bulk',
+  '/api/mysql/bulk',
+  '/api/db/batch',
+  '/api/mysql/batch',
+  '/api/db',
+  '/api/mysql'
 ]);
 
+export const isDbOrSyncRoute = (path = '') => {
+  return (
+    path === '/api/db' ||
+    path.startsWith('/api/db/') ||
+    path.startsWith('/api/sync') ||
+    path.startsWith('/api/mysql') ||
+    path.startsWith('/api/sqlite')
+  );
+};
+
 export const bodyParserMiddleware = (req, res, next) => {
-  if (LARGE_BODY_ROUTES.has(req.path)) {
+  // Routes with custom auth-first middleware (e.g. Backups/Snapshots)
+  if (req.path === '/api/db/backups' || req.path === '/api/mysql/snapshots' || req.path === '/api/sqlite/snapshots') {
     return next();
   }
+
+  // Database, bulk import, and sync routes support payloads up to 50MB
+  if (isDbOrSyncRoute(req.path)) {
+    return express.json({ limit: '50mb' })(req, res, (err) => {
+      if (err) {
+        return res.status(413).json({ success: false, error: 'Payload too large. Database bulk import limit is 50MB.' });
+      }
+      express.urlencoded({ limit: '50mb', extended: true })(req, res, next);
+    });
+  }
+
+  // General API routes enforce compact 100kb limit
   express.json({ limit: '100kb' })(req, res, (err) => {
     if (err) {
       return res.status(413).json({ success: false, error: 'Payload too large. General API limit is 100kb.' });
@@ -84,7 +113,7 @@ export async function verifySessionAndCheckConcurrency(req) {
   // Read full db to verify user and their role
   const fullDb = await readFullDatabase();
   const dbUsers = fullDb.db.tp_users || [];
-  const dbUser = dbUsers.find(u => u.id === payload.id || (payload.username && u.username === payload.username));
+  const dbUser = dbUsers.find(u => u.id === payload.id || (payload.username && (u.username || '').toLowerCase() === (payload.username || '').toLowerCase()));
   
   if (!dbUser) {
     return { valid: false, status: 401, code: 'USER_NOT_FOUND', error: 'User account not found or session invalid. Please log in again.' };

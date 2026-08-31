@@ -474,11 +474,14 @@ router.get('/verify-session', async (req, res) => {
 });
 
 // API: Authentication - Logout and Release Session Lock
-router.post('/logout', async (req, res) => {
+router.all(['/logout', '/session'], async (req, res, next) => {
+  if (req.method !== 'POST' && req.method !== 'DELETE') {
+    return next();
+  }
   try {
     const payload = verifyAndExtractToken(req);
-    const sessionId = req.body?.sessionId || payload?.sessionId || req.headers['x-client-id'];
-    const userId = payload?.id || req.body?.userId;
+    const sessionId = req.body?.sessionId || req.query?.sessionId || payload?.sessionId || req.headers['x-client-id'] || req.headers['x-session-id'];
+    const userId = payload?.id || req.body?.userId || req.query?.userId;
 
     if (sessionId || userId) {
       await removeActiveSessionRecord(sessionId, userId);

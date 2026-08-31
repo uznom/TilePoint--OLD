@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { KEY_TO_TABLE_MAP, TABLE_COLUMNS, SENSITIVE_FIELD_DENYLIST } from '../config/serverConfig.js';
+import { KEY_TO_TABLE_MAP, TABLE_COLUMNS, SENSITIVE_FIELD_DENYLIST, DB_COLLECTION_PRIORITY_ORDER } from '../config/serverConfig.js';
 import { pool, isConnectionError } from './mysqlPool.js';
 import { alasql, upsertRecordAlasql } from './alasqlEngine.js';
 import {
@@ -523,7 +523,14 @@ export async function saveKeyToStore(key, value) {
   if (key === 'tp_bootstrap_init') {
     isConfiguredCache = true;
     if (value && typeof value === 'object') {
-      for (const k of Object.keys(value)) {
+      const keys = Object.keys(value).sort((a, b) => {
+        const idxA = DB_COLLECTION_PRIORITY_ORDER.indexOf(a);
+        const idxB = DB_COLLECTION_PRIORITY_ORDER.indexOf(b);
+        const posA = idxA === -1 ? 999 : idxA;
+        const posB = idxB === -1 ? 999 : idxB;
+        return posA - posB;
+      });
+      for (const k of keys) {
         saveKeyToAlasql(k, value[k]);
       }
     }
@@ -536,17 +543,27 @@ export async function saveKeyToStore(key, value) {
   if (getIsMysqlActive() || getMysqlEnforced()) {
     try {
       if (key === 'tp_bootstrap_init') {
+        await pool.query('SET FOREIGN_KEY_CHECKS = 0');
         if (value && typeof value === 'object') {
-          for (const k of Object.keys(value)) {
+          const keys = Object.keys(value).sort((a, b) => {
+            const idxA = DB_COLLECTION_PRIORITY_ORDER.indexOf(a);
+            const idxB = DB_COLLECTION_PRIORITY_ORDER.indexOf(b);
+            const posA = idxA === -1 ? 999 : idxA;
+            const posB = idxB === -1 ? 999 : idxB;
+            return posA - posB;
+          });
+          for (const k of keys) {
             await saveKeyToMysql(k, value[k]);
           }
         }
         await saveKeyToMysql('tp_is_configured', 'true');
         await saveKeyToMysql('tilepoint_onboarded_setup', 'true');
+        await pool.query('SET FOREIGN_KEY_CHECKS = 1');
       } else {
         await saveKeyToMysql(key, value);
       }
     } catch (err) {
+      try { await pool.query('SET FOREIGN_KEY_CHECKS = 1'); } catch (_) {}
       if (isConnectionError(err)) {
         markServerDegraded(`MySQL write error: ${err.message} (${err.code})`);
       } else {
@@ -563,23 +580,12 @@ export async function isDatabaseConfiguredStore() {
   if (getIsMysqlActive() || getMysqlEnforced()) {
     try {
       const [users] = await pool.query('SELECT COUNT(*) as count FROM users');
-      const hasUsers = users && users[0] && users[0].count > 0;
+      const hasUsers = users && users[0] && Number(users[0].count) > 0;
       if (!hasUsers) {
         isConfiguredCache = false;
         return false;
       }
 
-      if (isConfiguredCache === true) return true;
-
-      const [settings] = await pool.query('SELECT setting_value FROM system_settings WHERE setting_key = ?', ['tp_is_configured']);
-      if (settings.length > 0) {
-        const val = settings[0].setting_value;
-        const conf = val === 'true' || val === true || val === '"true"';
-        if (conf) {
-          isConfiguredCache = true;
-          return true;
-        }
-      }
       isConfiguredCache = true;
       return true;
     } catch (e) {
@@ -593,7 +599,7 @@ export async function isDatabaseConfiguredStore() {
 
   try {
     const users = alasql('SELECT COUNT(*) as count FROM `users`');
-    const hasUsers = users && users[0] && users[0].count > 0;
+    const hasUsers = users && users[0] && Number(users[0].count) > 0;
     if (!hasUsers) {
       isConfiguredCache = false;
       return false;

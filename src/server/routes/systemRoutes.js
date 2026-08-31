@@ -16,7 +16,7 @@ import { addSseClient, removeSseClient } from '../realtime/socketHandler.js';
 const router = express.Router();
 
 // API: Service Health Check & Degraded Engine Status
-router.get(['/health', '/server/status'], async (req, res) => {
+router.get(['/health', '/server/status', '/status', '/db/status'], async (req, res) => {
   const configured = await isDatabaseConfiguredStore();
   const isMysqlActive = getIsMysqlActive();
   res.json({

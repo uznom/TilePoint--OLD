@@ -946,7 +946,7 @@ export function useDbProductsModule({
 
         (async () => {
           try {
-            await safeApiFetch("/api/db/bulk", {
+            const res = await safeApiFetch("/api/db/bulk", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -961,7 +961,12 @@ export function useDbProductsModule({
                 },
               }),
             });
-            console.log("[Bulk Import Sync] Successfully flushed imported products and inventory to central server.");
+            if (res.ok) {
+              console.log("[Bulk Import Sync] Successfully flushed imported products and inventory to central server.");
+            } else {
+              const body = await res.json().catch(() => ({}));
+              console.warn("[Bulk Import Sync] Server returned status", res.status, body);
+            }
           } catch (err) {
             console.warn("[Bulk Import Sync] Failed to post bulk sync to server:", err);
           }

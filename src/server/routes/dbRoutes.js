@@ -312,6 +312,22 @@ router.get(['/', '/full'], async (req, res) => {
   }
 });
 
+// API: Get all branches list
+router.get(['/branches', '/list/branches'], async (req, res) => {
+  try {
+    if (getIsMysqlActive() || getMysqlEnforced()) {
+      const [rows] = await pool.query('SELECT * FROM branches ORDER BY isDeleted ASC, id ASC');
+      const branches = rows.map(r => parseRowFromMysql('branches', r));
+      return res.json({ success: true, branches });
+    }
+    const rows = alasql('SELECT * FROM `branches` ORDER BY isDeleted ASC, id ASC') || [];
+    const branches = rows.map(r => parseRowFromMysql('branches', r));
+    return res.json({ success: true, branches });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // API: Save key-value state
 router.post('/', async (req, res) => {
   const { key, value } = req.body;
