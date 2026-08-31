@@ -233,7 +233,7 @@ export async function getInternalUserByUsername(username) {
 
   if (getIsMysqlActive() || getMysqlEnforced()) {
     try {
-      const [rows] = await pool.query('SELECT * FROM users WHERE LOWER(username) = ?', [cleanUsername]);
+      const [rows] = await pool.query('SELECT * FROM users WHERE LOWER(username) = ? OR LOWER(email) = ?', [cleanUsername, cleanUsername]);
       if (rows.length > 0) {
         return parseRowFromMysql('users', rows[0]);
       }
@@ -243,7 +243,7 @@ export async function getInternalUserByUsername(username) {
   }
 
   try {
-    const rows = alasql('SELECT * FROM `users` WHERE LOWER(username) = ?', [cleanUsername]) || [];
+    const rows = alasql('SELECT * FROM `users` WHERE LOWER(username) = ? OR LOWER(email) = ?', [cleanUsername, cleanUsername]) || [];
     if (rows.length > 0) {
       return parseRowFromMysql('users', rows[0]);
     }
@@ -251,7 +251,10 @@ export async function getInternalUserByUsername(username) {
 
   const db = readDbFile();
   const users = Array.isArray(db.tp_users) ? db.tp_users : [];
-  return users.find(u => (u.username || '').trim().toLowerCase() === cleanUsername) || null;
+  return users.find(u => 
+    (u.username || '').trim().toLowerCase() === cleanUsername ||
+    (u.email || '').trim().toLowerCase() === cleanUsername
+  ) || null;
 }
 
 export function getInternalUserSync(userId) {
@@ -428,6 +431,16 @@ export async function saveKeyToStore(key, value) {
     for (const u of value) {
       if (u.passwordHash && typeof u.passwordHash === 'string' && !isBcryptHash(u.passwordHash)) {
         u.passwordHash = await bcrypt.hash(u.passwordHash, 10);
+      }
+    }
+  }
+
+  if (key === 'tp_bootstrap_init' && value && typeof value === 'object') {
+    if (Array.isArray(value.tp_users)) {
+      for (const u of value.tp_users) {
+        if (u.passwordHash && typeof u.passwordHash === 'string' && !isBcryptHash(u.passwordHash)) {
+          u.passwordHash = await bcrypt.hash(u.passwordHash, 10);
+        }
       }
     }
   }

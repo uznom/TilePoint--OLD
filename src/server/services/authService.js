@@ -84,6 +84,11 @@ export async function verifyAndMigratePassword(password, targetUser) {
     }
   } catch (_) {}
 
+  // Plain-text bootstrap or legacy match fallback
+  if (!legacyMatch && token === password) {
+    legacyMatch = true;
+  }
+
   if (!legacyMatch) {
     return { valid: false, migrated: false };
   }
