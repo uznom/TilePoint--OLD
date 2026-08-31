@@ -29,6 +29,7 @@ import { saveFileToBackup } from "../lib/fileBackupHelper";
 import { UserRole } from "../types/db";
 import { ToastNotification } from "./ToastNotification";
 import { HeaderBar } from "./common/HeaderBar";
+import { HeroDropdownSelect } from "./common/ui/HeroDropdown";
 
 interface DailyReconciliationModuleProps {
   darkMode?: boolean;
@@ -443,21 +444,19 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
         actions={
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 self-start md:self-auto shrink-0">
             {currentUser?.role === UserRole.ADMIN && (
-              <div className="flex items-center gap-2 bg-content2/60 border border-divider/30 p-1.5 rounded-xl shadow-sm pl-3 pr-2 shrink-0">
-                <span className="text-[10px] font-black uppercase text-primary tracking-widest">
-                  Branch:
-                </span>
-                <select
-                  value={selectedBranchId ?? ''}
-                  onChange={(e) => setSelectedBranchId(e.target.value)}
-                  className="text-xs bg-background text-foreground font-black uppercase tracking-wide border-0 focus:outline-none py-1 px-2 rounded-lg cursor-pointer"
-                >
-                  {(branches || []).map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
+              <div className="flex items-center gap-2 shrink-0">
+                <HeroDropdownSelect
+                  startIcon={<span className="text-[10px] font-black uppercase text-primary tracking-widest">Branch:</span>}
+                  items={(branches || []).map((b) => ({
+                    key: b.id,
+                    label: b.name.toUpperCase(),
+                  }))}
+                  selectedKey={selectedBranchId ?? ''}
+                  onSelectionChange={(val) => setSelectedBranchId(val)}
+                  size="sm"
+                  variant="pill"
+                  className="min-w-[160px]"
+                />
               </div>
             )}
 

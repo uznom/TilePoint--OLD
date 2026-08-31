@@ -4,6 +4,7 @@ import { Clock, X } from 'lucide-react';
 import { Branch, Product, User } from '../../types/db';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
 import { HeroButton } from '../common/ui/HeroButton';
+import { HeroSelect } from '../common/ui/HeroSelect';
 
 interface RegisterBatchModalProps {
   isOpen: boolean;
@@ -83,11 +84,12 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
         <div className="space-y-3 text-xs">
           {/* Product Selection */}
           <div className="space-y-1">
-            <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">Select Catalog Product</label>
-            <select
+            <HeroSelect
+              label="Select Catalog Product"
+              isRequired
+              placeholder="Select a product..."
               value={batchFormProductId ?? ''}
-              onChange={e => {
-                const val = e.target.value;
+              onValueChange={val => {
                 setBatchFormProductId(val);
                 const prod = products.find(p => p.id === val);
                 if (prod) {
@@ -96,16 +98,13 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
                   if (!batchFormNo) setBatchFormNo(`B-${prod.productCode.replace(/[^A-Z0-9]/gi, '')}-${Date.now().toString().slice(-4)}`);
                 }
               }}
-              className="w-full bg-content2 border border-divider focus:border-primary px-3 py-2 text-xs focus:outline-none rounded-medium font-bold text-foreground cursor-pointer"
-              required
-            >
-              <option value="" disabled>Select a product...</option>
-              {branchProducts.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.productName} ({p.productCode}){p.hasExpiration ? ' - [Expiry Tracked]' : ''}
-                </option>
-              ))}
-            </select>
+              radius="md"
+              items={branchProducts.map(p => ({
+                key: p.id,
+                value: p.id,
+                label: `${p.productName} (${p.productCode})${p.hasExpiration ? ' - [Expiry Tracked]' : ''}`,
+              }))}
+            />
             {batchFormProductId && (() => {
               const selectedProductObj = products.find(p => p.id === batchFormProductId);
               if (selectedProductObj && !selectedProductObj.hasExpiration) {
@@ -171,23 +170,25 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
 
           {/* Branch Assignment */}
           <div className="space-y-1">
-            <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">Branch Allocation</label>
             {currentUser?.role === 'Admin' ? (
-              <select
+              <HeroSelect
+                label="Branch Allocation"
+                isRequired
                 value={batchFormBranchId ?? ''}
-                onChange={e => setBatchFormBranchId(e.target.value)}
-                className="w-full bg-content2 border border-divider focus:border-primary px-3 py-2 text-xs focus:outline-none rounded-medium font-bold text-foreground cursor-pointer"
-                required
-              >
-                {branches.map(b => (
-                  <option key={b.id} value={b.id}>
-                    {getBranchOptionLabel(b)}
-                  </option>
-                ))}
-              </select>
+                onValueChange={val => setBatchFormBranchId(val)}
+                radius="md"
+                items={branches.map(b => ({
+                  key: b.id,
+                  value: b.id,
+                  label: getBranchOptionLabel(b),
+                }))}
+              />
             ) : (
-              <div className="w-full bg-content2 border border-divider px-3 py-2 text-xs rounded-medium font-bold text-default-500">
-                {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
+              <div className="space-y-1">
+                <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">Branch Allocation</label>
+                <div className="w-full bg-content2 border border-divider px-3 py-2 text-xs rounded-medium font-bold text-default-500">
+                  {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
+                </div>
               </div>
             )}
           </div>

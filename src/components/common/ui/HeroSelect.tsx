@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { ChevronDown, Check } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
 
-export type HeroSelectVariant = 'flat' | 'bordered' | 'faded' | 'underlined';
+export type HeroSelectVariant = 'flat' | 'bordered' | 'faded' | 'underlined' | 'pill';
 export type HeroSelectColor = 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'danger';
 export type HeroSelectSize = 'sm' | 'md' | 'lg';
 export type HeroSelectRadius = 'none' | 'sm' | 'md' | 'lg' | 'full';
@@ -13,12 +15,8 @@ export interface SelectItemProps {
   className?: string;
 }
 
-export const SelectItem: React.FC<SelectItemProps> = ({ value, disabled, children, className = '' }) => {
-  return (
-    <option value={value} disabled={disabled} className={`bg-content1 dark:bg-[#18181B] text-foreground ${className}`}>
-      {children}
-    </option>
-  );
+export const SelectItem: React.FC<SelectItemProps> = ({ value, disabled, children }) => {
+  return <div data-value={value} data-disabled={disabled}>{children}</div>;
 };
 SelectItem.displayName = 'SelectItem';
 
@@ -28,18 +26,19 @@ export interface SelectSectionProps {
   className?: string;
 }
 
-export const SelectSection: React.FC<SelectSectionProps> = ({ title, children, className = '' }) => {
+export const SelectSection: React.FC<SelectSectionProps> = ({ title, children }) => {
   return (
-    <optgroup label={title} className={`bg-content1 dark:bg-[#18181B] text-default-500 font-bold ${className}`}>
+    <div className="py-1">
+      {title && <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-default-400">{title}</div>}
       {children}
-    </optgroup>
+    </div>
   );
 };
 SelectSection.displayName = 'SelectSection';
 
 export interface HeroSelectItem {
   key: string | number;
-  label: string;
+  label: string | React.ReactNode;
   value?: string | number;
   disabled?: boolean;
 }
@@ -68,7 +67,6 @@ export interface HeroSelectProps extends Omit<React.SelectHTMLAttributes<HTMLSel
   id?: string;
 }
 
-
 export const HeroSelect = React.forwardRef<HTMLSelectElement, HeroSelectProps>(
   (
     {
@@ -81,7 +79,7 @@ export const HeroSelect = React.forwardRef<HTMLSelectElement, HeroSelectProps>(
       isDisabled = false,
       variant = 'bordered',
       size = 'md',
-      radius = 'md',
+      radius = 'lg',
       startContent,
       fullWidth = true,
       className = '',
@@ -94,123 +92,242 @@ export const HeroSelect = React.forwardRef<HTMLSelectElement, HeroSelectProps>(
       onChange,
       disabled,
       children,
-      ...props
+      name,
     },
     ref
   ) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const hiddenSelectRef = useRef<HTMLSelectElement | null>(null);
+
     const inputId = id || (label ? `hero-select-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined);
     const effectiveDisabled = disabled ?? isDisabled;
 
-    const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-      onChange?.(e);
-      onValueChange?.(e.target.value);
+    // Parse options from items prop or JSX children (<SelectItem> / <option>)
+    const parsedItems = useMemo(() => {
+      if (items && items.length > 0) {
+        return items.map((i) => ({
+          key: String(i.key ?? i.value),
+          value: String(i.value ?? i.key),
+          label: i.label,
+          disabled: Boolean(i.disabled),
+        }));
+      }
+      const list: Array<{ key: string; value: string; label: React.ReactNode; disabled: boolean }> = [];
+      React.Children.forEach(children, (child) => {
+        if (React.isValidElement(child)) {
+          const childProps = (child as React.ReactElement<any>).props || {};
+          const val = childProps.value !== undefined ? String(childProps.value) : String(child.key ?? '');
+          list.push({
+            key: val,
+            value: val,
+            label: childProps.children ?? val,
+            disabled: Boolean(childProps.disabled),
+          });
+        }
+      });
+      return list;
+    }, [items, children]);
+
+    // Track internal selected value
+    const [internalValue, setInternalValue] = useState<string>(
+      value !== undefined ? String(value) : defaultValue !== undefined ? String(defaultValue) : ''
+    );
+
+    useEffect(() => {
+      if (value !== undefined) {
+        setInternalValue(String(value));
+      }
+    }, [value]);
+
+    const selectedItem = parsedItems.find((it) => it.value === internalValue || it.key === internalValue);
+
+    // Close on click outside
+    useEffect(() => {
+      const handleOutsideClick = (e: MouseEvent) => {
+        if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+          setIsOpen(false);
+        }
+      };
+      document.addEventListener('mousedown', handleOutsideClick);
+      return () => document.removeEventListener('mousedown', handleOutsideClick);
+    }, []);
+
+    const handleSelect = (itemVal: string) => {
+      setInternalValue(itemVal);
+      setIsOpen(false);
+      onValueChange?.(itemVal);
+
+      if (hiddenSelectRef.current) {
+        hiddenSelectRef.current.value = itemVal;
+        const event = new Event('change', { bubbles: true });
+        hiddenSelectRef.current.dispatchEvent(event);
+      }
+      if (onChange) {
+        const syntheticEvent = {
+          target: { value: itemVal, name: name || '' },
+          currentTarget: { value: itemVal, name: name || '' },
+        } as React.ChangeEvent<HTMLSelectElement>;
+        onChange(syntheticEvent);
+      }
     };
 
+    const isPill = radius === 'full' || variant === 'pill';
+
     const getRadiusClasses = () => {
-      if (variant === 'underlined') return 'rounded-none';
-      switch (radius) {
-        case 'none':
-          return 'rounded-none';
-        case 'sm':
-          return 'rounded-small';
-        case 'lg':
-          return 'rounded-large';
-        case 'full':
-          return 'rounded-full';
-        case 'md':
-        default:
-          return 'rounded-medium';
-      }
+      if (isPill) return 'rounded-full';
+      if (radius === 'none') return 'rounded-none';
+      if (radius === 'sm') return 'rounded-lg';
+      if (radius === 'md') return 'rounded-xl';
+      return 'rounded-xl';
     };
 
     const getSizeClasses = () => {
       switch (size) {
         case 'sm':
-          return 'h-8 px-2.5 text-xs';
+          return 'py-1.5 pl-3 pr-2 text-xs';
         case 'lg':
-          return 'h-12 px-4 text-base';
+          return 'py-3 pl-4 pr-3 text-base';
         case 'md':
         default:
-          return 'h-10 px-3 text-sm';
+          return 'py-2 pl-3.5 pr-2.5 text-xs sm:text-sm';
+      }
+    };
+
+    const getChevronPadding = () => {
+      switch (size) {
+        case 'sm':
+          return 'px-2';
+        case 'lg':
+          return 'px-3.5';
+        case 'md':
+        default:
+          return 'px-2.5';
       }
     };
 
     const getVariantClasses = () => {
       if (isInvalid) {
-        return 'bg-danger-50/20 border border-danger text-foreground focus-within:border-danger focus-within:ring-2 focus-within:ring-danger/20';
+        return 'bg-rose-50/20 dark:bg-rose-500/10 border border-rose-500 text-foreground';
       }
-
       switch (variant) {
         case 'flat':
-          return 'bg-default-100 border-transparent text-foreground hover:bg-default-200 focus-within:bg-default-100 focus-within:ring-2 focus-within:ring-primary/40';
+          return 'bg-default-100 dark:bg-zinc-800/80 border border-transparent text-foreground hover:bg-default-200/70';
         case 'faded':
-          return 'bg-default-100 border border-divider text-foreground hover:border-default-400 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20';
+          return 'bg-default-100 dark:bg-zinc-800/90 border border-divider dark:border-white/10 text-foreground hover:border-default-400';
         case 'underlined':
-          return 'bg-transparent border-b-2 border-divider rounded-none px-0 text-foreground hover:border-default-400 focus-within:border-primary';
+          return 'bg-transparent border-b-2 border-divider rounded-none px-0 text-foreground hover:border-default-400';
         case 'bordered':
+        case 'pill':
         default:
-          return 'bg-content1 border border-default-200 dark:border-default-100/50 text-foreground hover:border-default-400 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 shadow-xs';
+          return 'bg-default-100/90 hover:bg-default-200/70 dark:bg-zinc-800/90 dark:hover:bg-zinc-700/80 border border-divider/40 dark:border-white/10 text-foreground shadow-xs';
       }
     };
 
     return (
-      <div className={`flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${wrapperClassName}`}>
+      <div ref={containerRef} className={`relative flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${wrapperClassName}`}>
         {label && (
           <label
             htmlFor={inputId}
-            className="text-xs font-bold text-default-700 dark:text-default-300 select-none flex items-center gap-1"
+            className="text-xs font-semibold text-foreground dark:text-zinc-200 select-none flex items-center gap-1 font-sans tracking-tight"
           >
             <span>{label}</span>
-            {isRequired && <span className="text-danger">*</span>}
+            {isRequired && <span className="text-rose-500">*</span>}
           </label>
         )}
 
-        <div
-          className={`relative flex items-center gap-2 transition-all duration-150 ${getRadiusClasses()} ${getSizeClasses()} ${getVariantClasses()} ${
-            effectiveDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
-          }`}
+        {/* Hidden Native Select for standard form & ref bindings */}
+        <select
+          ref={(node) => {
+            hiddenSelectRef.current = node;
+            if (typeof ref === 'function') ref(node);
+            else if (ref) (ref as React.MutableRefObject<HTMLSelectElement | null>).current = node;
+          }}
+          id={inputId}
+          name={name}
+          value={internalValue}
+          onChange={(e) => handleSelect(e.target.value)}
+          disabled={effectiveDisabled}
+          tabIndex={-1}
+          aria-hidden="true"
+          className="sr-only"
         >
-          {startContent && <div className="shrink-0 text-default-400 flex items-center">{startContent}</div>}
+          {placeholder && <option value="" disabled>{placeholder}</option>}
+          {parsedItems.map((it) => (
+            <option key={it.key} value={it.value} disabled={it.disabled}>
+              {typeof it.label === 'string' ? it.label : it.value}
+            </option>
+          ))}
+        </select>
 
-          <select
-            ref={ref}
-            id={inputId}
-            value={value}
-            defaultValue={defaultValue}
-            onChange={handleChange}
-            disabled={effectiveDisabled}
-            className={`w-full h-full bg-transparent text-foreground outline-none border-none p-0 focus:ring-0 text-inherit font-medium cursor-pointer appearance-none pr-6 ${className}`}
-            {...props}
-          >
-            {placeholder && !defaultValue && !value && (
-              <option value="" disabled className="bg-content1 dark:bg-[#18181B] text-default-400">
-                {placeholder}
-              </option>
-            )}
-            {items
-              ? items.map((item) => (
-                  <option
-                    key={item.key}
-                    value={item.value !== undefined ? item.value : item.key}
-                    disabled={item.disabled}
-                    className="bg-content1 dark:bg-[#18181B] text-foreground"
-                  >
-                    {item.label}
-                  </option>
-                ))
-              : children}
-          </select>
+        {/* HeroUI v3 Segmented Capsule Trigger Button */}
+        <button
+          type="button"
+          disabled={effectiveDisabled}
+          onClick={() => setIsOpen((prev) => !prev)}
+          className={`group flex items-stretch transition-all font-sans text-left cursor-pointer active:scale-[0.98] overflow-hidden select-none ${getRadiusClasses()} ${getVariantClasses()} ${
+            effectiveDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
+          } focus:outline-none focus:ring-2 focus:ring-primary/20 ${className}`}
+        >
+          {/* Left section: Icon + Label */}
+          <span className={`flex items-center gap-2 grow min-w-0 ${getSizeClasses()}`}>
+            {startContent && <span className="shrink-0 text-foreground/80 group-hover:text-foreground">{startContent}</span>}
+            <span className={`truncate ${selectedItem ? 'text-foreground font-semibold' : 'text-default-400 font-medium'}`}>
+              {selectedItem ? selectedItem.label : placeholder}
+            </span>
+          </span>
 
-          {/* Custom Chevron icon */}
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-default-400">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-        </div>
+          {/* Right section: Shaded Chevron Segment with Hairline Divider */}
+          <span className={`flex items-center justify-center bg-default-200/50 dark:bg-zinc-700/50 border-l border-divider/40 dark:border-white/10 text-default-500 group-hover:text-foreground transition-colors ${getChevronPadding()}`}>
+            <ChevronDown
+              className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
+                isOpen ? 'rotate-180 text-foreground' : ''
+              }`}
+            />
+          </span>
+        </button>
+
+        {/* HeroUI v3 Floating Rounded-2xl Options Card */}
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -4 }}
+              transition={{ duration: 0.12 }}
+              className="absolute top-full left-0 mt-1.5 z-50 min-w-full sm:min-w-[160px] rounded-2xl bg-white dark:bg-[#18181B] border border-divider/40 dark:border-white/10 shadow-2xl p-1.5 max-h-64 overflow-y-auto space-y-0.5 text-foreground backdrop-blur-md font-sans"
+            >
+              {parsedItems.length > 0 ? (
+                parsedItems.map((item) => {
+                  const isSelected = item.value === internalValue || item.key === internalValue;
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      disabled={item.disabled}
+                      onClick={() => handleSelect(item.value)}
+                      className={`flex items-center justify-between gap-2.5 w-full px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors cursor-pointer text-left active:scale-[0.98] ${
+                        item.disabled ? 'opacity-40 cursor-not-allowed' : ''
+                      } ${
+                        isSelected
+                          ? 'bg-default-100 dark:bg-zinc-800 text-foreground font-semibold shadow-xs'
+                          : 'text-foreground hover:bg-default-100/70 dark:hover:bg-zinc-800/70'
+                      }`}
+                    >
+                      <span className="truncate">{item.label}</span>
+                      {isSelected && <Check className="w-3.5 h-3.5 shrink-0 text-primary stroke-[2.5]" />}
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="p-3 text-center text-xs text-default-400 font-medium">No options available</div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {errorMessage && isInvalid ? (
-          <p className="text-[11px] font-medium text-danger animate-fade-in pl-1">{errorMessage}</p>
+          <p className="text-[11px] font-medium text-rose-500 animate-fade-in pl-1">{errorMessage}</p>
         ) : helperText ? (
           <p className="text-[11px] text-default-400 pl-1">{helperText}</p>
         ) : null}
@@ -222,6 +339,4 @@ export const HeroSelect = React.forwardRef<HTMLSelectElement, HeroSelectProps>(
 HeroSelect.displayName = 'HeroSelect';
 
 export const Select = HeroSelect;
-
 export default HeroSelect;
-

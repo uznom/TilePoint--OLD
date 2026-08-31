@@ -13,6 +13,8 @@ import { TablePagination, useResponsivePageSize } from "./TablePagination";
 import { ToastNotification } from "./ToastNotification";
 import { HeaderBar } from "./common/HeaderBar";
 import { HeroButton } from "./common/ui/HeroButton";
+import { HeroSelect } from "./common/ui/HeroSelect";
+import { HeroDropdownSelect } from "./common/ui/HeroDropdown";
 import {
  FileText,
  Truck,
@@ -1722,27 +1724,56 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  <Settings2 className="h-4.5 w-4.5 text-primary" />
  <span>Automated PO Consolidation Desk</span>
  </h3>
- </div>
-
  <div className="flex items-center gap-2 shrink-0">
  <label className="text-[10px] font-black text-default-500 uppercase tracking-wider">
  Receiving Branch:
  </label>
- <select
- value={selectedConsolidationBranchId ?? ''}
- onChange={(e) =>
- setSelectedConsolidationBranchId(e.target.value)
- }
- className="bg-content1 border border-divider/35 rounded-xl px-3 py-2 text-xs font-bold text-foreground focus:outline-none [color-scheme:dark]"
- >
- {branches
+ <HeroDropdownSelect
+ items={branches
  .filter((b) => !b.isDeleted)
- .map((branch) => (
- <option key={branch.id} value={branch.id}>
- {branch.name}
- </option>
- ))}
- </select>
+ .map((branch) => ({
+ key: branch.id,
+ label: branch.name,
+ }))}
+ selectedKey={selectedConsolidationBranchId ?? ''}
+ onSelectionChange={(val) => setSelectedConsolidationBranchId(val)}
+ size="sm"
+ variant="pill"
+ className="min-w-[160px]"
+ />
+ </div>
+ </div>
+
+ {/* AUTOMATED PREDICTION MATRIX CONTAINER */}
+ <div className="bg-content1 border border-divider/15 rounded-2xl p-4.5 space-y-4">
+ <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-divider/10 pb-3">
+ <div className="flex items-center gap-2">
+ <Package className="h-4 w-4 text-primary" />
+ <span className="text-xs font-bold text-foreground">Suggested Order Requirements</span>
+ </div>
+ <div className="flex items-center gap-2">
+ <label className="text-[9px] font-black text-primary uppercase pl-0.5 tracking-wider">
+ Payment Terms:
+ </label>
+ <HeroDropdownSelect
+ items={[
+ { key: '0', label: 'Cash On Delivery (COD)' },
+ { key: '15', label: '15 Days (Net 15)' },
+ { key: '30', label: '30 Days (Net 30)' },
+ { key: '45', label: '45 Days (Net 45)' },
+ { key: '60', label: '60 Days (Net 60)' },
+ { key: 'CUSTOM', label: 'Custom Term Schedule' },
+ ]}
+ selectedKey={String(paymentTerm)}
+ onSelectionChange={(val) => {
+ setPaymentTerm(val === 'CUSTOM' ? 'CUSTOM' : Number(val));
+ }}
+ size="sm"
+ variant="pill"
+ className="min-w-[180px]"
+ />
+ </div>
+ </div>
  </div>
  </div>
 
@@ -1884,22 +1915,24 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  <label className="text-[9px] font-black text-primary uppercase pl-0.5 tracking-wider">
  Supplier Payment Terms:
  </label>
- <select
- value={paymentTerm ?? ''}
- onChange={(e) => {
- const val = e.target.value;
- setPaymentTerm(val === "CUSTOM" ? "CUSTOM" : Number(val));
- }}
- className="w-full bg-content1 border border-divider/35 rounded-xl px-2.5 py-2 text-xs font-bold text-foreground focus:outline-none cursor-pointer [color-scheme:dark]"
- >
- <option value={0}>Cash On Delivery (COD)</option>
- <option value={15}>15 Days (Net 15)</option>
- <option value={30}>30 Days (Net 30)</option>
- <option value={45}>45 Days (Net 45)</option>
- <option value={60}>60 Days (Net 60)</option>
- <option value={90}>90 Days (Net 90)</option>
- <option value="CUSTOM">Custom Date</option>
- </select>
+ <HeroDropdownSelect
+   items={[
+     { key: '0', label: 'Cash On Delivery (COD)' },
+     { key: '15', label: '15 Days (Net 15)' },
+     { key: '30', label: '30 Days (Net 30)' },
+     { key: '45', label: '45 Days (Net 45)' },
+     { key: '60', label: '60 Days (Net 60)' },
+     { key: '90', label: '90 Days (Net 90)' },
+     { key: 'CUSTOM', label: 'Custom Date' },
+   ]}
+   selectedKey={String(paymentTerm)}
+   onSelectionChange={(val) => {
+     setPaymentTerm(val === "CUSTOM" ? "CUSTOM" : Number(val));
+   }}
+   size="sm"
+   variant="pill"
+   className="w-full"
+ />
  </div>
 
  <div className="space-y-1 text-left w-48">
@@ -2248,33 +2281,32 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  <span className="text-[10px] font-bold uppercase text-primary tracking-wider ">
  Load PO Template:
  </span>
- <select
- onChange={(e) => {
- const templateId = e.target.value;
- if (!templateId) return;
- const selectedTemplate = poTemplates.find(
- (t) => t.id === templateId,
- );
- if (selectedTemplate) {
- setSelectedSupplierId(selectedTemplate.supplierId);
- setSelectedBranchId(selectedTemplate.branchId);
- setDraftItems(selectedTemplate.items);
- setPoNotes(selectedTemplate.notes || "");
- showToast(
- `Template "${selectedTemplate.name}" loaded successfully.`,
- );
- }
- e.target.value = "";
- }}
- className="bg-content1 border border-divider px-2.5 py-1 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg cursor-pointer max-w-[200px]"
- >
- <option value="">-- Select Template --</option>
- {poTemplates.map((t) => (
- <option key={t.id} value={t.id}>
- {t.name}
- </option>
- ))}
- </select>
+ <HeroSelect
+   value=""
+   placeholder="-- Select Template --"
+   onValueChange={(templateId) => {
+     if (!templateId) return;
+     const selectedTemplate = poTemplates.find(
+       (t) => t.id === templateId,
+     );
+     if (selectedTemplate) {
+       setSelectedSupplierId(selectedTemplate.supplierId);
+       setSelectedBranchId(selectedTemplate.branchId);
+       setDraftItems(selectedTemplate.items);
+       setPoNotes(selectedTemplate.notes || "");
+       showToast(
+         `Template "${selectedTemplate.name}" loaded successfully.`,
+       );
+     }
+   }}
+   radius="md"
+   className="max-w-[220px]"
+   items={poTemplates.map((t) => ({
+     key: t.id,
+     value: t.id,
+     label: t.name,
+   }))}
+ />
  </div>
  {poTemplates.length > 0 && (
  <button
@@ -2307,66 +2339,63 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
 
  {/* General Specs */}
  <div className="space-y-1 relative">
- <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">
- Vendor Supplier
- </label>
- <select
- value={selectedSupplierId ?? ''}
- onChange={(e) => setSelectedSupplierId(e.target.value)}
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg cursor-pointer"
- >
- {suppliers.map((s) => (
- <option key={s.id} value={s.id}>
- {s.name}
- </option>
- ))}
- </select>
+   <HeroSelect
+     label="Vendor Supplier"
+     value={selectedSupplierId ?? ''}
+     onValueChange={(val) => setSelectedSupplierId(val)}
+     radius="md"
+     items={suppliers.map((s) => ({
+       key: s.id,
+       value: s.id,
+       label: s.name,
+     }))}
+   />
  </div>
 
  <div className="space-y-1 relative">
- <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">
- Warehouse / Branch Assignment
- </label>
  {currentUser?.role === UserRole.ADMIN ? (
- <select
- value={selectedBranchId ?? ''}
- onChange={(e) => setSelectedBranchId(e.target.value)}
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg cursor-pointer"
- >
- {branches.map((b) => (
- <option key={b.id} value={b.id}>
- {b.name}
- </option>
- ))}
- </select>
+   <HeroSelect
+     label="Warehouse / Branch Assignment"
+     value={selectedBranchId ?? ''}
+     onValueChange={(val) => setSelectedBranchId(val)}
+     radius="md"
+     items={branches.map((b) => ({
+       key: b.id,
+       value: b.id,
+       label: b.name,
+     }))}
+   />
  ) : (
- <div className="w-full bg-content1 border-b-2 border-divider/30 px-3 py-2 text-xs text-foreground font-bold rounded-lg">
- {branches.find(b => b.id === (currentUser?.branchAssignmentId || "B1"))?.name || 'N/A'}
+ <div className="space-y-1">
+   <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">
+     Warehouse / Branch Assignment
+   </label>
+   <div className="w-full bg-content1 border-b-2 border-divider/30 px-3 py-2 text-xs text-foreground font-bold rounded-lg">
+     {branches.find(b => b.id === (currentUser?.branchAssignmentId || "B1"))?.name || 'N/A'}
+   </div>
  </div>
  )}
  </div>
 
  {/* Supplier Payment Terms & Payout Deadline Selection */}
  <div className="space-y-1 relative">
- <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">
- Supplier Payment Terms
- </label>
- <select
- value={paymentTerm ?? ''}
- onChange={(e) => {
- const val = e.target.value;
- setPaymentTerm(val === "CUSTOM" ? "CUSTOM" : Number(val));
- }}
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg cursor-pointer"
- >
- <option value={0}>Cash On Delivery (COD)</option>
- <option value={15}>15 Days (Net 15)</option>
- <option value={30}>30 Days (Net 30)</option>
- <option value={45}>45 Days (Net 45)</option>
- <option value={60}>60 Days (Net 60)</option>
- <option value={90}>90 Days (Net 90)</option>
- <option value="CUSTOM">Custom Date</option>
- </select>
+   <HeroSelect
+     label="Supplier Payment Terms"
+     value={String(paymentTerm)}
+     onValueChange={(val) => {
+       setPaymentTerm(val === "CUSTOM" ? "CUSTOM" : Number(val));
+     }}
+     radius="md"
+     items={[
+       { key: '0', value: '0', label: 'Cash On Delivery (COD)' },
+       { key: '15', value: '15', label: '15 Days (Net 15)' },
+       { key: '30', value: '30', label: '30 Days (Net 30)' },
+       { key: '45', value: '45', label: '45 Days (Net 45)' },
+       { key: '60', value: '60', label: '60 Days (Net 60)' },
+       { key: '90', value: '90', label: '90 Days (Net 90)' },
+       { key: 'CUSTOM', value: 'CUSTOM', label: 'Custom Date' },
+     ]}
+   />
  </div>
 
  <div className="space-y-1 relative">
@@ -2480,18 +2509,17 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </div>
 
  <div className="space-y-1">
- <label className="text-[9px] font-bold uppercase text-amber-600 dark:text-amber-400 block pl-1">
- Category
- </label>
- <select
- value={manualCategory ?? ''}
- onChange={(e) => setManualCategory(e.target.value)}
- className="w-full bg-background border border-amber-500/30 px-3 py-2 text-xs text-foreground focus:outline-none focus:border-amber-500 rounded-lg font-sans font-bold cursor-pointer"
- >
- {dynamicCategories.map((cat) => (
- <option key={cat} value={cat}>{cat}</option>
- ))}
- </select>
+   <HeroSelect
+     label="Category"
+     value={manualCategory ?? ''}
+     onValueChange={(val) => setManualCategory(val)}
+     radius="md"
+     items={dynamicCategories.map((cat) => ({
+       key: cat,
+       value: cat,
+       label: cat,
+     }))}
+   />
  </div>
 
  <div className="space-y-1">
@@ -2585,21 +2613,18 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  /* Item selector widget within drafting panel */
  <div className="md:col-span-2 bg-content1 p-4 rounded-2xl border border-divider/30 my-1 grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
  <div className="space-y-1 relative text-left">
- <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">
- Product catalog Lookup
- </label>
- <select
- value={selectedProdId ?? ''}
- onChange={(e) => setSelectedProdId(e.target.value)}
- className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg cursor-pointer"
- >
- <option value="">-- Choose active catalog item --</option>
- {activeProductsForSupplier.map((p) => (
- <option key={p.id} value={p.id}>
- {p.productName} (Code: {p.productCode})
- </option>
- ))}
- </select>
+    <HeroSelect
+      label="Product Catalog Lookup"
+      value={selectedProdId ?? ''}
+      placeholder="-- Choose active catalog item --"
+      onValueChange={(val) => setSelectedProdId(val)}
+      radius="md"
+      items={activeProductsForSupplier.map((p) => ({
+        key: p.id,
+        value: p.id,
+        label: `${p.productName} (Code: ${p.productCode})`,
+      }))}
+    />
  </div>
 
  <div className="flex gap-2">
@@ -3257,22 +3282,19 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
  </div>
 
  <div className="space-y-1">
- <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">
- Authorized Supplier Partner
- </label>
- <select
- value={brandSupplierId ?? ''}
- onChange={(e) => setBrandSupplierId(e.target.value)}
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-bold"
- >
- {suppliers
- .filter((s) => !s.isDeleted)
- .map((sup) => (
- <option key={sup.id} value={sup.id}>
- {sup.name}
- </option>
- ))}
- </select>
+   <HeroSelect
+     label="Authorized Supplier Partner"
+     value={brandSupplierId ?? ''}
+     onValueChange={(val) => setBrandSupplierId(val)}
+     radius="md"
+     items={suppliers
+       .filter((s) => !s.isDeleted)
+       .map((sup) => ({
+         key: sup.id,
+         value: sup.id,
+         label: sup.name,
+       }))}
+   />
  </div>
 
  <div className="space-y-1">

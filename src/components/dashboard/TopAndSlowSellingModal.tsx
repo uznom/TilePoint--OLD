@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { HeroModal } from '../common/ui/HeroModal';
 import { HeroButton } from '../common/ui/HeroButton';
+import { HeroDropdownSelect } from '../common/ui/HeroDropdown';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { Product, Sale, SaleItem } from '../../types/db';
 
@@ -301,16 +302,17 @@ export const TopAndSlowSellingModal: React.FC<TopAndSlowSellingModalProps> = ({
             />
           </div>
 
-          <select
-            value={categoryFilter}
-            onChange={e => setCategoryFilter(e.target.value)}
-            className="px-3 py-1.5 bg-content2 border border-divider text-foreground rounded-xl text-xs font-bold focus:outline-none focus:border-primary cursor-pointer"
-          >
-            <option value="All">All Categories</option>
-            {categories.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+          <HeroDropdownSelect
+            items={[
+              { key: 'All', label: 'All Categories' },
+              ...categories.map(c => ({ key: c, label: c })),
+            ]}
+            selectedKey={categoryFilter}
+            onSelectionChange={(val) => setCategoryFilter(val)}
+            size="sm"
+            variant="pill"
+            className="min-w-[140px]"
+          />
         </div>
       </div>
 

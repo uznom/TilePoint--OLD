@@ -88,7 +88,7 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
         <div className="flex items-center justify-between text-xs font-bold text-default-700 dark:text-default-300">
           {label && <span>{label}</span>}
           {showValue && (
-            <span className="text-default-500 font-mono">
+            <span className="text-default-500 font-sans tabular-nums font-semibold">
               {formatValue ? formatValue(currentValue) : currentValue}
             </span>
           )}

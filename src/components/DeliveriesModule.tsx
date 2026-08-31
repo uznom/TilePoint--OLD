@@ -33,6 +33,8 @@ import { useResponsivePageSize } from './TablePagination';
 import { ToastNotification } from './ToastNotification';
 import { HeroTable } from './common/ui/HeroTable';
 import { HeroButton } from './common/ui/HeroButton';
+import { HeroSelect } from './common/ui/HeroSelect';
+import { HeroDropdownSelect } from './common/ui/HeroDropdown';
 import { HeaderBar } from './common/HeaderBar';
 import { useMultiSort } from '../hooks/useMultiSort';
 import { MultiSortBadgeBar } from './common/ui/MultiSortBadgeBar';
@@ -721,22 +723,22 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
             </HeroButton>
 
             {currentUser?.role === UserRole.ADMIN && (
-              <div className="flex items-center gap-2 bg-content2/60 border border-divider/30 p-1.5 rounded-xl shadow-sm pl-3 pr-2 shrink-0">
-                <span className="text-[10px] font-black uppercase text-primary tracking-widest">
-                  Scope:
-                </span>
-                <select
-                  value={selectedBranchId ?? ''}
-                  onChange={(e) => setSelectedBranchId(e.target.value)}
-                  className="text-xs bg-background text-foreground font-black uppercase tracking-wide border-0 focus:outline-none py-1 px-2 rounded-lg cursor-pointer"
-                >
-                  <option value="ALL">ALL OUTLETS</option>
-                  {branches.map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
+              <div className="flex items-center gap-2 shrink-0">
+                <HeroDropdownSelect
+                  startIcon={<span className="text-[10px] font-black uppercase text-primary tracking-widest">Scope:</span>}
+                  items={[
+                    { key: 'ALL', label: 'ALL OUTLETS' },
+                    ...branches.map((b) => ({
+                      key: b.id,
+                      label: b.name.toUpperCase(),
+                    })),
+                  ]}
+                  selectedKey={selectedBranchId ?? 'ALL'}
+                  onSelectionChange={(val) => setSelectedBranchId(val)}
+                  size="sm"
+                  variant="pill"
+                  className="min-w-[160px]"
+                />
               </div>
             )}
           </div>
@@ -1651,22 +1653,19 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
 
         <form onSubmit={handleSchedulePosDeliverySubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-black uppercase text-default-500 mb-1">
-              Select POS Order Invoice <span className="text-rose-500">*</span>
-            </label>
-            <select
+            <HeroSelect
+              label="Select POS Order Invoice"
+              isRequired
               value={selectedPosSaleId ?? ''}
-              onChange={(e) => handleSelectPosSale(e.target.value)}
-              required
- className="w-full bg-content1 text-xs text-foreground font-bold border border-divider/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              <option value="">-- Choose POS Transaction Order --</option>
-              {sales.slice(0, 30).map((s) => (
-                <option key={s.id} value={s.id}>
-                  Ref: {s.saleNumber} | {s.customerName} | {formatCurrency(s.grandTotal)} ({s.createdAt && !isNaN(new Date(s.createdAt).getTime()) ? new Date(s.createdAt).toLocaleDateString() : 'N/A'})
-                </option>
-              ))}
-            </select>
+              placeholder="-- Choose POS Transaction Order --"
+              onValueChange={(val) => handleSelectPosSale(val)}
+              radius="md"
+              items={sales.slice(0, 30).map((s) => ({
+                key: s.id,
+                value: s.id,
+                label: `Ref: ${s.saleNumber} | ${s.customerName} | ${formatCurrency(s.grandTotal)} (${s.createdAt && !isNaN(new Date(s.createdAt).getTime()) ? new Date(s.createdAt).toLocaleDateString() : 'N/A'})`,
+              }))}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -1764,18 +1763,17 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
               />
             </div>
             <div>
-              <label className="block text-xs font-black uppercase text-default-500 mb-1">
-                Preferred Slot
-              </label>
-              <select
+              <HeroSelect
+                label="Preferred Slot"
                 value={posDelivTime ?? ''}
-                onChange={(e) => setPosDelivTime(e.target.value)}
-                className="w-full bg-content1 text-xs font-bold text-foreground border border-divider/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value="08:00 AM - 12:00 PM">Morning Slot (08:00 AM - 12:00 PM)</option>
-                <option value="10:00 AM - 02:00 PM">Midday Slot (10:00 AM - 02:00 PM)</option>
-                <option value="01:00 PM - 05:00 PM">Afternoon Slot (01:00 PM - 05:00 PM)</option>
-              </select>
+                onValueChange={(val) => setPosDelivTime(val)}
+                radius="md"
+                items={[
+                  { key: '08:00 AM - 12:00 PM', value: '08:00 AM - 12:00 PM', label: 'Morning Slot (08:00 AM - 12:00 PM)' },
+                  { key: '10:00 AM - 02:00 PM', value: '10:00 AM - 02:00 PM', label: 'Midday Slot (10:00 AM - 02:00 PM)' },
+                  { key: '01:00 PM - 05:00 PM', value: '01:00 PM - 05:00 PM', label: 'Afternoon Slot (01:00 PM - 05:00 PM)' },
+                ]}
+              />
             </div>
           </div>
 

@@ -19,7 +19,7 @@ import {
 import { Branch, Supplier, User, UserRole } from '../../types/db';
 import { useDb } from '../../context/DbContext';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
-import { HeroButton, HeroCheckbox } from '../common/ui';
+import { HeroButton, HeroCheckbox, HeroSelect } from '../common/ui';
 
 interface AddEditProductModalProps {
   isOpen: boolean;
@@ -359,23 +359,22 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                         className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold"
                       />
                     ) : (
-                      <select
+                      <HeroSelect
                         value={category ?? ''}
-                        onChange={e => {
-                          if (e.target.value === '__CUSTOM__') {
+                        onValueChange={(val) => {
+                          if (val === '__CUSTOM__') {
                             setIsCustomCategoryInput(true);
                             setCategory('');
                           } else {
-                            setCategory(e.target.value);
+                            setCategory(val);
                           }
                         }}
-                        className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2.5 text-xs text-foreground focus:outline-none transition-colors rounded-medium cursor-pointer font-bold"
-                      >
-                        {categories.map((cat, i) => (
-                          <option key={i} value={cat}>{cat}</option>
-                        ))}
-                        <option value="__CUSTOM__">+ Add Custom New Category...</option>
-                      </select>
+                        radius="md"
+                        items={[
+                          ...categories.map((cat) => ({ key: cat, value: cat, label: cat })),
+                          { key: '__CUSTOM__', value: '__CUSTOM__', label: '+ Add Custom New Category...' }
+                        ]}
+                      />
                     )}
                   </div>
 
@@ -527,15 +526,19 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                   {!isRegisteringNewSupplier ? (
                     <div className="space-y-3">
                       <div className="flex gap-2 items-center">
-                        <select
-                          value={supplierId ?? ''}
-                          onChange={e => setSupplierId(e.target.value)}
-                          className="flex-1 bg-content1 border border-divider focus:border-primary px-3 py-2.5 text-xs text-foreground focus:outline-none transition-colors rounded-medium cursor-pointer font-bold"
-                        >
-                          {suppliers.filter(s => !s.isDeleted).map((sup) => (
-                            <option key={sup.id} value={sup.id}>{sup.name}</option>
-                          ))}
-                        </select>
+                        <div className="flex-1">
+                          <HeroSelect
+                            value={supplierId ?? ''}
+                            onValueChange={(val) => setSupplierId(val)}
+                            radius="md"
+                            placeholder="Select Supplier"
+                            items={suppliers.filter(s => !s.isDeleted).map((sup) => ({
+                              key: sup.id,
+                              value: sup.id,
+                              label: sup.name
+                            }))}
+                          />
+                        </div>
                         <HeroButton
                           type="button"
                           variant="flat"
@@ -707,16 +710,17 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                   </div>
 
                   <div className="space-y-1 relative pl-0">
-                    <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none">VAT Taxation Type</label>
-                    <select
+                    <HeroSelect
+                      label="VAT Taxation Type"
                       value={taxType ?? ''}
-                      onChange={e => setTaxType(e.target.value)}
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold cursor-pointer"
-                    >
-                      <option value="12% VAT">Standard 12% VAT</option>
-                      <option value="VAT Exempt">VAT Exempt</option>
-                      <option value="Zero Rated">Zero Rated (0% VAT)</option>
-                    </select>
+                      onValueChange={(val) => setTaxType(val)}
+                      radius="md"
+                      items={[
+                        { key: '12% VAT', value: '12% VAT', label: 'Standard 12% VAT' },
+                        { key: 'VAT Exempt', value: 'VAT Exempt', label: 'VAT Exempt' },
+                        { key: 'Zero Rated', value: 'Zero Rated', label: 'Zero Rated (0% VAT)' },
+                      ]}
+                    />
                   </div>
                 </div>
               </div>
@@ -742,20 +746,19 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       )}
                     </div>
                     {currentUser?.role === UserRole.ADMIN ? (
-                      <select
+                      <HeroSelect
                         value={targetBranchId ?? ''}
-                        onChange={e => {
-                          setTargetBranchId(e.target.value);
-                          setOrigin(e.target.value);
+                        onValueChange={(val) => {
+                          setTargetBranchId(val);
+                          setOrigin(val);
                         }}
-                        className="w-full bg-content2 border border-divider focus:border-primary px-3 py-2 text-xs font-bold text-foreground focus:outline-none transition-colors rounded-medium cursor-pointer"
-                      >
-                        {branches.filter(b => !b.isDeleted).map(b => (
-                          <option key={b.id} value={b.id}>
-                            {getBranchOptionLabel(b)}
-                          </option>
-                        ))}
-                      </select>
+                        radius="md"
+                        items={branches.filter(b => !b.isDeleted).map(b => ({
+                          key: b.id,
+                          value: b.id,
+                          label: getBranchOptionLabel(b)
+                        }))}
+                      />
                     ) : (
                       <div className="px-3 py-2 text-xs font-bold text-foreground bg-content2 rounded-medium border border-divider flex items-center justify-between">
                         <span>{branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || currentUser?.branchAssignmentId}</span>

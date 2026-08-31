@@ -209,20 +209,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
               key={cat.id}
               type="button"
               onClick={() => handleCategoryClick(cat)}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer group ${
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer group active:scale-[0.98] ${
                 isCategoryActive
-                  ? "bg-primary text-primary-foreground shadow-sm font-extrabold"
-                  : "text-default-600 hover:text-foreground hover:bg-default-100/70 font-medium"
+                  ? "bg-white text-zinc-900 shadow-xs border border-divider/60 dark:bg-zinc-800 dark:text-white dark:border-white/10"
+                  : "text-default-600 dark:text-zinc-400 hover:text-foreground hover:bg-default-100/70 dark:hover:bg-zinc-800/50"
               }`}
               title={`Open ${cat.name}`}
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <Icon
                   className={`h-4 w-4 shrink-0 transition-colors ${
-                    isCategoryActive ? "text-primary-foreground" : "text-default-400 group-hover:text-foreground"
+                    isCategoryActive ? "text-primary dark:text-primary-300" : "text-default-400 group-hover:text-foreground"
                   }`}
                 />
-                <span className="truncate text-xs font-bold">
+                <span className="truncate text-xs font-semibold tracking-tight">
                   {cat.name}
                 </span>
               </div>
@@ -279,14 +279,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {isSidebarExpanded && (
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-1">
-                  <span className="text-xs font-black text-foreground truncate leading-tight">
+                  <span className="text-xs font-semibold text-foreground truncate leading-tight tracking-tight">
                     {currentUser.fullName || "Operator"}
                   </span>
-                  <span className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded-md border uppercase ${roleBadge.bg}`}>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${roleBadge.bg}`}>
                     {roleBadge.label}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-[10px] text-default-400 font-medium truncate mt-0.5">
+                <div className="flex items-center gap-1.5 text-[11px] text-default-400 font-normal truncate mt-0.5">
                   <Store className="h-3 w-3 text-primary shrink-0" />
                   <span className="truncate">{branchName}</span>
                 </div>

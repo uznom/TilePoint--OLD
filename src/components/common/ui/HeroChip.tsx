@@ -164,18 +164,18 @@ export const HeroChip: React.FC<HeroChipProps> = ({
       default:
         switch (resolvedColor) {
           case 'primary':
-            return { container: 'bg-primary-50 text-primary-600 dark:bg-primary/20 dark:text-primary border border-primary/20', dot: 'bg-primary' };
+            return { container: 'bg-primary-50 text-primary-600 dark:bg-primary/15 dark:text-primary border border-primary/20', dot: 'bg-primary' };
           case 'secondary':
-            return { container: 'bg-secondary-50 text-secondary-600 dark:bg-secondary/20 dark:text-secondary border border-secondary/20', dot: 'bg-secondary' };
+            return { container: 'bg-secondary-50 text-secondary-600 dark:bg-secondary/15 dark:text-secondary border border-secondary/20', dot: 'bg-secondary' };
           case 'success':
-            return { container: 'bg-success-50 text-success-600 dark:bg-success/20 dark:text-success border border-success/20', dot: 'bg-success' };
+            return { container: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400 border border-emerald-500/20', dot: 'bg-emerald-500' };
           case 'warning':
-            return { container: 'bg-warning-50 text-warning-600 dark:bg-warning/20 dark:text-warning border border-warning/20', dot: 'bg-warning' };
+            return { container: 'bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400 border border-amber-500/20', dot: 'bg-amber-500' };
           case 'danger':
-            return { container: 'bg-danger-50 text-danger-600 dark:bg-danger/20 dark:text-danger border border-danger/20', dot: 'bg-danger' };
+            return { container: 'bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400 border border-rose-500/20', dot: 'bg-rose-500' };
           case 'default':
           default:
-            return { container: 'bg-default-100 text-default-700 dark:text-default-300 border border-default-200/50', dot: 'bg-default-500' };
+            return { container: 'bg-default-100 text-default-700 dark:bg-zinc-800/80 dark:text-zinc-300 border border-divider/60 dark:border-white/5', dot: 'bg-default-500' };
         }
     }
   };
@@ -199,12 +199,12 @@ export const HeroChip: React.FC<HeroChipProps> = ({
   const getSizeClasses = () => {
     switch (size) {
       case 'sm':
-        return 'text-[10px] h-6 px-2 gap-1';
+        return 'text-[10px] h-5 px-2 gap-1 font-semibold';
       case 'lg':
-        return 'text-xs h-8 px-3.5 gap-2';
+        return 'text-xs h-8 px-3.5 gap-2 font-semibold';
       case 'md':
       default:
-        return 'text-[11px] h-7 px-2.5 gap-1.5';
+        return 'text-[11px] h-6 px-2.5 gap-1.5 font-semibold';
     }
   };
 
@@ -215,7 +215,7 @@ export const HeroChip: React.FC<HeroChipProps> = ({
     <span
       id={id}
       onClick={onClick}
-      className={`inline-flex items-center justify-center font-bold tracking-wide select-none transition-colors duration-150 ${getRadiusClasses()} ${getSizeClasses()} ${styles.container} ${onClick ? 'cursor-pointer active:scale-95' : ''} ${className}`}
+      className={`inline-flex items-center justify-center font-sans font-semibold tracking-tight select-none transition-colors duration-150 ${getRadiusClasses()} ${getSizeClasses()} ${styles.container} ${onClick ? 'cursor-pointer active:scale-95' : ''} ${className}`}
     >
       {avatar && <span className="shrink-0 -ml-1 mr-1">{avatar}</span>}
       {startContent && <span className="shrink-0">{startContent}</span>}

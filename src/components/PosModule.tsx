@@ -44,7 +44,7 @@ import { formatCurrency } from "../utils/formatters";
 import { CalculatorModule } from "./CalculatorModule";
 import { ToastNotification } from "./ToastNotification";
 import { useReceiptFontSize } from "./ReceiptFontSizeControl";
-
+import { HeroDropdownSelect } from "./common/ui/HeroDropdown";
 import { formatTin } from '../utils/formatters';
 
 interface PosModuleProps {
@@ -3198,7 +3198,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
  Settlement Method
  </label>
- <div className="grid grid-cols-3 gap-1.5">
+ <div className="grid grid-cols-3 gap-1.5 font-sans">
  {(
     [
       { name: `Cash`, label: `Cash`, color: `border-emerald-500/25 text-emerald-600 dark:text-emerald-400 bg-emerald-500/5`, activeColor: `bg-emerald-600 border-emerald-600 text-white` },
@@ -3219,13 +3219,13 @@ export const PosModule: React.FC<PosModuleProps> = ({
           setAmountTendered("");
         }
       }}
-      className={`py-1.5 px-0.5 text-[9px] rounded-lg border font-black select-none text-center transition-all cursor-pointer ${
+      className={`py-2 px-1 text-xs rounded-full border font-semibold select-none text-center transition-all cursor-pointer active:scale-[0.97] ${
         paymentMethod === method.name
-          ? `${method.activeColor} shadow-md scale-[1.02]`
-          : `bg-content1 border-divider/40 hover:bg-default-100 ${method.color}`
+          ? `${method.activeColor} shadow-xs`
+          : `bg-default-100 dark:bg-zinc-800 border-divider/40 hover:bg-default-200 dark:hover:bg-zinc-700 ${method.color}`
       }`}
     >
-      <span className="flex items-center justify-center gap-1">
+      <span className="flex items-center justify-center gap-1 font-sans">
         {method.label}
       </span>
     </button>
@@ -3233,8 +3233,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  </div>
 
- <div className="sm:col-span-6 space-y-1">
- <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
+ <div className="sm:col-span-6 space-y-1 font-sans">
+ <label className="text-xs font-semibold text-foreground dark:text-zinc-200 tracking-tight pl-1 block font-sans">
  Amount Tendered (PHP)
  </label>
  <input
@@ -3244,7 +3244,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={amountTendered ?? ''}
  onChange={(e) => setAmountTendered(e.target.value)}
  placeholder={grandTotal.toFixed(0)}
- className="w-full bg-content1 border-b-2 border-divider px-3 py-1.5 text-xs text-foreground font-bold focus:outline-none focus:border-primary transition-colors disabled:opacity-45 disabled:cursor-not-allowed rounded-lg"
+ className="w-full bg-default-100 dark:bg-zinc-900 border border-divider/40 px-3.5 py-2 text-xs text-foreground font-semibold tracking-tight focus:outline-none focus:border-primary transition-colors disabled:opacity-45 disabled:cursor-not-allowed rounded-xl font-sans tabular-nums"
  />
 
 
@@ -3622,27 +3622,30 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
  </div>
 
- {/* Payment Filter */}
- <div className="flex flex-col gap-1.5">
- <span className="text-[10px] text-default-500 font-black uppercase tracking-wider flex items-center gap-1.5">
- <span className="h-2 w-2 bg-primary rounded-full" />
- <span>Payment Method</span>
- </span>
- <select
- value={ledgerPaymentFilter ?? ''}
- onChange={(e) => {
- setLedgerPaymentFilter(e.target.value);
- setSalesPage(1);
- }}
- className="w-full text-[11px] font-sans font-black bg-background border border-divider/40 focus:border-primary px-3 py-2 rounded-xl text-primary focus:outline-none uppercase tracking-wider transition-colors cursor-pointer shadow-sm"
- >
- <option value="All">All Payments</option>
-  <option value="Cash">Cash Only</option>
-  <option value="GCash">GCash Only</option>
-  <option value="Maya">Maya Only</option>
-  <option value="Card / Bank Terminal">Card / Bank Terminal Only</option>
-  <option value="Member Credit">Member Credit Only</option></select>
- </div>
+  {/* Payment Filter */}
+  <div className="flex flex-col gap-1.5">
+    <span className="text-[10px] text-default-500 font-black uppercase tracking-wider flex items-center gap-1.5">
+      <span className="h-2 w-2 bg-primary rounded-full" />
+      <span>Payment Method</span>
+    </span>
+    <HeroDropdownSelect
+      items={[
+        { key: 'All', label: 'All Payments' },
+        { key: 'Cash', label: 'Cash Only' },
+        { key: 'GCash', label: 'GCash Only' },
+        { key: 'Maya', label: 'Maya Only' },
+        { key: 'Card / Bank Terminal', label: 'Card / Bank Terminal Only' },
+        { key: 'Member Credit', label: 'Member Credit Only' },
+      ]}
+      selectedKey={ledgerPaymentFilter ?? 'All'}
+      onSelectionChange={(val) => {
+        setLedgerPaymentFilter(val);
+        setSalesPage(1);
+      }}
+      size="sm"
+      variant="pill"
+    />
+  </div>
 
  {/* Date Selector */}
  <div className="flex flex-col gap-1.5">
@@ -4196,25 +4199,25 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <label className="text-xs font-bold text-primary uppercase tracking-wider block">
  Target Item for Discount
  </label>
- <select
- value={selectedDiscountItemIndex === null ? "ALL" : selectedDiscountItemIndex}
- onChange={(e) => {
- const val = e.target.value;
- setSelectedDiscountItemIndex(val === "ALL" ? null : parseInt(val, 10));
- }}
- className="w-full bg-content1 border border-divider/30 text-xs font-bold rounded-xl px-3.5 py-2.5 text-foreground focus:outline-none focus:border-primary"
- >
- <option value="ALL">Apply to ALL Items in Cart ({cart.length} item{cart.length === 1 ? '' : 's'})</option>
- {cart.map((it, i) => {
+ <HeroDropdownSelect
+ items={[
+ { key: 'ALL', label: `Apply to ALL Items in Cart (${cart.length} item${cart.length === 1 ? '' : 's'})` },
+ ...cart.map((it, i) => {
  const baseP = getBranchPrice(it.product);
  const p = it.overridePrice !== undefined ? it.overridePrice : baseP;
- return (
- <option key={i} value={i}>
- Item #{i + 1}: {it.product.productName} ({formatCurrency(p)}/unit x {it.quantity})
- </option>
- );
- })}
- </select>
+ return {
+ key: String(i),
+ label: `Item #${i + 1}: ${it.product.productName} (${formatCurrency(p)}/unit x ${it.quantity})`,
+ };
+ }),
+ ]}
+ selectedKey={selectedDiscountItemIndex === null ? 'ALL' : String(selectedDiscountItemIndex)}
+ onSelectionChange={(val) => {
+ setSelectedDiscountItemIndex(val === 'ALL' ? null : parseInt(val, 10));
+ }}
+ size="sm"
+ variant="pill"
+ />
  </div>
 
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -134,12 +134,12 @@ export const HeroAlert: React.FC<HeroAlertProps> = ({
 
       <div className="flex-1 min-w-0 font-sans">
         {title && (
-          <h5 className="text-xs sm:text-sm font-extrabold uppercase tracking-wide leading-snug">
+          <h5 className="text-xs sm:text-sm font-semibold tracking-tight leading-snug">
             {title}
           </h5>
         )}
         {description && (
-          <div className="text-xs opacity-90 leading-relaxed mt-0.5 font-medium">
+          <div className="text-xs opacity-90 leading-relaxed mt-0.5 font-normal">
             {description}
           </div>
         )}

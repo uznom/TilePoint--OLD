@@ -9,7 +9,8 @@ import { motion } from 'motion/react';
 import { useDb } from '../context/DbContext';
 import { User, UserRole, UserStatus } from '../types/db';
 import { useResponsivePageSize, TablePagination } from './TablePagination';
-import { HeroChip, HeroButton } from './common/ui';
+import { HeroChip, HeroButton, HeroSelect } from './common/ui';
+import { HeroDropdownSelect } from './common/ui/HeroDropdown';
 import { HeroTable } from './common/ui/HeroTable';
 import { ToastNotification } from './ToastNotification';
 import { useMultiSort } from '../hooks/useMultiSort';
@@ -600,44 +601,54 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
 
               {/* Role Filter */}
               <div className="sm:col-span-3 lg:col-span-3">
-                <select
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-background border border-divider/40 rounded-xl text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 font-medium cursor-pointer"
-                >
-                  <option value="ALL">All Roles</option>
-                  <option value={UserRole.ADMIN}>Admin</option>
-                  <option value={UserRole.MANAGER}>Manager</option>
-                  <option value={UserRole.CASHIER}>Cashier</option>
-                  <option value={UserRole.STAFF}>Staff</option>
-                </select>
+                <HeroDropdownSelect
+                  items={[
+                    { key: 'ALL', label: 'All Roles' },
+                    { key: UserRole.ADMIN, label: 'Admin' },
+                    { key: UserRole.MANAGER, label: 'Manager' },
+                    { key: UserRole.CASHIER, label: 'Cashier' },
+                    { key: UserRole.STAFF, label: 'Staff' },
+                  ]}
+                  selectedKey={roleFilter}
+                  onSelectionChange={(val) => setRoleFilter(val)}
+                  size="sm"
+                  variant="pill"
+                  className="w-full"
+                />
               </div>
 
               {/* Branch Filter */}
               <div className="sm:col-span-3 lg:col-span-2">
-                <select
-                  value={branchFilter}
-                  onChange={(e) => setBranchFilter(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-background border border-divider/40 rounded-xl text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 font-medium cursor-pointer"
-                >
-                  <option value="ALL">All Branches</option>
-                  {branches.map(b => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
+                <HeroDropdownSelect
+                  items={[
+                    { key: 'ALL', label: 'All Branches' },
+                    ...branches.map((b) => ({
+                      key: b.id,
+                      label: b.name,
+                    })),
+                  ]}
+                  selectedKey={branchFilter}
+                  onSelectionChange={(val) => setBranchFilter(val)}
+                  size="sm"
+                  variant="pill"
+                  className="w-full"
+                />
               </div>
 
               {/* Status Filter */}
               <div className="sm:col-span-12 lg:col-span-2">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-background border border-divider/40 rounded-xl text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 font-medium cursor-pointer"
-                >
-                  <option value="ALL">All Status</option>
-                  <option value="Active">Active Only</option>
-                  <option value="Disabled">Disabled Only</option>
-                </select>
+                <HeroDropdownSelect
+                  items={[
+                    { key: 'ALL', label: 'All Status' },
+                    { key: 'Active', label: 'Active Only' },
+                    { key: 'Disabled', label: 'Disabled Only' },
+                  ]}
+                  selectedKey={statusFilter}
+                  onSelectionChange={(val) => setStatusFilter(val)}
+                  size="sm"
+                  variant="pill"
+                  className="w-full"
+                />
               </div>
             </div>
 
@@ -1576,17 +1587,20 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-primary uppercase tracking-wider">Operational Role Designation</label>
-                <select
+                <HeroSelect
+                  label="Operational Role Designation"
                   value={role ?? ''}
-                  onChange={e => setRole(e.target.value as UserRole)}
-                  className="w-full bg-background border border-divider/40 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-semibold cursor-pointer"
-                >
-                  {isUserAdmin && <option value={UserRole.ADMIN}>Admin - Full Corporate Enterprise Access</option>}
-                  {isUserAdmin && <option value={UserRole.MANAGER}>Manager - Branch Station Supervisor</option>}
-                  <option value={UserRole.CASHIER}>Cashier - POS Sales & Till Cash Register</option>
-                  <option value={UserRole.STAFF}>Staff - Logistics & Warehouse Checker</option>
-                </select>
+                  onValueChange={val => setRole(val as UserRole)}
+                  radius="md"
+                  items={[
+                    ...(isUserAdmin ? [
+                      { key: UserRole.ADMIN, value: UserRole.ADMIN, label: 'Admin - Full Corporate Enterprise Access' },
+                      { key: UserRole.MANAGER, value: UserRole.MANAGER, label: 'Manager - Branch Station Supervisor' },
+                    ] : []),
+                    { key: UserRole.CASHIER, value: UserRole.CASHIER, label: 'Cashier - POS Sales & Till Cash Register' },
+                    { key: UserRole.STAFF, value: UserRole.STAFF, label: 'Staff - Logistics & Warehouse Checker' },
+                  ]}
+                />
               </div>
 
               {(role === UserRole.ADMIN || role === UserRole.MANAGER) && (
@@ -1609,16 +1623,17 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
               )}
 
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-primary uppercase tracking-wider">Branch Station Assignment</label>
-                <select
+                <HeroSelect
+                  label="Branch Station Assignment"
                   value={branchAssignmentId ?? ''}
-                  onChange={e => setBranchAssignmentId(e.target.value)}
-                  className="w-full bg-background border border-divider/40 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-semibold cursor-pointer"
-                >
-                  {branches.filter(b => isUserAdmin || b.id === userBranchId).map(b => (
-                    <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
-                  ))}
-                </select>
+                  onValueChange={val => setBranchAssignmentId(val)}
+                  radius="md"
+                  items={branches.filter(b => isUserAdmin || b.id === userBranchId).map(b => ({
+                    key: b.id,
+                    value: b.id,
+                    label: getBranchOptionLabel(b),
+                  }))}
+                />
               </div>
             </div>
 

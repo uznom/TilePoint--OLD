@@ -15,14 +15,17 @@ import {
   Calculator,
   Store,
   Eye,
-  X
+  X,
+  Calendar,
+  RotateCw
 } from 'lucide-react';
 import { useDb } from '../context/DbContext';
 import { HeroCard } from './common/ui/HeroCard';
 import { HeroButton } from './common/ui/HeroButton';
 import { HeroModal } from './common/ui/HeroModal';
 import { HeroTable } from './common/ui/HeroTable';
-import { HeroDropdownSelect } from './common/ui/HeroDropdown';
+import { HeroDropdownSelect, HeroDropdownItem } from './common/ui/HeroDropdown';
+import { HeroSelect } from './common/ui/HeroSelect';
 import { HeroPagination } from './common/ui/HeroPagination';
 import { Sale } from '../types/db';
 import { isSameBranch } from '../lib/branchUtils';
@@ -52,6 +55,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   // Active time range for revenue graph
   const [timeRange, setTimeRange] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | 'All'>('1M');
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
+
+  // Period filter and refresh
+  const [dashboardPeriod, setDashboardPeriod] = useState<string>('monthly');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const periodFilterItems: HeroDropdownItem[] = useMemo(() => [
+    { key: 'daily', label: 'Daily' },
+    { key: 'weekly', label: 'Weekly' },
+    { key: 'monthly', label: 'Monthly' },
+    { key: 'yearly', label: 'Yearly' },
+  ], []);
 
   // Search filter and pagination for recent transactions
   const [searchTxnQuery, setSearchTxnQuery] = useState('');
@@ -531,20 +545,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   }, [calcLength, calcWidth, calcTileSize, calcWastage]);
 
   return (
-    <div className="space-y-6 w-full pb-20 md:pb-16 animate-fade-in text-foreground">
+    <div className="space-y-6 w-full pb-20 md:pb-16 animate-fade-in text-foreground font-sans">
       {/* 1. GREETING & OPERATIONAL HEADER WITH HEROUI ACTION SUITE */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
               {greeting}, {displayName}
             </h1>
-            <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase tracking-wide">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400 border border-emerald-500/20">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Live Terminal
             </span>
           </div>
-          <p className="text-xs sm:text-sm text-default-500 mt-1 flex items-center gap-1.5">
+          <p className="text-xs sm:text-sm text-default-500 mt-1 flex items-center gap-1.5 font-normal">
             <Store className="h-3.5 w-3.5 text-primary" />
             <span>{currentBranch ? currentBranch.name : 'TilePoint Central Enterprise'}</span>
           </p>
@@ -558,11 +572,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             variant="solid"
             color="primary"
             size="md"
+            radius="full"
             startIcon={<ShoppingCart className="h-4 w-4" />}
-            className="font-bold shadow-md shadow-primary/20"
+            className="font-semibold shadow-sm"
           >
             ERP Checkout
-            <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded bg-white/20 text-white font-mono">F1</span>
+            <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-white/20 text-white font-semibold">F1</span>
           </HeroButton>
 
           {/* Stock Lookup */}
@@ -570,6 +585,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             onClick={() => setIsStockLookupOpen(true)}
             variant="flat"
             size="md"
+            radius="full"
             startIcon={<Layers className="h-4 w-4 text-primary" />}
             className="font-semibold"
           >
@@ -581,6 +597,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             onClick={() => onNavigate('inventory-transfer')}
             variant="flat"
             size="md"
+            radius="full"
             startIcon={<ArrowLeftRight className="h-4 w-4 text-sky-500" />}
             className="font-semibold"
           >
@@ -592,11 +609,39 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             onClick={() => setIsQuickCalcOpen(true)}
             variant="flat"
             size="md"
+            radius="full"
             startIcon={<Calculator className="h-4 w-4 text-amber-500" />}
             className="font-semibold"
           >
             Tile Calc
           </HeroButton>
+
+          {/* Refresh & Period Filter Dropdown (HeroUI v3 Segmented Capsule Pill) */}
+          <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
+            <HeroButton
+              isIconOnly
+              size="md"
+              variant="flat"
+              radius="full"
+              onClick={() => {
+                setIsRefreshing(true);
+                setTimeout(() => setIsRefreshing(false), 500);
+              }}
+              className="bg-default-100 hover:bg-default-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-foreground"
+              aria-label="Refresh Metrics"
+            >
+              <RotateCw className={`h-4 w-4 text-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
+            </HeroButton>
+
+            <HeroDropdownSelect
+              items={periodFilterItems}
+              selectedKey={dashboardPeriod}
+              onSelectionChange={(k) => setDashboardPeriod(k)}
+              startIcon={<Calendar className="h-4 w-4" />}
+              size="md"
+              variant="pill"
+            />
+          </div>
         </div>
       </div>
 
@@ -604,28 +649,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Revenue */}
         <HeroCard
-          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-300"
+          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 dark:bg-[#18181B] shadow-xs"
           variant="bordered"
+          radius="2xl"
         >
           <div className="flex items-start justify-between">
-            <span className="text-xs font-semibold text-default-500 uppercase tracking-wider">
+            <span className="text-xs font-medium text-default-500 tracking-tight">
               Total Gross Sales
             </span>
             <span
-              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                 momGrowth >= 0
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                  ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400 border border-emerald-500/20'
+                  : 'bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400 border border-rose-500/20'
               }`}
             >
               {momGrowth >= 0 ? `+${momGrowth.toFixed(1)}%` : `${momGrowth.toFixed(1)}%`} MoM
             </span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-foreground">
+            <div className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground tabular-nums">
               ₱{totalRevenue.toLocaleString('en-PH', { maximumFractionDigits: 2 })}
             </div>
-            <div className="text-xs text-default-400 mt-1 flex items-center gap-1.5 font-medium">
+            <div className="text-xs text-default-400 mt-1 flex items-center gap-1.5 font-normal">
               <Receipt className="h-3.5 w-3.5 text-primary" />
               <span>{sales.filter((s) => !s.isDeleted).length} Invoices Recorded</span>
             </div>
@@ -634,22 +680,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Inventory Stock Valuation */}
         <HeroCard
-          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-300"
+          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 dark:bg-[#18181B] shadow-xs"
           variant="bordered"
+          radius="2xl"
         >
           <div className="flex items-start justify-between">
-            <span className="text-xs font-semibold text-default-500 uppercase tracking-wider">
+            <span className="text-xs font-medium text-default-500 tracking-tight">
               Catalog Asset Value
             </span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-600 dark:bg-sky-500/15 dark:text-sky-400 border border-sky-500/20">
               {activeSkuCount} Active SKUs
             </span>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-foreground">
+            <div className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground tabular-nums">
               ₱{totalInventoryValuation.toLocaleString('en-PH', { maximumFractionDigits: 0 })}
             </div>
-            <div className="text-xs text-default-400 mt-1 flex items-center gap-1.5 font-medium">
+            <div className="text-xs text-default-400 mt-1 flex items-center gap-1.5 font-normal">
               <Package className="h-3.5 w-3.5 text-sky-500" />
               <button
                 type="button"
@@ -664,25 +711,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Top Performer Tile - Clickable to open Top 20 & Slow 10 Velocity Analytics */}
         <HeroCard
-          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-primary/60 hover:shadow-md cursor-pointer group"
+          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-primary/60 hover:shadow-sm cursor-pointer group bg-content1 dark:bg-[#18181B] shadow-xs"
           variant="bordered"
+          radius="2xl"
           onClick={() => setIsTopSellingModalOpen(true)}
         >
           <div className="flex items-start justify-between">
-            <span className="text-xs font-semibold text-default-500 uppercase tracking-wider group-hover:text-primary transition-colors">
+            <span className="text-xs font-medium text-default-500 tracking-tight group-hover:text-primary transition-colors">
               Top Selling Product
             </span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 group-hover:bg-amber-500/20 transition-all">
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400 border border-amber-500/20 group-hover:bg-amber-100 transition-all">
               Top 20 / Slow 10
             </span>
           </div>
           <div className="mt-3">
-            <div className="text-base font-black text-foreground truncate group-hover:text-primary transition-colors" title={topProduct.name}>
+            <div className="text-lg font-bold text-foreground tracking-tight truncate group-hover:text-primary transition-colors" title={topProduct.name}>
               {topProduct.name}
             </div>
-            <div className="text-xs text-default-400 mt-1 flex items-center justify-between font-medium">
+            <div className="text-xs text-default-400 mt-1 flex items-center justify-between font-normal">
               <span>{topProduct.qty} Units Sold</span>
-              <span className="text-emerald-500 font-bold">
+              <span className="text-emerald-500 font-semibold tabular-nums">
                 ₱{topProduct.revenue.toLocaleString('en-PH')}
               </span>
             </div>
@@ -691,38 +739,39 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Operational Pulse & Alerts */}
         <HeroCard
-          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-300"
+          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 dark:bg-[#18181B] shadow-xs"
           variant="bordered"
+          radius="2xl"
         >
           <div className="flex items-start justify-between">
-            <span className="text-xs font-semibold text-default-500 uppercase tracking-wider">
+            <span className="text-xs font-medium text-default-500 tracking-tight">
               Operations & Alerts
             </span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
               Active Queue
             </span>
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
             <div
               onClick={() => onNavigate('deliveries-panel')}
-              className="p-1.5 rounded-xl bg-default-100/60 hover:bg-default-100 cursor-pointer transition-colors"
+              className="p-2 rounded-xl bg-default-100/70 dark:bg-zinc-800/60 hover:bg-default-200/70 cursor-pointer transition-colors"
             >
-              <div className="text-sm font-black text-sky-500">{pendingDeliveriesCount}</div>
-              <div className="text-[9.5px] text-default-400 font-semibold uppercase">Cargo</div>
+              <div className="text-sm font-bold text-sky-500 tabular-nums">{pendingDeliveriesCount}</div>
+              <div className="text-[10px] text-default-400 font-medium">Cargo</div>
             </div>
             <div
               onClick={() => onNavigate('pos')}
-              className="p-1.5 rounded-xl bg-default-100/60 hover:bg-default-100 cursor-pointer transition-colors"
+              className="p-2 rounded-xl bg-default-100/70 dark:bg-zinc-800/60 hover:bg-default-200/70 cursor-pointer transition-colors"
             >
-              <div className="text-sm font-black text-amber-500">{parkedSalesCount}</div>
-              <div className="text-[9.5px] text-default-400 font-semibold uppercase">Parked</div>
+              <div className="text-sm font-bold text-amber-500 tabular-nums">{parkedSalesCount}</div>
+              <div className="text-[10px] text-default-400 font-medium">Parked</div>
             </div>
             <div
               onClick={() => onNavigate('inventory-stocks')}
-              className="p-1.5 rounded-xl bg-default-100/60 hover:bg-default-100 cursor-pointer transition-colors"
+              className="p-2 rounded-xl bg-default-100/70 dark:bg-zinc-800/60 hover:bg-default-200/70 cursor-pointer transition-colors"
             >
-              <div className="text-sm font-black text-rose-500">{lowStockCount}</div>
-              <div className="text-[9.5px] text-default-400 font-semibold uppercase">Low Stock</div>
+              <div className="text-sm font-bold text-rose-500 tabular-nums">{lowStockCount}</div>
+              <div className="text-[10px] text-default-400 font-medium">Low Stock</div>
             </div>
           </div>
         </HeroCard>
@@ -733,33 +782,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         {/* LEFT COLUMN (2 COLS): SPLINE REVENUE CHART & RECENT TRANSACTIONS */}
         <div className="lg:col-span-2 space-y-6">
           {/* Revenue Analytics Spline Chart */}
-          <HeroCard className="p-6 relative" variant="bordered">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-divider/20">
+          <HeroCard className="p-6 relative bg-content1 dark:bg-[#18181B] shadow-xs" variant="bordered" radius="2xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-divider/40">
               <div>
-                <span className="text-xs font-bold text-default-500 uppercase tracking-wider">
+                <span className="text-xs font-medium text-default-500 tracking-tight">
                   Revenue Analytics & Sales Trajectory
                 </span>
                 <div className="flex items-baseline gap-3 mt-1">
-                  <span className="text-2xl sm:text-3xl font-black text-foreground">
+                  <span className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground tabular-nums">
                     {chartData.displayRevenue}
                   </span>
-                  <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400 border border-emerald-500/20">
                     {chartData.change}
                   </span>
                 </div>
               </div>
 
-              {/* Time Range Pills (HeroUI Style) */}
-              <div className="flex items-center bg-content2 dark:bg-content1/80 p-1 rounded-xl border border-divider/25 self-start sm:self-auto">
+              {/* Time Range Pills (HeroUI Style Segmented Pill) */}
+              <div className="flex items-center bg-default-100 dark:bg-zinc-800/80 p-1 rounded-full border border-divider/40 dark:border-white/5 self-start sm:self-auto shadow-xs">
                 {(['1D', '1W', '1M', '3M', '1Y', 'All'] as const).map((r) => (
                   <button
                     key={r}
                     type="button"
                     onClick={() => setTimeRange(r)}
-                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                    className={`px-3 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer font-sans active:scale-[0.97] ${
                       timeRange === r
-                        ? 'bg-background text-foreground shadow-xs'
-                        : 'text-default-400 hover:text-foreground'
+                        ? 'bg-white text-zinc-900 dark:bg-zinc-700 dark:text-white shadow-xs'
+                        : 'text-default-500 dark:text-zinc-400 hover:text-foreground'
                     }`}
                   >
                     {r}
@@ -856,17 +905,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </HeroCard>
 
           {/* Recent Invoices & Transactions Table with HeroUI v3 design language */}
-          <HeroCard className="p-5 sm:p-6" variant="bordered">
+          <HeroCard className="p-5 sm:p-6 bg-content1 dark:bg-[#18181B] shadow-xs" variant="bordered" radius="2xl">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
               <div>
-                <h3 className="text-base font-extrabold text-foreground">Recent POS Transactions</h3>
-                <p className="text-xs text-default-400 mt-0.5">Live store sales invoices and settlement records with pagination</p>
+                <h3 className="text-base font-bold tracking-tight text-foreground">Recent POS Transactions</h3>
+                <p className="text-xs text-default-400 mt-0.5 font-normal">Live store sales invoices and settlement records with pagination</p>
               </div>
 
               {/* Filters & Actions */}
               <div className="flex items-center gap-2.5 flex-wrap">
                 <div className="relative min-w-[180px] sm:min-w-[200px]">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-default-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-default-400" />
                   <input
                     type="text"
                     value={searchTxnQuery}
@@ -875,7 +924,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                       setTablePage(1);
                     }}
                     placeholder="Search invoice or customer..."
-                    className="w-full bg-content2 dark:bg-content1/70 border border-divider/40 text-foreground text-xs rounded-xl pl-8 pr-3 py-2 outline-none focus:border-primary/50 transition-colors"
+                    className="w-full bg-default-100 dark:bg-zinc-800/80 border border-divider/40 text-foreground text-xs rounded-full pl-9 pr-3.5 py-2 outline-none focus:border-primary/50 transition-colors font-sans"
                   />
                 </div>
 
@@ -896,7 +945,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   onClick={() => onNavigate('ledger')}
                   variant="light"
                   size="sm"
-                  className="text-primary font-bold ml-auto sm:ml-0"
+                  radius="full"
+                  className="text-primary font-semibold ml-auto sm:ml-0"
                 >
                   All Invoices →
                 </HeroButton>
@@ -985,8 +1035,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                       className="cursor-pointer"
                     >
                       <HeroTable.Cell align="start">
-                        <div className="font-bold text-foreground">{sale.saleNumber}</div>
-                        <div className="text-[10px] text-default-400">
+                        <div className="font-semibold text-foreground tracking-tight">{sale.saleNumber}</div>
+                        <div className="text-[11px] text-default-400">
                           {new Date(sale.createdAt || Date.now()).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit'
@@ -994,30 +1044,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                         </div>
                       </HeroTable.Cell>
                       <HeroTable.Cell align="start">
-                        <div className="font-semibold text-foreground truncate max-w-[140px]">
+                        <div className="font-medium text-foreground truncate max-w-[140px]">
                           {sale.customerName || 'Walk-In Customer'}
                         </div>
                       </HeroTable.Cell>
                       <HeroTable.Cell align="start">
-                        <div className="text-default-500 truncate max-w-[120px]">
+                        <div className="text-default-500 truncate max-w-[120px] font-normal">
                           {sale.cashierName || 'Cashier'}
                         </div>
                       </HeroTable.Cell>
                       <HeroTable.Cell align="center">
                         <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase inline-block ${
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase inline-block ${
                             sale.paymentMethod?.toUpperCase() === 'CASH'
-                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                              ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400 border border-emerald-500/20'
                               : sale.paymentMethod?.toUpperCase() === 'GCASH'
-                              ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20'
-                              : 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20'
+                              ? 'bg-sky-50 text-sky-600 dark:bg-sky-500/15 dark:text-sky-400 border border-sky-500/20'
+                              : 'bg-purple-50 text-purple-600 dark:bg-purple-500/15 dark:text-purple-400 border border-purple-500/20'
                           }`}
                         >
                           {sale.paymentMethod || 'Cash'}
                         </span>
                       </HeroTable.Cell>
                       <HeroTable.Cell align="end">
-                        <span className="font-black text-foreground">
+                        <span className="font-bold text-foreground tabular-nums">
                           ₱{(sale.grandTotal || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                         </span>
                       </HeroTable.Cell>
@@ -1028,10 +1078,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                             e.stopPropagation();
                             setSelectedSale(sale);
                           }}
-                          className="p-1.5 rounded-lg hover:bg-default-200 text-default-400 hover:text-foreground transition-colors cursor-pointer"
+                          className="w-7 h-7 rounded-full bg-default-100 hover:bg-default-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-default-400 hover:text-foreground transition-all flex items-center justify-center cursor-pointer active:scale-95 mx-auto"
                           title="View Receipt Details"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-3.5 w-3.5" />
                         </button>
                       </HeroTable.Cell>
                     </HeroTable.Row>
@@ -1053,19 +1103,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5 text-default-400 text-xs">
-                    <span>Rows:</span>
-                    <select
-                      value={tableRowsPerPage}
-                      onChange={(e) => {
-                        setTableRowsPerPage(Number(e.target.value));
+                    <HeroDropdownSelect
+                      startIcon={<span>Rows:</span>}
+                      items={[
+                        { key: '5', label: '5' },
+                        { key: '10', label: '10' },
+                        { key: '20', label: '20' },
+                      ]}
+                      selectedKey={String(tableRowsPerPage)}
+                      onSelectionChange={(val) => {
+                        setTableRowsPerPage(Number(val));
                         setTablePage(1);
                       }}
-                      className="bg-content2 dark:bg-content1/70 border border-divider/40 text-foreground text-xs rounded-lg px-2 py-1 outline-none font-semibold cursor-pointer"
-                    >
-                      <option value={5}>5</option>
-                      <option value={10}>10</option>
-                      <option value={20}>20</option>
-                    </select>
+                      size="sm"
+                      variant="pill"
+                      className="min-w-[90px]"
+                    />
                   </div>
 
                   <HeroPagination
@@ -1421,29 +1474,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-default-500 font-bold block mb-1">Tile Dimensions</label>
-              <select
+              <HeroSelect
+                label="Tile Dimensions"
                 value={calcTileSize}
-                onChange={(e) => setCalcTileSize(e.target.value)}
-                className="w-full bg-content2 dark:bg-content1/70 border border-divider/30 rounded-xl px-3 py-2 text-foreground font-bold"
-              >
-                <option value="60x60">60x60 cm (1.44 m²/box)</option>
-                <option value="30x30">30x30 cm (1.00 m²/box)</option>
-                <option value="30x60">30x60 cm (1.44 m²/box)</option>
-                <option value="80x80">80x80 cm (1.92 m²/box)</option>
-              </select>
+                onValueChange={(val) => setCalcTileSize(val)}
+                radius="md"
+                items={[
+                  { key: '60x60', value: '60x60', label: '60x60 cm (1.44 m²/box)' },
+                  { key: '30x30', value: '30x30', label: '30x30 cm (1.00 m²/box)' },
+                  { key: '30x60', value: '30x60', label: '30x60 cm (1.44 m²/box)' },
+                  { key: '80x80', value: '80x80', label: '80x80 cm (1.92 m²/box)' },
+                ]}
+              />
             </div>
             <div>
-              <label className="text-default-500 font-bold block mb-1">Wastage / Cut Buffer</label>
-              <select
-                value={calcWastage}
-                onChange={(e) => setCalcWastage(Number(e.target.value))}
-                className="w-full bg-content2 dark:bg-content1/70 border border-divider/30 rounded-xl px-3 py-2 text-foreground font-bold"
-              >
-                <option value={5}>5% Standard</option>
-                <option value={10}>10% Recommended</option>
-                <option value={15}>15% Diagonal Pattern</option>
-              </select>
+              <HeroSelect
+                label="Wastage / Cut Buffer"
+                value={String(calcWastage)}
+                onValueChange={(val) => setCalcWastage(Number(val))}
+                radius="md"
+                items={[
+                  { key: '5', value: '5', label: '5% Standard' },
+                  { key: '10', value: '10', label: '10% Recommended' },
+                  { key: '15', value: '15', label: '15% Diagonal Pattern' },
+                ]}
+              />
             </div>
           </div>
 

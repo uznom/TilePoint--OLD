@@ -230,13 +230,10 @@ export const IdleScreen: React.FC = () => {
  {/* Giant Clock Face */}
  <h1 
  id="idle-screen-adaptive-clock"
- className="animate-roboto-flex text-[11vw] font-black leading-none text-[var(--heroui-foreground)] select-none whitespace-nowrap flex items-baseline justify-center gap-4"
- style={{
- fontFamily: "'Roboto Flex Variable', 'Roboto Flex', var(--font-sans)",
- }}
+ className="text-[11vw] font-bold tracking-tight leading-none text-[var(--heroui-foreground)] select-none whitespace-nowrap flex items-baseline justify-center gap-4 font-sans"
  >
  <span>{formatTimeParts(time).timeStr}</span>
- <span className="text-[3.5vw] font-extrabold text-[var(--heroui-primary)] tracking-wider uppercase ">
+ <span className="text-[3.5vw] font-bold text-[var(--heroui-primary)] tracking-tight uppercase ">
  {formatTimeParts(time).ampm}
  </span>
  </h1>

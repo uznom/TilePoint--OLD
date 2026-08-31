@@ -37,6 +37,7 @@ import { ConfirmationModal } from './ConfirmationModal';
 import { ToastNotification } from './ToastNotification';
 import { HeaderBar } from './common/HeaderBar';
 import { HeroButton } from './common/ui/HeroButton';
+import { HeroDropdownSelect } from './common/ui/HeroDropdown';
 
 function validateAndMapInboundReport(rawParsed: any): { errors: string[]; mapped?: any } {
   const errors: string[] = [];
@@ -1272,16 +1273,20 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
   <div className="sm:col-span-3 space-y-1">
   <label className="text-[10px] font-bold uppercase tracking-wider text-default-500 pl-0.5">Branch</label>
   {currentUser?.role === UserRole.ADMIN ? (
-  <select
-  value={adminBranchFilter ?? ''}
-  onChange={(e) => setAdminBranchFilter(e.target.value)}
-  className="w-full bg-content1 border border-divider/40 rounded-xl px-2.5 py-2 text-xs focus:outline-none focus:border-primary text-foreground"
-  >
-  <option value="ALL">All Branches</option>
-  {branches.map(b => (
-  <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
-  ))}
-  </select>
+    <HeroDropdownSelect
+      items={[
+        { key: 'ALL', label: 'All Branches' },
+        ...branches.map((b) => ({
+          key: b.id,
+          label: getBranchOptionLabel(b),
+        })),
+      ]}
+      selectedKey={adminBranchFilter ?? 'ALL'}
+      onSelectionChange={(val) => setAdminBranchFilter(val)}
+      size="sm"
+      variant="pill"
+      className="w-full"
+    />
   ) : (
   <div className="w-full bg-content2/60 border border-divider/20 rounded-xl px-3 py-2 text-xs font-bold text-foreground">
   {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
@@ -1291,15 +1296,18 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
 
   <div className="sm:col-span-3 space-y-1">
   <label className="text-[10px] font-bold uppercase tracking-wider text-default-500 pl-0.5">Status</label>
-  <select
-  value={adminStatusFilter ?? ''}
-  onChange={(e) => setAdminStatusFilter(e.target.value)}
-  className="w-full bg-content1 border border-divider/40 rounded-xl px-2.5 py-2 text-xs focus:outline-none focus:border-primary text-foreground"
-  >
-  <option value="ALL">All States</option>
-  <option value="Pending Audit">Pending Audit</option>
-  <option value="Verified">Verified</option>
-  </select>
+  <HeroDropdownSelect
+    items={[
+      { key: 'ALL', label: 'All States' },
+      { key: 'Pending Audit', label: 'Pending Audit' },
+      { key: 'Verified', label: 'Verified' },
+    ]}
+    selectedKey={adminStatusFilter ?? 'ALL'}
+    onSelectionChange={(val) => setAdminStatusFilter(val)}
+    size="sm"
+    variant="pill"
+    className="w-full"
+  />
   </div>
   </div>
 

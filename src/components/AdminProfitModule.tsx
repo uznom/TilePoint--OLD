@@ -16,6 +16,8 @@ const LazyProfitAnalytics = React.lazy(async () => {
 });
 import { HeroTable } from "./common/ui/HeroTable";
 import { HeroButton } from "./common/ui/HeroButton";
+import { HeroSelect } from "./common/ui/HeroSelect";
+import { HeroDropdownSelect } from "./common/ui/HeroDropdown";
 import { HeaderBar } from "./common/HeaderBar";
 import { useMultiSort } from "../hooks/useMultiSort";
 import { MultiSortBadgeBar } from "./common/ui/MultiSortBadgeBar";
@@ -545,21 +547,21 @@ export function AdminProfitModule({
         actions={
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Branch Filter Selector */}
-            <div className="flex items-center gap-1.5 bg-content2 border border-divider/50 rounded-xl px-3 py-1.5 shadow-sm">
-              <Building className="h-3.5 w-3.5 text-default-500" />
-              <select
-                value={selectedBranchId}
-                onChange={(e) => setSelectedBranchId(e.target.value)}
-                className="bg-transparent text-xs font-semibold text-foreground focus:outline-none cursor-pointer"
-              >
-                <option value="all">Consolidated (All Branches)</option>
-                {branches.filter((b) => !b.isDeleted).map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <HeroDropdownSelect
+              startIcon={<Building className="h-3.5 w-3.5 text-default-500" />}
+              items={[
+                { key: 'all', label: 'Consolidated (All Branches)' },
+                ...branches.filter((b) => !b.isDeleted).map((b) => ({
+                  key: b.id,
+                  label: b.name,
+                })),
+              ]}
+              selectedKey={selectedBranchId}
+              onSelectionChange={(val) => setSelectedBranchId(val)}
+              size="sm"
+              variant="pill"
+              className="min-w-[180px]"
+            />
 
             <HeroButton
               onClick={() => {
@@ -1032,33 +1034,35 @@ export function AdminProfitModule({
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-extrabold uppercase text-default-500">Target Showroom Branch</label>
-                <select
+                <HeroSelect
+                  label="Target Showroom Branch"
                   value={expenseBranch ?? ''}
-                  onChange={(e) => setExpenseBranch(e.target.value)}
-                  className="w-full bg-content1 border border-divider/30 text-xs px-3 py-2 rounded-xl text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer font-medium"
-                >
-                  {branches.filter(b => !b.isDeleted).map(b => (
-                    <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
-                  ))}
-                </select>
+                  onValueChange={(val) => setExpenseBranch(val)}
+                  radius="md"
+                  items={branches.filter(b => !b.isDeleted).map(b => ({
+                    key: b.id,
+                    value: b.id,
+                    label: getBranchOptionLabel(b),
+                  }))}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-extrabold uppercase text-default-500">Expense Category</label>
-                  <select
+                  <HeroSelect
+                    label="Expense Category"
                     value={expenseCategory ?? ''}
-                    onChange={(e) => setExpenseCategory(e.target.value)}
-                    className="w-full bg-content1 border border-divider/30 text-xs px-3 py-2 rounded-xl text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer font-medium"
-                  >
-                    <option value="Utilities">Utilities (Power, Water)</option>
-                    <option value="Logistics">Logistics & Freight</option>
-                    <option value="Packaging">Packaging Boxes</option>
-                    <option value="Marketing">Local Marketing</option>
-                    <option value="Repairs">Repairs & Maintenance</option>
-                    <option value="Miscellaneous">Miscellaneous</option>
-                  </select>
+                    onValueChange={(val) => setExpenseCategory(val)}
+                    radius="md"
+                    items={[
+                      { key: 'Utilities', value: 'Utilities', label: 'Utilities (Power, Water)' },
+                      { key: 'Logistics', value: 'Logistics', label: 'Logistics & Freight' },
+                      { key: 'Packaging', value: 'Packaging', label: 'Packaging Boxes' },
+                      { key: 'Marketing', value: 'Marketing', label: 'Local Marketing' },
+                      { key: 'Repairs', value: 'Repairs', label: 'Repairs & Maintenance' },
+                      { key: 'Miscellaneous', value: 'Miscellaneous', label: 'Miscellaneous' },
+                    ]}
+                  />
                 </div>
 
                 <div className="space-y-1">

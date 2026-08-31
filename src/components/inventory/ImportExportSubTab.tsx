@@ -2,6 +2,7 @@ import React from 'react';
 import { Database, Download, FileSpreadsheet, MapPin, ShieldCheck, Sliders, Upload } from 'lucide-react';
 import { Branch, Product, Supplier, User, UserRole } from '../../types/db';
 import { HeroButton } from '../common/ui/HeroButton';
+import { HeroDropdownSelect } from '../common/ui/HeroDropdown';
 import { PreflightReportCard } from '../PreflightReportCard';
 
 interface ImportExportSubTabProps {
@@ -64,25 +65,26 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
   exportInventoryCatalogToXLSX,
 }) => {
   return (
-    <div className="space-y-6 text-left animate-fade-in">
+    <div className="space-y-6 text-left animate-fade-in font-sans">
       {/* Tool Header & Mode Selector */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-content1 p-5 rounded-large border border-divider shadow-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-divider dark:border-white/10 shadow-xs">
         <div>
-          <h2 className="text-base font-black text-foreground uppercase tracking-wider flex items-center gap-2">
-            <Database className="h-5 w-5 text-success" />
+          <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
+            <Database className="h-5 w-5 text-emerald-500" />
             <span>Migration &amp; Import / Export Tool</span>
           </h2>
         </div>
 
         {/* Tab Switcher: Import vs Export */}
-        <div className="flex bg-content2 p-1 rounded-medium border border-divider shrink-0">
+        <div className="flex bg-default-100 dark:bg-zinc-800/80 p-1 rounded-full border border-divider/40 dark:border-white/5 shrink-0 shadow-xs">
           <HeroButton
             size="sm"
             variant={migrationSubTab === 'import' ? 'solid' : 'light'}
             color={migrationSubTab === 'import' ? 'primary' : 'default'}
+            radius="full"
             onClick={() => setMigrationSubTab('import')}
             startIcon={<Upload className="h-3.5 w-3.5" />}
-            className="text-xs font-black uppercase tracking-wider h-8"
+            className="text-xs font-semibold h-8"
           >
             Import &amp; Migration
           </HeroButton>
@@ -90,9 +92,10 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
             size="sm"
             variant={migrationSubTab === 'export' ? 'solid' : 'light'}
             color={migrationSubTab === 'export' ? 'primary' : 'default'}
+            radius="full"
             onClick={() => setMigrationSubTab('export')}
             startIcon={<Download className="h-3.5 w-3.5" />}
-            className="text-xs font-black uppercase tracking-wider h-8"
+            className="text-xs font-semibold h-8"
           >
             Export &amp; Backups
           </HeroButton>
@@ -101,25 +104,25 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
 
       {/* MODE 1: IMPORT & MIGRATION */}
       {migrationSubTab === 'import' && (
-        <div className="space-y-6 animate-fade-in">
+        <div className="space-y-6 animate-fade-in font-sans">
           {/* Target Branch Selection */}
-          <div className="p-4 rounded-large bg-content1 border border-divider flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
-            <div className="flex items-center gap-2 text-xs font-black uppercase text-primary tracking-wider">
-              <MapPin className="h-4 w-4" />
+          <div className="p-5 rounded-2xl bg-content1 dark:bg-[#18181B] border border-divider dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-2 text-xs font-semibold text-foreground tracking-tight">
+              <MapPin className="h-4 w-4 text-primary" />
               <span>Target Destination Branch Allocation</span>
             </div>
             {currentUser?.role === UserRole.ADMIN ? (
-              <select
-                value={importTargetBranchId ?? ''}
-                onChange={e => setImportTargetBranchId(e.target.value)}
-                className="bg-content2 border border-divider px-3 py-2 text-xs font-bold text-foreground rounded-medium focus:outline-none focus:border-primary cursor-pointer max-w-md w-full sm:w-auto"
-              >
-                {branches.filter(b => !b.isDeleted).map(b => (
-                  <option key={b.id} value={b.id}>
-                    {getBranchOptionLabel(b)}
-                  </option>
-                ))}
-              </select>
+              <HeroDropdownSelect
+                items={branches.filter(b => !b.isDeleted).map(b => ({
+                  key: b.id,
+                  label: getBranchOptionLabel(b)
+                }))}
+                selectedKey={importTargetBranchId ?? ''}
+                onSelectionChange={(k) => setImportTargetBranchId(k)}
+                size="sm"
+                variant="pill"
+                className="min-w-[220px]"
+              />
             ) : (
               <div className="px-3 py-1.5 text-xs font-bold text-foreground bg-content2 rounded-medium border border-divider flex items-center gap-2">
                 <span>{branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name}</span>

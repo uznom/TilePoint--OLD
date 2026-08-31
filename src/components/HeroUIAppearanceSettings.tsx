@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { HeroSwitch } from './common/ui/HeroSwitch';
+import { HeroSelect } from './common/ui/HeroSelect';
 import { ColorPicker } from './common/ui/HeroColorPicker';
 import {
   HEROUI_BASE_PALETTES,
@@ -725,25 +726,17 @@ export const HeroUIAppearanceSettings: React.FC<HeroUIAppearanceSettingsProps> =
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10.5px] font-bold text-default-600 block">
-              Sample Dropdown
-            </label>
-            <select
+            <HeroSelect
+              label="Sample Dropdown"
               defaultValue="B1"
-              className={`w-full text-xs text-foreground focus:outline-none transition-all cursor-pointer ${
-                config.formVariant === 'bordered'
-                  ? 'px-3 py-2 bg-background border border-divider/40 focus:border-primary rounded-xl'
-                  : config.formVariant === 'flat'
-                  ? 'px-3 py-2 bg-content2 focus:bg-content2 border-transparent focus:border-primary rounded-xl'
-                  : config.formVariant === 'underlined'
-                  ? 'px-2 py-1.5 bg-transparent border-b-2 border-divider/60 focus:border-primary rounded-none'
-                  : 'px-3 py-2 bg-background border border-divider/20 focus:border-primary rounded-xl'
-              }`}
-            >
-              <option value="B1">Main Branch (B1)</option>
-              <option value="B2">North Warehouse (B2)</option>
-              <option value="B3">South Terminal (B3)</option>
-            </select>
+              radius={config.radius}
+              variant={config.formVariant === 'bordered' ? 'bordered' : config.formVariant === 'underlined' ? 'underlined' : 'flat'}
+              items={[
+                { key: 'B1', value: 'B1', label: 'Main Branch (B1)' },
+                { key: 'B2', value: 'B2', label: 'North Warehouse (B2)' },
+                { key: 'B3', value: 'B3', label: 'South Terminal (B3)' },
+              ]}
+            />
           </div>
 
           <div className="space-y-1">

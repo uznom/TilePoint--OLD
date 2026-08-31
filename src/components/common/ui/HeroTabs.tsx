@@ -52,9 +52,9 @@ export const HeroTabs: React.FC<HeroTabsProps> = ({
   defaultSelectedKey,
   onSelectionChange,
   variant = 'solid',
-  color = 'primary',
+  color = 'default',
   size = 'md',
-  radius = 'lg',
+  radius = 'full',
   fullWidth = false,
   className = '',
   id,
@@ -114,11 +114,11 @@ export const HeroTabs: React.FC<HeroTabsProps> = ({
         return 'rounded-small';
       case 'md':
         return 'rounded-medium';
-      case 'full':
-        return 'rounded-full';
       case 'lg':
+        return 'rounded-xl';
+      case 'full':
       default:
-        return 'rounded-large';
+        return 'rounded-full';
     }
   };
 
@@ -131,11 +131,11 @@ export const HeroTabs: React.FC<HeroTabsProps> = ({
         return 'rounded-xs';
       case 'md':
         return 'rounded-small';
-      case 'full':
-        return 'rounded-full';
       case 'lg':
+        return 'rounded-lg';
+      case 'full':
       default:
-        return 'rounded-medium';
+        return 'rounded-full';
     }
   };
 
@@ -149,40 +149,40 @@ export const HeroTabs: React.FC<HeroTabsProps> = ({
         return 'p-0 bg-transparent border-b border-divider rounded-none gap-4';
       case 'solid':
       default:
-        return 'p-1 bg-default-100 dark:bg-default-100/50';
+        return 'p-1 bg-default-100 dark:bg-zinc-800/80 border border-divider/40 dark:border-white/5';
     }
   };
 
   const getItemSize = () => {
     switch (size) {
       case 'sm':
-        return 'px-2.5 py-1 text-xs gap-1.5 min-h-7';
+        return 'px-3 py-1 text-xs gap-1.5 min-h-7 font-semibold';
       case 'lg':
-        return 'px-4 py-2 text-sm gap-2 min-h-10';
+        return 'px-5 py-2 text-sm gap-2 min-h-10 font-semibold';
       case 'md':
       default:
-        return 'px-3.5 py-1.5 text-xs gap-2 min-h-8';
+        return 'px-4 py-1.5 text-xs sm:text-sm gap-2 min-h-8 font-semibold';
     }
   };
 
   const getSelectedStyles = () => {
     if (variant === 'underlined') {
-      return 'border-b-2 border-primary text-primary font-bold shadow-none rounded-none -mb-px';
+      return 'border-b-2 border-primary text-primary font-semibold shadow-none rounded-none -mb-px';
     }
     switch (color) {
       case 'primary':
-        return 'bg-primary text-primary-foreground shadow-md shadow-primary/20 font-bold';
+        return 'bg-primary text-primary-foreground shadow-sm shadow-primary/20 font-semibold';
       case 'secondary':
-        return 'bg-secondary text-secondary-foreground shadow-md shadow-secondary/20 font-bold';
+        return 'bg-secondary text-secondary-foreground shadow-sm shadow-secondary/20 font-semibold';
       case 'success':
-        return 'bg-success text-success-foreground shadow-md shadow-success/20 font-bold';
+        return 'bg-success text-success-foreground shadow-sm shadow-success/20 font-semibold';
       case 'warning':
-        return 'bg-warning text-warning-foreground shadow-md shadow-warning/20 font-bold';
+        return 'bg-warning text-warning-foreground shadow-sm shadow-warning/20 font-semibold';
       case 'danger':
-        return 'bg-danger text-danger-foreground shadow-md shadow-danger/20 font-bold';
+        return 'bg-danger text-danger-foreground shadow-sm shadow-danger/20 font-semibold';
       case 'default':
       default:
-        return 'bg-background text-foreground shadow-sm font-bold';
+        return 'bg-white text-zinc-900 dark:bg-zinc-700 dark:text-white shadow-xs font-semibold';
     }
   };
 
@@ -190,7 +190,7 @@ export const HeroTabs: React.FC<HeroTabsProps> = ({
     if (variant === 'underlined') {
       return 'text-default-500 hover:text-foreground font-medium';
     }
-    return 'text-default-600 hover:text-foreground hover:bg-default-200/50 font-medium';
+    return 'text-default-600 dark:text-zinc-400 hover:text-foreground hover:bg-default-200/50 dark:hover:bg-zinc-700/50 font-medium';
   };
 
   return (
@@ -210,7 +210,7 @@ export const HeroTabs: React.FC<HeroTabsProps> = ({
               aria-selected={isSelected}
               disabled={tab.isDisabled}
               onClick={() => handleSelect(tab.id)}
-              className={`relative inline-flex items-center justify-center transition-all duration-200 cursor-pointer select-none outline-none ${fullWidth ? 'flex-1' : ''} ${getInnerRadiusClasses()} ${getItemSize()} ${
+              className={`relative inline-flex items-center justify-center font-sans tracking-tight transition-all duration-200 cursor-pointer select-none outline-none ${fullWidth ? 'flex-1' : ''} ${getInnerRadiusClasses()} ${getItemSize()} ${
                 isSelected ? getSelectedStyles() : getUnselectedStyles()
               } ${tab.isDisabled ? 'opacity-40 cursor-not-allowed pointer-events-none' : 'active:scale-95'}`}
             >

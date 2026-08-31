@@ -29,7 +29,7 @@ import {
 } from './common/ui';
 
 export const SetupModule: React.FC = () => {
-  const { setupSystem, triggerSystemProcessing, setIsConfigured, users } = useDb();
+  const { setupSystem, triggerSystemProcessing, setIsConfigured } = useDb();
 
   // If database is already configured on server, auto-advance to Login
   useEffect(() => {

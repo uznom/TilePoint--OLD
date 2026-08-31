@@ -40,6 +40,8 @@ import { CustomCorporateBill,Expense,Member,ProductReturn,UserRole } from "../ty
 import { formatCurrency } from "../utils/formatters";
 import { ConfirmationModal } from "./ConfirmationModal";
 import { useReceiptFontSize } from "./ReceiptFontSizeControl";
+import { HeroSelect } from "./common/ui/HeroSelect";
+import { HeroDropdownSelect } from "./common/ui/HeroDropdown";
 
 export interface StoreOperationsModuleProps {
  activeSubTab: string;
@@ -743,21 +745,23 @@ export default function StoreOperationsModule({
  placeholder="Filter customer database..."
  className="w-full bg-transparent border-0 outline-none p-1.5"
  />
- <div className="flex items-center gap-1 shrink-0 border-l border-divider/20 pl-2">
- <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
- <select
- value={memberBranchFilter ?? ''}
- onChange={(e) => setMemberBranchFilter(e.target.value)}
- className="bg-background border border-divider/30 text-primary text-xs font-bold rounded-lg px-2 py-1 outline-none cursor-pointer"
- >
- <option value="All">All Branches</option>
- {db.branches.filter((b) => !b.isDeleted).map((b) => (
- <option key={b.id} value={b.id}>
- {b.name}
- </option>
- ))}
- </select>
- </div>
+  <div className="flex items-center gap-1 shrink-0 border-l border-divider/20 pl-2">
+    <HeroDropdownSelect
+      startIcon={<Building2 className="h-3.5 w-3.5 text-primary" />}
+      items={[
+        { key: 'All', label: 'All Branches' },
+        ...db.branches.filter((b) => !b.isDeleted).map((b) => ({
+          key: b.id,
+          label: b.name,
+        })),
+      ]}
+      selectedKey={memberBranchFilter ?? 'All'}
+      onSelectionChange={(val) => setMemberBranchFilter(val)}
+      size="sm"
+      variant="pill"
+      className="min-w-[160px]"
+    />
+  </div>
  </div>
 
  <div className="bg-content1 border border-divider/15 rounded-2xl overflow-hidden shadow-sm">
@@ -1008,28 +1012,28 @@ export default function StoreOperationsModule({
          <span>A/R Ledger & Payment History</span>
        </h3>
      </div>
-     <div className="flex items-center gap-1">
-       <span className="text-[10px] text-default-500">Account:</span>
-       <select
-         value={selectedMember ? selectedMember.id : "all"}
-         onChange={(e) => {
-           const val = e.target.value;
-           if (val === "all") {
-             setSelectedMember(null);
-           } else {
-             const m = members.find((x) => x.id === val);
-             if (m) setSelectedMember(m);
-           }
-         }}
-         className="bg-content3 border border-divider rounded px-2.5 py-1 text-[11px] outline-none font-bold text-foreground"
-       >
-         <option value="all">All Members</option>
-         {members.map((m) => (
-           <option key={m.id} value={m.id}>
-             {m.fullName}
-           </option>
-         ))}
-       </select>
+     <div className="flex items-center gap-1.5">
+        <HeroDropdownSelect
+          items={[
+            { key: 'all', label: 'All Member Accounts' },
+            ...members.map((m) => ({
+              key: m.id,
+              label: `${m.fullName} (${m.phone || m.id})`,
+            })),
+          ]}
+          selectedKey={selectedMember ? selectedMember.id : 'all'}
+          onSelectionChange={(val) => {
+            if (val === 'all') {
+              setSelectedMember(null);
+            } else {
+              const m = members.find((x) => x.id === val);
+              if (m) setSelectedMember(m);
+            }
+          }}
+          size="sm"
+          variant="pill"
+          className="min-w-[180px]"
+        />
      </div>
    </div>
 
@@ -1455,45 +1459,37 @@ export default function StoreOperationsModule({
  className="space-y-3 font-sans text-xs"
  >
  <div className="space-y-1">
- <label className="font-bold text-default-500">
- Branch Location *
- </label>
- <select
- value={expBranchId ?? ''}
- onChange={(e) => setExpBranchId(e.target.value)}
- className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary font-bold text-primary"
- >
- {db.branches.filter((b) => !b.isDeleted).map((b) => (
- <option key={b.id} value={b.id}>
- {b.name} ({b.id})
- </option>
- ))}
- </select>
- </div>
- <div className="space-y-1">
- <label className="font-bold text-default-500">
- Expense Classification *
- </label>
- <select
- value={expCategory ?? ''}
- onChange={(e) => setExpCategory(e.target.value)}
- className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary"
- >
- <option value="Floor Supplies">Floor Supplies</option>
- <option value="Delivery Gas">Delivery Gas</option>
- <option value="Snacks / Snacks Meetings">
- Snacks / Snacks Meetings
- </option>
- <option value="Office Stationery">Office Stationery</option>
- <option value="Utility Repairs">Utility Repairs</option>
- <option value="Showroom Lightings">
- Showroom Lightings
- </option>
- <option value="Other / Custom">
- Other / Custom (Specify Below)
- </option>
- </select>
- </div>
+    <HeroSelect
+      label="Branch Location"
+      isRequired
+      value={expBranchId ?? ''}
+      onValueChange={(val) => setExpBranchId(val)}
+      radius="md"
+      items={db.branches.filter((b) => !b.isDeleted).map((b) => ({
+        key: b.id,
+        value: b.id,
+        label: `${b.name} (${b.id})`,
+      }))}
+    />
+  </div>
+  <div className="space-y-1">
+    <HeroSelect
+      label="Expense Classification"
+      isRequired
+      value={expCategory ?? ''}
+      onValueChange={(val) => setExpCategory(val)}
+      radius="md"
+      items={[
+        { key: 'Floor Supplies', label: 'Floor Supplies' },
+        { key: 'Delivery Gas', label: 'Delivery Gas' },
+        { key: 'Snacks / Snacks Meetings', label: 'Snacks / Snacks Meetings' },
+        { key: 'Office Stationery', label: 'Office Stationery' },
+        { key: 'Utility Repairs', label: 'Utility Repairs' },
+        { key: 'Showroom Lightings', label: 'Showroom Lightings' },
+        { key: 'Other / Custom', label: 'Other / Custom (Specify Below)' },
+      ]}
+    />
+  </div>
  {expCategory === "Other / Custom" && (
  <div className="space-y-1">
  <label className="font-bold text-default-500">
@@ -1554,20 +1550,22 @@ export default function StoreOperationsModule({
  className="w-full bg-transparent border-0 outline-none p-1.5"
  />
  <div className="flex items-center gap-1 shrink-0 border-l border-divider/20 pl-2">
- <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
- <select
- value={expenseBranchFilter ?? ''}
- onChange={(e) => setExpenseBranchFilter(e.target.value)}
- className="bg-background border border-divider/30 text-primary text-xs font-bold rounded-lg px-2 py-1 outline-none cursor-pointer"
- >
- <option value="All">All Branches</option>
- {db.branches.filter((b) => !b.isDeleted).map((b) => (
- <option key={b.id} value={b.id}>
- {b.name}
- </option>
- ))}
- </select>
- </div>
+    <HeroDropdownSelect
+      startIcon={<Building2 className="h-3.5 w-3.5 text-primary" />}
+      items={[
+        { key: 'All', label: 'All Branches' },
+        ...db.branches.filter((b) => !b.isDeleted).map((b) => ({
+          key: b.id,
+          label: b.name,
+        })),
+      ]}
+      selectedKey={expenseBranchFilter ?? 'All'}
+      onSelectionChange={(val) => setExpenseBranchFilter(val)}
+      size="sm"
+      variant="pill"
+      className="min-w-[160px]"
+    />
+  </div>
  </div>
 
  <div className="bg-content1 border border-divider/15 rounded-2xl overflow-hidden shadow-sm">
@@ -1723,17 +1721,20 @@ export default function StoreOperationsModule({
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-default-500">Category:</span>
-              <select
-                value={expenseCategoryFilter ?? ''}
-                onChange={(e) => setExpenseCategoryFilter(e.target.value)}
-                className="bg-content3 border border-divider rounded p-1 outline-none text-foreground"
-              >
-                <option value="">All Categories</option>
-                {Array.from(new Set(expenses.filter(ex => !ex.isDeleted).map(ex => ex.category))).map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
+              <HeroDropdownSelect
+                items={[
+                  { key: '', label: 'All Categories' },
+                  ...Array.from(new Set(expenses.filter(ex => !ex.isDeleted).map(ex => ex.category))).map(cat => ({
+                    key: cat,
+                    label: cat,
+                  })),
+                ]}
+                selectedKey={expenseCategoryFilter ?? ''}
+                onSelectionChange={(val) => setExpenseCategoryFilter(val)}
+                size="sm"
+                variant="pill"
+                className="min-w-[160px]"
+              />
               {expenseCategoryFilter && (
                 <button
                   type="button"
@@ -1974,19 +1975,18 @@ export default function StoreOperationsModule({
  />
  </div>
  <div className="space-y-1">
- <label className="font-bold text-default-500">
- Damage Fee %
- </label>
- <select
- value={retFee ?? ''}
- onChange={(e) => setRetFee(e.target.value)}
- className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary"
- >
- <option value="5">5% fee</option>
- <option value="10">10% fee</option>
- <option value="15">15% fee</option>
- <option value="0">0% fee</option>
- </select>
+  <HeroSelect
+    label="Damage Fee %"
+    value={retFee ?? ''}
+    onValueChange={(val) => setRetFee(val)}
+    radius="md"
+    items={[
+      { key: '5', label: '5% fee' },
+      { key: '10', label: '10% fee' },
+      { key: '15', label: '15% fee' },
+      { key: '0', label: '0% fee' },
+    ]}
+  />
  </div>
  </div>
  <div className="space-y-1">
@@ -2701,28 +2701,22 @@ export default function StoreOperationsModule({
  className="w-full bg-content1 border border-divider rounded-lg p-2.5 outline-none focus:border-primary text-foreground"
  />
  </div>
- <div className="space-y-1">
- <label className="font-bold text-default-500">
- Recurrence Interval *
- </label>
- <select
- value={billFrequency ?? ''}
- onChange={(e) =>
- setBillFrequency(e.target.value as any)
- }
- className="w-full bg-content1 border border-divider rounded-lg p-2.5 outline-none focus:border-primary font-bold text-foreground"
- >
- <option value="WEEKLY" className="bg-content1 text-foreground">Weekly Cycle</option>
- <option value="MONTHLY" className="bg-content1 text-foreground">Monthly Cycle</option>
- <option value="SEMI_QUARTERLY" className="bg-content1 text-foreground">
- Semi-Quarterly (45d)
- </option>
- <option value="QUARTERLY" className="bg-content1 text-foreground">
- Quarterly Installment
- </option>
- <option value="YEARLY" className="bg-content1 text-foreground">Yearly Corporate Bill</option>
- </select>
- </div>
+  <div className="space-y-1">
+    <HeroSelect
+      label="Recurrence Interval"
+      isRequired
+      value={billFrequency ?? ''}
+      onValueChange={(val) => setBillFrequency(val as any)}
+      radius="md"
+      items={[
+        { key: 'WEEKLY', label: 'Weekly Cycle' },
+        { key: 'MONTHLY', label: 'Monthly Cycle' },
+        { key: 'SEMI_QUARTERLY', label: 'Semi-Quarterly (45d)' },
+        { key: 'QUARTERLY', label: 'Quarterly Installment' },
+        { key: 'YEARLY', label: 'Yearly Corporate Bill' },
+      ]}
+    />
+  </div>
  <div className="space-y-1">
  <label className="font-bold text-default-500">
  Target Start Due Date *
@@ -2782,33 +2776,37 @@ export default function StoreOperationsModule({
 
  <div className="grid grid-cols-2 gap-2">
  <div className="space-y-0.5">
- <label className="text-[8px] font-black uppercase tracking-wider text-default-500">
+ <label className="text-[9px] font-bold uppercase tracking-wider text-default-500">
  Filter Status
  </label>
- <select
- value={payableStatusFilter ?? ''}
- onChange={(e) => setPayableStatusFilter(e.target.value as any)}
- className="w-full bg-content1 border border-divider rounded-md p-1 font-sans text-[10px] outline-none font-bold focus:border-primary text-foreground"
- >
- <option value="all" className="bg-content1 text-foreground">All</option>
- <option value="active" className="bg-content1 text-foreground">Active</option>
- <option value="partial" className="bg-content1 text-foreground">Partial</option>
- <option value="paid" className="bg-content1 text-foreground">Settled</option>
- </select>
+ <HeroDropdownSelect
+   items={[
+     { key: 'all', label: 'All Statuses' },
+     { key: 'active', label: 'Active' },
+     { key: 'partial', label: 'Partial' },
+     { key: 'paid', label: 'Settled' },
+   ]}
+   selectedKey={payableStatusFilter ?? 'all'}
+   onSelectionChange={(val) => setPayableStatusFilter(val as any)}
+   size="sm"
+   variant="pill"
+ />
  </div>
  <div className="space-y-0.5">
- <label className="text-[8px] font-black uppercase tracking-wider text-default-500">
+ <label className="text-[9px] font-bold uppercase tracking-wider text-default-500">
  Sort By
  </label>
- <select
- value={payableSortField ?? ''}
- onChange={(e) => setPayableSortField(e.target.value as any)}
- className="w-full bg-content1 border border-divider rounded-md p-1 font-sans text-[10px] outline-none font-bold focus:border-primary text-foreground"
- >
- <option value="due" className="bg-content1 text-foreground">Urgency</option>
- <option value="amount" className="bg-content1 text-foreground">Amount</option>
- <option value="supplier" className="bg-content1 text-foreground">Supplier</option>
- </select>
+ <HeroDropdownSelect
+   items={[
+     { key: 'due', label: 'Urgency / Due' },
+     { key: 'amount', label: 'Amount' },
+     { key: 'supplier', label: 'Supplier' },
+   ]}
+   selectedKey={payableSortField ?? 'due'}
+   onSelectionChange={(val) => setPayableSortField(val as any)}
+   size="sm"
+   variant="pill"
+ />
  </div>
  </div>
  </div>
@@ -2962,35 +2960,35 @@ export default function StoreOperationsModule({
  <ChevronLeft className="h-4 w-4" />
  </button>
  
- <select
- value={calendarMonth ?? ''}
- onChange={(e) => {
- setCalendarMonth(Number(e.target.value));
- setSelectedCalendarDay(null);
- }}
- className="bg-transparent border-0 text-xs font-black font-sans text-foreground focus:ring-0 cursor-pointer pr-8 py-0.5"
- >
- {months.map((m, idx) => (
- <option key={m} value={idx} className="bg-content1 text-foreground font-sans">
- {m}
- </option>
- ))}
- </select>
+ <HeroDropdownSelect
+    items={months.map((m, idx) => ({
+      key: String(idx),
+      label: m,
+    }))}
+    selectedKey={String(calendarMonth)}
+    onSelectionChange={(val) => {
+      setCalendarMonth(Number(val));
+      setSelectedCalendarDay(null);
+    }}
+    size="sm"
+    variant="pill"
+    className="min-w-[120px]"
+  />
 
- <select
- value={calendarYear ?? ''}
- onChange={(e) => {
- setCalendarYear(Number(e.target.value));
- setSelectedCalendarDay(null);
- }}
- className="bg-transparent border-0 text-xs font-bold text-primary focus:ring-0 cursor-pointer pr-8 py-0.5"
- >
- {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map((y) => (
- <option key={y} value={y} className="bg-content1 text-foreground ">
- {y}
- </option>
- ))}
- </select>
+  <HeroDropdownSelect
+    items={Array.from({ length: 5 }, (_, i) => {
+      const y = new Date().getFullYear() - 2 + i;
+      return { key: String(y), label: String(y) };
+    })}
+    selectedKey={String(calendarYear)}
+    onSelectionChange={(val) => {
+      setCalendarYear(Number(val));
+      setSelectedCalendarDay(null);
+    }}
+    size="sm"
+    variant="pill"
+    className="min-w-[90px]"
+  />
 
  <button
  type="button"
@@ -4275,7 +4273,7 @@ export default function StoreOperationsModule({
                   <button
                     type="button"
                     onClick={() => { setAdjustPointsAmount(`-${selectedLoyaltyMember.points || 0}`); setAdjustPointsReason("Full Balance Store Credit Redemption"); }}
- className="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 font-bold text-[10px] rounded border border-amber-500/20 cursor-pointer"
+                    className="px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 font-bold text-[10px] rounded border border-amber-500/20 cursor-pointer"
                   >
                     Use All ({selectedLoyaltyMember.points || 0} Pts)
                   </button>

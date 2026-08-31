@@ -14,6 +14,7 @@ import {
 import { Branch, BranchStock, Product, TransferType, User } from '../../types/db';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
 import { HeroButton } from '../common/ui/HeroButton';
+import { HeroSelect } from '../common/ui/HeroSelect';
 
 interface CreateTransferModalProps {
   isOpen: boolean;
@@ -168,25 +169,24 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Dispatch branch assignment */}
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-primary uppercase tracking-widest pl-1 block select-none">
-                  Dispensing Branch (Source) <span className="text-danger">*</span>
-                </label>
-                <select
-                  disabled={currentUser?.role !== 'Admin'}
+                <HeroSelect
+                  label="Dispensing Branch (Source)"
+                  isRequired
+                  isDisabled={currentUser?.role !== 'Admin'}
                   value={transferSource ?? ''}
-                  onChange={e => {
-                    const src = e.target.value;
-                    setTransferSource(src);
-                    if (src === transferDest) {
-                      setTransferDest(branches.find(b => b.id !== src)?.id || '');
+                  onValueChange={val => {
+                    setTransferSource(val);
+                    if (val === transferDest) {
+                      setTransferDest(branches.find(b => b.id !== val)?.id || '');
                     }
                   }}
-                  className="w-full bg-content2 border border-divider focus:border-primary p-2.5 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-sans cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  {branches.filter(b => !b.isDeleted).map(b => (
-                    <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
-                  ))}
-                </select>
+                  radius="md"
+                  items={branches.filter(b => !b.isDeleted).map(b => ({
+                    key: b.id,
+                    value: b.id,
+                    label: getBranchOptionLabel(b),
+                  }))}
+                />
                 {currentUser?.role !== 'Admin' && (
                   <span className="text-[9px] text-default-500 pl-1">{branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name}</span>
                 )}
@@ -194,19 +194,19 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
 
               {/* Destination branch assignment */}
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-primary uppercase tracking-widest pl-1 block select-none">
-                  Receiving Branch (Destination) <span className="text-danger">*</span>
-                </label>
-                <select
+                <HeroSelect
+                  label="Receiving Branch (Destination)"
+                  isRequired
+                  placeholder="Select target branch..."
                   value={transferDest ?? ''}
-                  onChange={e => setTransferDest(e.target.value)}
-                  className="w-full bg-content2 border border-divider focus:border-primary p-2.5 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-sans cursor-pointer"
-                >
-                  <option value="" disabled>Select target branch...</option>
-                  {branches.filter(b => !b.isDeleted && b.id !== transferSource).map(b => (
-                    <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
-                  ))}
-                </select>
+                  onValueChange={val => setTransferDest(val)}
+                  radius="md"
+                  items={branches.filter(b => !b.isDeleted && b.id !== transferSource).map(b => ({
+                    key: b.id,
+                    value: b.id,
+                    label: getBranchOptionLabel(b),
+                  }))}
+                />
               </div>
 
               {/* Transfer Type Selection */}
@@ -273,22 +273,21 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
               </span>
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="flex-1 space-y-1">
-                  <span className="text-[9px] text-default-500 font-bold block">Select Ceramic Product</span>
-                  <select
+                  <HeroSelect
+                    label="Select Ceramic Product"
+                    placeholder="Choose a product..."
                     value={tempProductId ?? ''}
-                    onChange={e => setTempProductId(e.target.value)}
-                    className="w-full bg-content1 border border-divider focus:border-primary px-3 py-1.5 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-sans cursor-pointer"
-                  >
-                    <option value="">Choose a product...</option>
-                    {branchProducts.map(p => {
+                    onValueChange={val => setTempProductId(val)}
+                    radius="md"
+                    items={branchProducts.map(p => {
                       const stockInBranch = branchStock.find(bs => bs.productId === p.id && bs.branchId === transferSource)?.quantity || 0;
-                      return (
-                        <option key={p.id} value={p.id}>
-                          {p.productName} ({p.size}) [&nbsp;Stock: {stockInBranch} {p.unit || 'Unit'}&nbsp;]
-                        </option>
-                      );
+                      return {
+                        key: p.id,
+                        value: p.id,
+                        label: `${p.productName} (${p.size}) [ Stock: ${stockInBranch} ${p.unit || 'Unit'} ]`,
+                      };
                     })}
-                  </select>
+                  />
                 </div>
                 <div className="w-full sm:w-28 space-y-1">
                   <span className="text-[9px] text-default-500 font-bold block">Request Qty</span>

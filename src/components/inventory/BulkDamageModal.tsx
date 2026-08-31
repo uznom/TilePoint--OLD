@@ -4,6 +4,7 @@ import { AlertTriangle, X, Check } from 'lucide-react';
 import { Branch, Product, BranchStock } from '../../types/db';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
 import { HeroButton } from '../common/ui/HeroButton';
+import { HeroSelect } from '../common/ui/HeroSelect';
 
 interface BulkDamageModalProps {
   isOpen: boolean;
@@ -74,45 +75,48 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
         {/* Config Fields Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="space-y-1">
-            <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">Reporting Branch</label>
-            <select
-              required
+            <HeroSelect
+              label="Reporting Branch"
+              isRequired
               value={bulkDamageBranchId}
-              onChange={e => setBulkDamageBranchId(e.target.value)}
-              className="w-full bg-content2 border border-divider focus:border-primary p-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-sans cursor-pointer"
-            >
-              {branches.filter(b => !b.isDeleted).map(b => (
-                <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
-              ))}
-            </select>
+              onValueChange={val => setBulkDamageBranchId(val)}
+              radius="md"
+              items={branches.filter(b => !b.isDeleted).map(b => ({
+                key: b.id,
+                value: b.id,
+                label: getBranchOptionLabel(b),
+              }))}
+            />
           </div>
 
           <div className="space-y-1">
-            <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">Damage Category</label>
-            <select
+            <HeroSelect
+              label="Damage Category"
               value={bulkDamageCategory}
-              onChange={e => setBulkDamageCategory(e.target.value)}
-              className="w-full bg-content2 border border-divider focus:border-primary p-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-sans cursor-pointer"
-            >
-              <option value="Warehouse Breakage">Warehouse Drop / Forklift Clash</option>
-              <option value="BOA">BOA (Broken On Arrival from Supplier)</option>
-              <option value="Showroom Casualty">Showroom Display Chipped</option>
-              <option value="Delivery Transit">Transport Transit Fractures</option>
-            </select>
+              onValueChange={val => setBulkDamageCategory(val)}
+              radius="md"
+              items={[
+                { key: 'Warehouse Breakage', value: 'Warehouse Breakage', label: 'Warehouse Drop / Forklift Clash' },
+                { key: 'BOA', value: 'BOA', label: 'BOA (Broken On Arrival from Supplier)' },
+                { key: 'Showroom Casualty', value: 'Showroom Casualty', label: 'Showroom Display Chipped' },
+                { key: 'Delivery Transit', value: 'Delivery Transit', label: 'Transport Transit Fractures' },
+              ]}
+            />
           </div>
 
           <div className="space-y-1">
-            <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">Action / Treatment Taken</label>
-            <select
+            <HeroSelect
+              label="Action / Treatment Taken"
               value={bulkDamageAction}
-              onChange={e => setBulkDamageAction(e.target.value)}
-              className="w-full bg-content2 border border-divider focus:border-primary p-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-sans cursor-pointer"
-            >
-              <option value="Disposed / Scrapped">Shattered - Disposed & Scrapped</option>
-              <option value="Saved for Mosaic">Saved for Low-Cost Mosaic Sales</option>
-              <option value="Claimed from Supplier / Insurance Code">Pending Supplier Cargo Claim / BOA Reimbursement</option>
-              <option value="Returned for Credit">Returned to Supplier Warehouse for Credit Note</option>
-            </select>
+              onValueChange={val => setBulkDamageAction(val)}
+              radius="md"
+              items={[
+                { key: 'Disposed / Scrapped', value: 'Disposed / Scrapped', label: 'Shattered - Disposed & Scrapped' },
+                { key: 'Saved for Mosaic', value: 'Saved for Mosaic', label: 'Saved for Low-Cost Mosaic Sales' },
+                { key: 'Claimed from Supplier / Insurance Code', value: 'Claimed from Supplier / Insurance Code', label: 'Pending Supplier Cargo Claim / BOA Reimbursement' },
+                { key: 'Returned for Credit', value: 'Returned for Credit', label: 'Returned to Supplier Warehouse for Credit Note' },
+              ]}
+            />
           </div>
         </div>
 

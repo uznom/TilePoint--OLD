@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Check, X, Building2 } from 'lucide-react';
 import { Branch } from '../../types/db';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
-import { HeroButton, HeroCheckbox } from '../common/ui';
+import { HeroButton, HeroCheckbox, HeroSelect } from '../common/ui';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 interface BranchConfigsModalProps {
@@ -101,24 +101,21 @@ export const BranchConfigsModal: React.FC<BranchConfigsModalProps> = ({
 
               {pb.mode === 'existing' ? (
                 <div className="p-4 bg-content1 border border-divider rounded-medium space-y-2">
-                  <label className="text-[10px] font-black uppercase text-primary tracking-wider block pl-1">
-                    Select Existing Destination Branch *
-                  </label>
-                  <select
+                  <HeroSelect
+                    label="Select Existing Destination Branch *"
                     value={pb.selectedExistingBranchId ?? ''}
-                    onChange={(e) => {
+                    onValueChange={(val) => {
                       const updated = [...pendingBranches];
-                      updated[idx].selectedExistingBranchId = e.target.value;
+                      updated[idx].selectedExistingBranchId = val;
                       setPendingBranches(updated);
                     }}
-                    className="w-full bg-content2 border border-divider rounded-medium p-2.5 focus:outline-none focus:border-primary text-foreground font-sans text-xs cursor-pointer"
-                  >
-                    {branches.filter(b => !b.isDeleted).map(b => (
-                      <option key={b.id} value={b.id}>
-                        {getBranchOptionLabel(b)}
-                      </option>
-                    ))}
-                  </select>
+                    radius="md"
+                    items={branches.filter(b => !b.isDeleted).map(b => ({
+                      key: b.id,
+                      value: b.id,
+                      label: getBranchOptionLabel(b),
+                    }))}
+                  />
                   <div className="flex items-center gap-1.5 text-[10px] text-default-500 pl-1">
                     <Check className="h-3.5 w-3.5 text-success shrink-0" />
                     <span>All imported items matching "{pb.detectedLocation}" will automatically be imported into this branch's stock.</span>

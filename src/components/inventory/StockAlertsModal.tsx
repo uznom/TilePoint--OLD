@@ -15,6 +15,7 @@ import {
 import { Branch, Product } from '../../types/db';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
 import { HeroButton } from '../common/ui/HeroButton';
+import { HeroDropdownSelect } from '../common/ui/HeroDropdown';
 import { HeroTooltip } from '../common/ui/HeroTooltip';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
@@ -115,19 +116,19 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
         onClick={onClose} 
       />
       
-      <div className="relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-large border border-divider shadow-2xl bg-content1 text-foreground overflow-hidden z-30">
+      <div className="relative w-full max-w-5xl max-h-[92vh] flex flex-col rounded-3xl border border-divider dark:border-white/10 shadow-2xl bg-content1 dark:bg-[#18181B] text-foreground overflow-hidden z-30 font-sans">
         
         {/* Modal Header */}
-        <div className="p-5 md:p-6 border-b border-divider flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-content1">
+        <div className="p-5 md:p-6 border-b border-divider dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-content1 dark:bg-[#18181B]">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-medium bg-danger/10 text-danger shrink-0 border border-danger/20">
-              <ShieldAlert className="h-6 w-6" />
+            <div className="p-2.5 rounded-xl bg-danger/10 text-danger shrink-0 border border-danger/20">
+              <ShieldAlert className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-lg font-black text-foreground uppercase font-sans">
+              <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
                 Stock Alert Diagnostics & Action Hub
               </h2>
-              <span className="text-xs font-bold text-primary block">
+              <span className="text-xs font-medium text-primary block mt-0.5">
                 Scope: {selectedViewBranchId === 'consolidated' ? 'HQ Consolidated (All Branches)' : getBranchOptionLabel(branches.find(b => b.id === selectedViewBranchId))}
               </span>
             </div>
@@ -146,7 +147,8 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
               color="secondary"
               variant="flat"
               size="sm"
-              className="font-bold text-xs uppercase tracking-wider"
+              radius="full"
+              className="font-semibold"
               startIcon={<FileSpreadsheet className="h-4 w-4" />}
             >
               Export XLSX
@@ -158,38 +160,39 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
               color="success"
               variant="solid"
               size="sm"
-              className="font-bold text-xs uppercase tracking-wider"
+              radius="full"
+              className="font-semibold"
               startIcon={<Plus className="h-4 w-4" />}
             >
-              Queue All to PO Restock ({filteredItems.length})
+              Queue All to PO ({filteredItems.length})
             </HeroButton>
             
             <button 
               type="button" 
               onClick={onClose} 
-              className="p-2 rounded-medium hover:bg-default-100 text-default-400 hover:text-foreground transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-full bg-default-100 hover:bg-default-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-default-400 hover:text-foreground transition-all flex items-center justify-center cursor-pointer active:scale-95 ml-1"
               aria-label="Close modal"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </button>
           </div>
         </div>
 
         {/* Modal Filter Tabs Bar */}
-        <div className="px-5 pt-4 pb-2 border-b border-divider bg-content2/40 flex flex-wrap items-center justify-between gap-3">
+        <div className="px-5 pt-3 pb-3 border-b border-divider dark:border-white/10 bg-default-50/50 dark:bg-zinc-900/50 flex flex-wrap items-center justify-between gap-3 font-sans">
           {/* Status Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          <div className="flex items-center gap-1 bg-default-100 dark:bg-zinc-800/80 p-1 rounded-full border border-divider/40 dark:border-white/5 overflow-x-auto shadow-xs">
             <button
               type="button"
               onClick={() => setFilter('ALL')}
-              className={`px-3.5 py-1.5 rounded-medium text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3.5 py-1 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97] ${
                 filter === 'ALL'
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-content2 text-default-600 hover:bg-default-100'
+                  ? 'bg-white text-zinc-900 dark:bg-zinc-700 dark:text-white shadow-xs'
+                  : 'text-default-500 dark:text-zinc-400 hover:text-foreground'
               }`}
             >
               <span>All Alerts</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${filter === 'ALL' ? 'bg-white/20 text-white' : 'bg-default-200 text-default-600'}`}>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-semibold ${filter === 'ALL' ? 'bg-default-200 text-zinc-900 dark:bg-zinc-600 dark:text-white' : 'bg-default-200/60 text-default-600'}`}>
                 {alertProductsList.length}
               </span>
             </button>
@@ -197,15 +200,15 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
             <button
               type="button"
               onClick={() => setFilter('OUT_OF_STOCK')}
-              className={`px-3.5 py-1.5 rounded-medium text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3.5 py-1 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97] ${
                 filter === 'OUT_OF_STOCK'
-                  ? 'bg-danger text-white shadow-sm'
-                  : 'bg-danger/10 text-danger hover:bg-danger/20 border border-danger/20'
+                  ? 'bg-rose-500 text-white shadow-xs'
+                  : 'text-rose-600 dark:text-rose-400 hover:bg-rose-500/10'
               }`}
             >
               <X className="h-3.5 w-3.5" />
               <span>Out of Stock</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${filter === 'OUT_OF_STOCK' ? 'bg-white/20 text-white' : 'bg-danger/20 text-danger'}`}>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-semibold ${filter === 'OUT_OF_STOCK' ? 'bg-white/20 text-white' : 'bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
                 {stats.outOfStockCount}
               </span>
             </button>
@@ -213,15 +216,15 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
             <button
               type="button"
               onClick={() => setFilter('CRITICAL')}
-              className={`px-3.5 py-1.5 rounded-medium text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3.5 py-1 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97] ${
                 filter === 'CRITICAL'
-                  ? 'bg-danger text-white shadow-sm'
-                  : 'bg-danger/10 text-danger hover:bg-danger/20 border border-danger/20'
+                  ? 'bg-rose-500 text-white shadow-xs'
+                  : 'text-rose-600 dark:text-rose-400 hover:bg-rose-500/10'
               }`}
             >
               <AlertCircle className="h-3.5 w-3.5" />
               <span>Critical Warns</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${filter === 'CRITICAL' ? 'bg-white/20 text-white' : 'bg-danger/20 text-danger'}`}>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-semibold ${filter === 'CRITICAL' ? 'bg-white/20 text-white' : 'bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
                 {stats.criticalStockCount}
               </span>
             </button>
@@ -229,15 +232,15 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
             <button
               type="button"
               onClick={() => setFilter('LOW')}
-              className={`px-3.5 py-1.5 rounded-medium text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3.5 py-1 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97] ${
                 filter === 'LOW'
-                  ? 'bg-warning text-white shadow-sm'
-                  : 'bg-warning/10 text-warning hover:bg-warning/20 border border-warning/20'
+                  ? 'bg-amber-500 text-black shadow-xs font-bold'
+                  : 'text-amber-600 dark:text-amber-400 hover:bg-amber-500/10'
               }`}
             >
               <AlertTriangle className="h-3.5 w-3.5" />
               <span>Low Stock</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${filter === 'LOW' ? 'bg-white/20 text-white' : 'bg-warning/20 text-warning'}`}>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-semibold ${filter === 'LOW' ? 'bg-black/20 text-black' : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'}`}>
                 {stats.lowStockCount}
               </span>
             </button>
@@ -269,17 +272,18 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
             </div>
 
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-bold text-default-500 shrink-0 hidden md:inline">Category:</span>
-              <select
-                value={category}
-                onChange={e => setCategory(e.target.value)}
-                className="px-3 py-1.5 bg-content2 border border-divider text-foreground rounded-medium text-xs font-bold focus:outline-none focus:border-primary cursor-pointer"
-              >
-                <option value="All">All Categories</option>
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
+              <HeroDropdownSelect
+                startIcon={<span className="text-[11px] font-bold text-default-500 shrink-0 hidden md:inline">Category:</span>}
+                items={[
+                  { key: 'All', label: 'All Categories' },
+                  ...categories.map(cat => ({ key: cat, label: cat })),
+                ]}
+                selectedKey={category}
+                onSelectionChange={(val) => setCategory(val)}
+                size="sm"
+                variant="pill"
+                className="min-w-[140px]"
+              />
             </div>
           </div>
         </div>

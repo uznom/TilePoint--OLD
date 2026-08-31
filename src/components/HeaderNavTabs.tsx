@@ -260,7 +260,7 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
         ref={scrollRef}
         onScroll={checkScroll}
         onWheel={handleWheel}
-        className="flex items-center gap-1.5 md:gap-2 border border-divider/20 bg-background/95 backdrop-blur-md p-1.5 rounded-xl shadow-xs overflow-x-auto no-scrollbar scroll-smooth w-full select-none shrink-0"
+        className="flex items-center gap-1.5 border border-divider/40 dark:border-white/5 bg-default-100/80 dark:bg-zinc-800/80 p-1 rounded-full shadow-xs overflow-x-auto no-scrollbar scroll-smooth w-full select-none shrink-0"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {currentSubTabs.map((sub) => {
@@ -275,8 +275,8 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
           if (sub.id === 'pos' && parkedSalesCount > 0) {
             subBadge = (
               <span
-                className={`ml-1 px-1.5 py-0.2 rounded-full text-[9px] font-black leading-tight ${
-                  isSelected ? 'bg-white text-primary' : 'bg-amber-500 text-amber-950'
+                className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-tight ${
+                  isSelected ? 'bg-primary-100 text-primary-700 dark:bg-primary/30 dark:text-primary-300' : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
                 }`}
               >
                 {parkedSalesCount}
@@ -285,8 +285,8 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
           } else if (sub.id === 'deliveries-panel' && pendingDeliveriesCount > 0) {
             subBadge = (
               <span
-                className={`ml-1 px-1.5 py-0.2 rounded-full text-[9px] font-black leading-tight ${
-                  isSelected ? 'bg-white text-primary' : 'bg-sky-500 text-white'
+                className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-tight ${
+                  isSelected ? 'bg-primary-100 text-primary-700 dark:bg-primary/30 dark:text-primary-300' : 'bg-sky-500/20 text-sky-600 dark:text-sky-400'
                 }`}
               >
                 {pendingDeliveriesCount}
@@ -295,8 +295,8 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
           } else if (sub.id === 'inventory-transfer' && pendingTransfersCount > 0) {
             subBadge = (
               <span
-                className={`ml-1 px-1.5 py-0.2 rounded-full text-[9px] font-black leading-tight ${
-                  isSelected ? 'bg-white text-primary' : 'bg-emerald-500 text-white'
+                className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold leading-tight ${
+                  isSelected ? 'bg-primary-100 text-primary-700 dark:bg-primary/30 dark:text-primary-300' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
                 }`}
               >
                 {pendingTransfersCount}
@@ -310,10 +310,10 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
               data-active={isSelected ? 'true' : 'false'}
               type="button"
               onClick={() => onChangeTab(sub.id)}
-              className={`flex items-center gap-2 py-1.5 px-3.5 md:px-4 text-xs font-black uppercase tracking-wider transition-all duration-200 rounded-lg shrink-0 cursor-pointer ${
+              className={`flex items-center gap-2 py-1.5 px-3.5 md:px-4 text-xs font-semibold tracking-tight transition-all duration-200 rounded-full shrink-0 cursor-pointer font-sans active:scale-[0.97] ${
                 isSelected
-                  ? 'bg-primary text-primary-foreground shadow-sm font-black scale-[1.01]'
-                  : 'text-default-500 hover:text-foreground hover:bg-content1'
+                  ? 'bg-white text-zinc-900 dark:bg-zinc-700 dark:text-white shadow-xs'
+                  : 'text-default-500 dark:text-zinc-400 hover:text-foreground hover:bg-default-200/50 dark:hover:bg-zinc-700/50 font-medium'
               }`}
               title={`Sub-view: ${sub.name}`}
             >
@@ -325,16 +325,16 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
         })}
 
         {currentUser && sessionRemainingSeconds !== undefined && sessionRemainingSeconds > 0 && (
-          <div className="ml-auto flex items-center gap-1.5 pl-2 py-1 pr-1 bg-content1/80 border border-divider/30 rounded-lg text-[10.5px] shrink-0">
+          <div className="ml-auto flex items-center gap-1.5 pl-3 py-1 pr-1.5 bg-white dark:bg-zinc-700/60 border border-divider/40 rounded-full text-[11px] shrink-0 font-sans">
             <Clock className={`h-3 w-3 ${sessionRemainingSeconds < 300 ? "text-rose-500 font-bold" : "text-primary"}`} />
-            <span className="font-semibold text-foreground">
+            <span className="font-semibold text-foreground tabular-nums">
               {formatRemainingTime(sessionRemainingSeconds)}
             </span>
             <button
               type="button"
               onClick={handleExtend}
               disabled={isExtending}
-              className="ml-1 px-1.5 py-0.5 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground text-[9.5px] font-bold rounded cursor-pointer transition-colors"
+              className="ml-1 px-2 py-0.5 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground text-[10px] font-semibold rounded-full cursor-pointer transition-colors"
               title="Extend session duration (+60m)"
             >
               {isExtending ? "..." : "+60m"}

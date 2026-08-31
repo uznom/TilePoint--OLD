@@ -64,10 +64,10 @@ export const TransfersSubTab: React.FC<TransfersSubTabProps> = ({
   }, [branchFilteredTransfers, transferSortDescriptors, sortTransferData]);
 
   return (
-    <div className="space-y-6 text-left animate-fade-in">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-content1 p-5 rounded-large border border-divider shadow-sm">
+    <div className="space-y-6 text-left animate-fade-in font-sans">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-divider dark:border-white/10 shadow-xs">
         <div>
-          <h2 className="text-base font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+          <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
             <ArrowRightLeft className="h-5 w-5 text-primary" />
             <span>Inter-Branch Stock Transfers &amp; Transmittals</span>
           </h2>
@@ -76,34 +76,35 @@ export const TransfersSubTab: React.FC<TransfersSubTabProps> = ({
           color="primary"
           onClick={() => setShowCreateTransfer(true)}
           startIcon={<Plus className="h-4 w-4" />}
-          className="text-xs font-black uppercase tracking-wider shadow-md"
+          radius="full"
+          className="font-semibold shadow-xs"
         >
           Initiate Stock Transfer Request
         </HeroButton>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-content1 p-4 rounded-medium border border-divider space-y-1 shadow-sm">
-          <span className="text-[10px] font-black uppercase tracking-wider text-default-500">Total Transfer Orders</span>
-          <div className="text-xl font-black text-foreground">{branchFilteredTransfers.length}</div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-sans">
+        <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-divider dark:border-white/10 space-y-1 shadow-xs">
+          <span className="text-xs font-medium text-default-500 tracking-tight block">Total Transfer Orders</span>
+          <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground tabular-nums">{branchFilteredTransfers.length}</div>
         </div>
-        <div className="bg-warning/5 p-4 rounded-medium border border-warning/15 space-y-1">
-          <span className="text-[10px] font-black uppercase tracking-wider text-warning">Pending Approval</span>
-          <div className="text-xl font-black text-warning">
+        <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-amber-500/25 dark:border-amber-500/20 space-y-1 shadow-xs">
+          <span className="text-xs font-medium text-amber-600 dark:text-amber-400 tracking-tight block">Pending Approval</span>
+          <div className="text-xl sm:text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400 tabular-nums">
             {branchFilteredTransfers.filter(t => t.status === 'Pending').length} requests
           </div>
         </div>
-        <div className="bg-sky-500/5 p-4 rounded-medium border border-sky-500/15 space-y-1">
-          <span className="text-[10px] font-black uppercase tracking-wider text-sky-600 dark:text-sky-400">In Transit / Dispatched</span>
-          <div className="text-xl font-black text-sky-600 dark:text-sky-400">
+        <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-sky-500/25 dark:border-sky-500/20 space-y-1 shadow-xs">
+          <span className="text-xs font-medium text-sky-600 dark:text-sky-400 tracking-tight block">In Transit / Dispatched</span>
+          <div className="text-xl sm:text-2xl font-bold tracking-tight text-sky-600 dark:text-sky-400 tabular-nums">
             {branchFilteredTransfers.filter(t => t.status === 'Dispatched').length} orders
           </div>
         </div>
-        <div className="bg-success/5 p-4 rounded-medium border border-success/15 space-y-1">
-          <span className="text-[10px] font-black uppercase tracking-wider text-success">Completed Transfers</span>
-          <div className="text-xl font-black text-success">
-            {branchFilteredTransfers.filter(t => t.status === 'Received' || t.status === 'Completed').length} received
+        <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-emerald-500/25 dark:border-emerald-500/20 space-y-1 shadow-xs">
+          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 tracking-tight block">Received & Settled</span>
+          <div className="text-xl sm:text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
+            {branchFilteredTransfers.filter(t => t.status === 'Received').length} transfers
           </div>
         </div>
       </div>

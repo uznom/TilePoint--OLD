@@ -196,157 +196,156 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
  </button>
 
  <button
- onClick={() => setShowZReport(true)}
- className="bg-secondary text-secondary-foreground font-bold shadow-md shadow-secondary/20 rounded-medium p-2.5 text-xs font-bold rounded-full cursor-pointer text-center transition-all duration-200"
- >
- Z Report (End-Of-Day Closing)
- </button>
- </div>
- </div>
- )}
- </div>
+ onClick={() => setShowZReport(true)}  className="bg-secondary text-secondary-foreground font-semibold shadow-sm shadow-secondary/20 p-2.5 text-xs rounded-full cursor-pointer text-center transition-all duration-200 active:scale-[0.97]"
+  >
+  Z Report (End-Of-Day Closing)
+  </button>
+  </div>
+  </div>
+  )}
+  </div>
 
- {/* Close shift verification panel (Columns 5) */}
- <div className="bg-content1 border border-divider rounded-2xl shadow-sm text-foreground lg:col-span-5 p-5 sm:p-6 h-fit space-y-4">
- <h3 className="text-sm font-bold flex items-center gap-2 border-b border-divider/15 pb-2.5 text-primary">
- <Unlock className="h-5 w-5 text-secondary" /> Close Drawer Shift
- </h3>
+  {/* Close shift verification panel (Columns 5) */}
+  <div className="bg-content1 dark:bg-[#18181B] border border-divider dark:border-white/10 rounded-2xl shadow-xs text-foreground lg:col-span-5 p-5 sm:p-6 h-fit space-y-4 font-sans">
+  <h3 className="text-sm font-semibold tracking-tight flex items-center gap-2 border-b border-divider/20 pb-2.5 text-foreground">
+  <Unlock className="h-4 w-4 text-primary" /> Close Drawer Shift
+  </h3>
 
- <form onSubmit={handleCloseLocalShift} className="space-y-4 pt-3 text-xs text-left">
- <div>
- <label className="text-[10px] font-bold text-primary uppercase tracking-widest block mb-1.5 pl-1">
- Actual Counted Drawer Cash (PHP)
- </label>
- <input
- type="number"
- required
- value={closingCashInput ?? ''}
- onChange={e => setClosingCashInput(e.target.value)}
- placeholder="3000"
- className="w-full bg-background border border-divider focus:border-primary px-3 py-2 text-sm text-center font-bold text-foreground focus:outline-none transition-colors rounded-lg"
- />
- </div>
+  <form onSubmit={handleCloseLocalShift} className="space-y-4 pt-3 text-xs text-left">
+  <div>
+  <label className="text-xs font-semibold text-foreground dark:text-zinc-200 tracking-tight block mb-1.5 pl-1 font-sans">
+  Actual Counted Drawer Cash (PHP)
+  </label>
+  <input
+  type="number"
+  required
+  value={closingCashInput ?? ''}
+  onChange={e => setClosingCashInput(e.target.value)}
+  placeholder="3000"
+  className="w-full bg-default-100 dark:bg-zinc-900 border border-divider/40 focus:border-primary px-3.5 py-2.5 text-sm text-center font-semibold tracking-tight text-foreground focus:outline-none transition-colors rounded-xl font-sans tabular-nums"
+  />
+  </div>
 
- {/* Informative summary calculation preview */}
- {closingCashInput && (
- <div className="p-3 bg-content2/40 border border-divider/30 rounded-2xl space-y-1.5 text-[11px]">
- <div className="flex justify-between text-default-500">
- <span>Expected drawer:</span>
- <span>{formatCurrency(expectedEndCash)}</span>
- </div>
- <div className="flex justify-between text-foreground">
- <span>Counted drawer:</span>
- <span className="font-bold">{formatCurrency(closingCashInput)}</span>
- </div>
+  {/* Informative summary calculation preview */}
+  {closingCashInput && (
+  <div className="p-3 bg-default-100/60 dark:bg-zinc-800/40 border border-divider/30 rounded-2xl space-y-1.5 text-xs font-sans">
+  <div className="flex justify-between text-default-500 font-normal">
+  <span>Expected drawer:</span>
+  <span className="tabular-nums font-medium text-foreground">{formatCurrency(expectedEndCash)}</span>
+  </div>
+  <div className="flex justify-between text-foreground font-normal">
+  <span>Counted drawer:</span>
+  <span className="font-semibold tabular-nums">{formatCurrency(closingCashInput)}</span>
+  </div>
 
- {/* Variance computed */}
- {(() => {
- const variance = (parseFloat(closingCashInput) || 0) - expectedEndCash;
- return (
- <div className={`flex justify-between border-t border-dashed border-divider/20 pt-1.5 font-black text-[12px] ${
- variance === 0
- ? 'text-secondary'
- : variance > 0
- ? 'text-primary'
- : 'text-red-500'
- }`}>
- <span>Variance / Deviation:</span>
- <span>{formatCurrency(variance, { signDisplay: 'exceptZero' })}</span>
- </div>
- );
- })()}
- </div>
- )}
+  {/* Variance computed */}
+  {(() => {
+  const variance = (parseFloat(closingCashInput) || 0) - expectedEndCash;
+  return (
+  <div className={`flex justify-between border-t border-dashed border-divider/30 pt-1.5 font-semibold text-xs ${
+  variance === 0
+  ? 'text-emerald-500'
+  : variance > 0
+  ? 'text-primary'
+  : 'text-rose-500'
+  }`}>
+  <span>Variance / Deviation:</span>
+  <span className="tabular-nums">{formatCurrency(variance, { signDisplay: 'exceptZero' })}</span>
+  </div>
+  );
+  })()}
+  </div>
+  )}
 
- <button
- type="submit"
- className="w-full py-2.5 bg-primary text-primary-foreground font-extrabold text-xs uppercase tracking-widest rounded-full cursor-pointer transition shadow hover:bg-primary/95 text-center"
- >
- Close Out Safe and Close Shift
- </button>
- </form>
- </div>
- </div>
- ) : (
- /* If shift is CLOSED */
- <div className="bg-content1 border border-divider rounded-2xl shadow-sm text-foreground text-center max-w-md mx-auto p-6 sm:p-8 space-y-5">
-            <div className="p-3.5 bg-primary/10 text-primary border border-divider/15 rounded-full w-fit mx-auto">
+  <button
+  type="submit"
+  className="w-full py-2.5 bg-primary text-primary-foreground font-semibold text-xs tracking-tight rounded-full cursor-pointer transition-all shadow-sm hover:brightness-105 active:scale-[0.97] text-center font-sans"
+  >
+  Close Out Safe and Close Shift
+  </button>
+  </form>
+  </div>
+  </div>
+  ) : (
+  /* If shift is CLOSED */
+  <div className="bg-content1 dark:bg-[#18181B] border border-divider dark:border-white/10 rounded-2xl shadow-xs text-foreground text-center max-w-md mx-auto p-6 sm:p-8 space-y-5 font-sans">
+            <div className="p-3.5 bg-primary/10 text-primary border border-primary/20 rounded-full w-fit mx-auto">
               <Lock className="h-6 w-6" />
             </div>
 
             <div>
-              <h3 className="text-sm font-black text-primary uppercase tracking-wider">Cash Register Closed</h3>
-              <p className="text-xs text-default-500 mt-1.5 leading-relaxed">
+              <h3 className="text-sm font-semibold tracking-tight text-foreground">Cash Register Closed</h3>
+              <p className="text-xs text-default-400 mt-1.5 leading-relaxed font-normal">
                 Declare an initial starting drawer fund before processing checkouts.
               </p>
             </div>
 
- <form onSubmit={handleOpenLocalShift} className="space-y-4 text-xs text-left">
- {previouslyClosedShift && (
- <div className="p-3 bg-content1 border border-divider/30 rounded-2xl space-y-1.5 text-[11px] leading-normal">
- <div className="flex justify-between items-center text-amber-600 dark:text-amber-500 font-bold">
- <span>Previous Close Balance:</span>
- <span className=" font-black text-xs text-foreground">₱{previouslyClosedShift.cashCount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
- </div>
- <p className="text-[9.5px] text-default-500/80">
- Closed by <strong className="text-default-500 font-semibold">{previouslyClosedShift.cashierName}</strong> on {previouslyClosedShift.closedAt && !isNaN(new Date(previouslyClosedShift.closedAt).getTime()) ? new Date(previouslyClosedShift.closedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'recently'}.
- </p>
- <button
- type="button"
- onClick={() => {
- setStartCashInput(previouslyClosedShift.cashCount.toString());
- showToast(`Loaded previous shift balance of ₱${previouslyClosedShift.cashCount.toFixed(2)}`);
- }}
- className="w-full py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl font-bold transition-all text-center text-[10px]"
- >
- Use Previous Shift Balance
- </button>
- </div>
- )}
-
-  <div className="space-y-1.5">
-    <div className="flex justify-between items-center pl-1">
-      <label className="text-[10px] font-bold text-primary uppercase tracking-widest block">
-        Opening Change Float (PHP)
-      </label>
-      <span className="text-[9px] text-default-500 font-medium">Standard Retail Float</span>
-    </div>
-    <input
-      type="number"
-      step="any"
-      required
-      placeholder="e.g. 1000.00"
-      value={startCashInput ?? ''}
-      onChange={e => setStartCashInput(e.target.value)}
-      className="w-full bg-background border border-divider focus:border-primary px-3 py-2 text-base text-center font-bold text-foreground focus:outline-none transition-colors rounded-lg"
-    />
-    <div className="grid grid-cols-4 gap-1.5 pt-1">
-      {[500, 1000, 2000, 3000].map((amt) => (
-        <button
-          key={amt}
-          type="button"
-          onClick={() => setStartCashInput(amt.toString())}
-          className={`py-1.5 text-[11px] font-bold rounded-lg border transition-all ${
-            startCashInput === amt.toString()
-              ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-              : 'bg-content2 hover:bg-content3 border-divider/40 text-foreground'
-          }`}
-        >
-          ₱{amt.toLocaleString()}
-        </button>
-      ))}
-    </div>
+  <form onSubmit={handleOpenLocalShift} className="space-y-4 text-xs text-left">
+  {previouslyClosedShift && (
+  <div className="p-3 bg-default-100/60 dark:bg-zinc-800/40 border border-divider/30 rounded-2xl space-y-1.5 text-xs leading-normal font-sans">
+  <div className="flex justify-between items-center text-amber-600 dark:text-amber-400 font-semibold">
+  <span>Previous Close Balance:</span>
+  <span className="font-bold text-xs text-foreground tabular-nums">₱{previouslyClosedShift.cashCount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
   </div>
+  <p className="text-[11px] text-default-400">
+  Closed by <strong className="text-foreground font-medium">{previouslyClosedShift.cashierName}</strong> on {previouslyClosedShift.closedAt && !isNaN(new Date(previouslyClosedShift.closedAt).getTime()) ? new Date(previouslyClosedShift.closedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'recently'}.
+  </p>
+  <button
+  type="button"
+  onClick={() => {
+  setStartCashInput(previouslyClosedShift.cashCount.toString());
+  showToast(`Loaded previous shift balance of ₱${previouslyClosedShift.cashCount.toFixed(2)}`);
+  }}
+  className="w-full py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-full font-semibold transition-all text-center text-xs cursor-pointer active:scale-[0.98]"
+  >
+  Use Previous Shift Balance
+  </button>
+  </div>
+  )}
 
- <button
- type="submit"
- className="bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 rounded-medium w-full py-2.5 font-bold rounded-full shadow-sm cursor-pointer transition-colors text-center"
- >
- Start Shift Register
- </button>
- </form>
- </div>
- )}
+   <div className="space-y-1.5">
+     <div className="flex justify-between items-center pl-1">
+       <label className="text-xs font-semibold text-foreground dark:text-zinc-200 tracking-tight block font-sans">
+         Opening Change Float (PHP)
+       </label>
+       <span className="text-[11px] text-default-400 font-normal">Standard Retail Float</span>
+     </div>
+     <input
+       type="number"
+       step="any"
+       required
+       placeholder="e.g. 1000.00"
+       value={startCashInput ?? ''}
+       onChange={e => setStartCashInput(e.target.value)}
+       className="w-full bg-default-100 dark:bg-zinc-900 border border-divider/40 focus:border-primary px-3.5 py-2.5 text-base text-center font-semibold tracking-tight text-foreground focus:outline-none transition-colors rounded-xl font-sans tabular-nums"
+     />
+     <div className="grid grid-cols-4 gap-1.5 pt-1">
+       {[500, 1000, 2000, 3000].map((amt) => (
+         <button
+           key={amt}
+           type="button"
+           onClick={() => setStartCashInput(amt.toString())}
+           className={`py-1.5 text-xs font-semibold rounded-full border transition-all cursor-pointer active:scale-95 ${
+             startCashInput === amt.toString()
+               ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+               : 'bg-default-100 dark:bg-zinc-800 hover:bg-default-200 dark:hover:bg-zinc-700 border-divider/40 text-foreground'
+           }`}
+         >
+           ₱{amt.toLocaleString()}
+         </button>
+       ))}
+     </div>
+   </div>
+
+  <button
+  type="submit"
+  className="bg-primary text-primary-foreground font-semibold shadow-sm shadow-primary/20 w-full py-2.5 rounded-full cursor-pointer transition-all hover:brightness-105 active:scale-[0.97] text-center font-sans"
+  >
+  Start Shift Register
+  </button>
+  </form>
+  </div>
+  )}
 
   {/* Historic registers lists underneath */}
   <div className="bg-content1 border border-divider rounded-2xl shadow-sm text-foreground p-5 sm:p-6 space-y-4">

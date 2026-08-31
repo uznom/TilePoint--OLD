@@ -11,7 +11,7 @@ import { formatCurrency } from "../utils/formatters";
 import { saveFileToBackup, verifyAndUnwrapBackup } from "../lib/fileBackupHelper";
 import { Transmittal, TransmittalDocType, UserRole } from "../types/db";
 import { useResponsivePageSize, TablePagination } from "./TablePagination";
-import { HeroButton } from "./common/ui";
+import { HeroButton, HeroSelect } from "./common/ui";
 import { HeaderBar } from "./common/HeaderBar";
 import { ToastNotification } from "./ToastNotification";
 import {
@@ -1370,60 +1370,53 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </div>
 
  <div className="space-y-1 relative">
- <div className="flex justify-between items-center">
- <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">
- Document Category
- </label>
- <button
- type="button"
- onClick={() => compileBranchData(selectedDocType)}
- className="bg-primary/10 text-primary hover:bg-primary/25 border border-primary/20 px-2 py-0.5 rounded text-[9px] font-black uppercase transition-colors"
- title="Automatically snapshot and wrap core matching branch records into standard JSON ledger schema"
- >
- Pull Live Data
- </button>
- </div>
- <select
- value={selectedDocType ?? ''}
- onChange={(e) => {
- const val = e.target.value as TransmittalDocType;
- setSelectedDocType(val);
- compileBranchData(val);
- }}
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg cursor-pointer"
- >
- <option value="Full Branch State Snapshot">
- Full Branch State Snapshot (All Sales, Stocks, Shifts &amp;
- Expenses)
- </option>
- <option value="Daily Sales Report">Daily Sales Report</option>
- <option value="Inventory Count Report">
- Inventory Count Report
- </option>
- <option value="Purchase Order">Purchase Order</option>
- <option value="Receiving Report">Receiving Report</option>
- <option value="Branch Request">Branch Request</option>
- </select>
- </div>
+    <div className="flex justify-between items-center pb-1">
+      <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">
+        Document Category
+      </label>
+      <button
+        type="button"
+        onClick={() => compileBranchData(selectedDocType)}
+        className="bg-primary/10 text-primary hover:bg-primary/25 border border-primary/20 px-2 py-0.5 rounded text-[9px] font-black uppercase transition-colors"
+        title="Automatically snapshot and wrap core matching branch records into standard JSON ledger schema"
+      >
+        Pull Live Data
+      </button>
+    </div>
+    <HeroSelect
+      value={selectedDocType ?? ''}
+      onValueChange={(val) => {
+        const docVal = val as TransmittalDocType;
+        setSelectedDocType(docVal);
+        compileBranchData(docVal);
+      }}
+      radius="md"
+      items={[
+        { key: 'Full Branch State Snapshot', label: 'Full Branch State Snapshot (All Sales, Stocks, Shifts & Expenses)' },
+        { key: 'Daily Sales Report', label: 'Daily Sales Report' },
+        { key: 'Inventory Count Report', label: 'Inventory Count Report' },
+        { key: 'Purchase Order', label: 'Purchase Order' },
+        { key: 'Receiving Report', label: 'Receiving Report' },
+        { key: 'Branch Request', label: 'Branch Request' },
+      ]}
+    />
+  </div>
 
- <div className="space-y-1 relative">
- <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">
- Target branch destination
- </label>
- <select
- value={toBranchId ?? ''}
- onChange={(e) => setToBranchId(e.target.value)}
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg cursor-pointer"
- >
- {branches
- .filter((b) => b.id !== (currentUser?.branchAssignmentId || 'B1'))
- .map((b) => (
- <option key={b.id} value={b.id}>
- {b.name}
- </option>
- ))}
- </select>
- </div>
+  <div className="space-y-1 relative">
+    <HeroSelect
+      label="Target branch destination"
+      value={toBranchId ?? ''}
+      onValueChange={(val) => setToBranchId(val)}
+      radius="md"
+      items={branches
+        .filter((b) => b.id !== (currentUser?.branchAssignmentId || 'B1'))
+        .map((b) => ({
+          key: b.id,
+          value: b.id,
+          label: b.name,
+        }))}
+    />
+  </div>
 
  <div className="space-y-1 relative">
  <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">

@@ -3,6 +3,7 @@ import { Activity, Search, Sliders } from 'lucide-react';
 import { Branch, InventoryMovement, Product } from '../../types/db';
 import { HeroButton } from '../common/ui/HeroButton';
 import { HeroTable } from '../common/ui/HeroTable';
+import { HeroDropdownSelect } from '../common/ui/HeroDropdown';
 import { useMultiSort } from '../../hooks/useMultiSort';
 import { MultiSortBadgeBar } from '../common/ui/MultiSortBadgeBar';
 
@@ -63,11 +64,11 @@ export const MovementsSubTab: React.FC<MovementsSubTabProps> = ({
   }, [filteredMovements, movementSortDescriptors, sortMovementData]);
 
   return (
-    <div className="space-y-6 text-left animate-fade-in">
+    <div className="space-y-6 text-left animate-fade-in font-sans">
       {/* Header & Primary Action Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-content1 p-5 rounded-large border border-divider shadow-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-divider dark:border-white/10 shadow-xs">
         <div>
-          <h2 className="text-base font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+          <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
             <span>Stock Adjustments & Audit Movement Logs</span>
           </h2>
@@ -76,62 +77,67 @@ export const MovementsSubTab: React.FC<MovementsSubTabProps> = ({
           color="primary"
           onClick={() => setShowAdjustModal(true)}
           startIcon={<Sliders className="h-4 w-4" />}
-          className="text-xs font-black uppercase tracking-wider shadow-md"
+          radius="full"
+          className="font-semibold shadow-xs"
         >
           Record Manual Adjustment
         </HeroButton>
       </div>
 
       {/* KPI Overview Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-content1 p-4 rounded-medium border border-divider space-y-1 shadow-sm">
-          <span className="text-[10px] font-black uppercase tracking-wider text-default-500">Total Movement Logs</span>
-          <div className="text-xl font-black text-foreground">{filteredMovements.length}</div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-sans">
+        <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-divider dark:border-white/10 space-y-1 shadow-xs">
+          <span className="text-xs font-medium text-default-500 tracking-tight block">Total Movement Logs</span>
+          <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground tabular-nums">{filteredMovements.length}</div>
         </div>
-        <div className="bg-success/5 p-4 rounded-medium border border-success/15 space-y-1">
-          <span className="text-[10px] font-black uppercase tracking-wider text-success">Stock Inflows (+)</span>
-          <div className="text-xl font-black text-success">
+        <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-emerald-500/25 dark:border-emerald-500/20 space-y-1 shadow-xs">
+          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 tracking-tight block">Stock Inflows (+)</span>
+          <div className="text-xl sm:text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
             +{filteredMovements.filter(m => Number(m.quantity || 0) > 0).reduce((acc, m) => acc + Number(m.quantity || 0), 0)} boxes
           </div>
         </div>
-        <div className="bg-danger/5 p-4 rounded-medium border border-danger/15 space-y-1">
-          <span className="text-[10px] font-black uppercase tracking-wider text-danger">Deductions & Outflows (-)</span>
-          <div className="text-xl font-black text-danger">
+        <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-rose-500/25 dark:border-rose-500/20 space-y-1 shadow-xs">
+          <span className="text-xs font-medium text-rose-600 dark:text-rose-400 tracking-tight block">Deductions & Outflows (-)</span>
+          <div className="text-xl sm:text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400 tabular-nums">
             {filteredMovements.filter(m => Number(m.quantity || 0) < 0).reduce((acc, m) => acc + Number(m.quantity || 0), 0)} boxes
           </div>
         </div>
-        <div className="bg-warning/5 p-4 rounded-medium border border-warning/15 space-y-1">
-          <span className="text-[10px] font-black uppercase tracking-wider text-warning">Damaged / Write-Offs</span>
-          <div className="text-xl font-black text-warning">
+        <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-amber-500/25 dark:border-amber-500/20 space-y-1 shadow-xs">
+          <span className="text-xs font-medium text-amber-600 dark:text-amber-400 tracking-tight block">Damaged / Write-Offs</span>
+          <div className="text-xl sm:text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400 tabular-nums">
             {filteredMovements.filter(m => (m.type || '').toUpperCase().includes('DAMAGE')).length} incidents
           </div>
         </div>
       </div>
 
       {/* Search & Filter bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between font-sans">
         <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-default-500/60" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-default-400" />
           <input
             type="text"
             value={movementSearch ?? ''}
             onChange={(e) => setMovementSearch(e.target.value)}
             placeholder="Search log by notes, ref #, or operator..."
-            className="w-full pl-9 pr-3 py-2 text-xs rounded-medium bg-content1 border border-divider focus:border-primary focus:outline-none text-foreground"
+            className="w-full pl-9 pr-3.5 py-2 text-xs rounded-full bg-default-100 dark:bg-zinc-800/80 border border-divider/40 focus:border-primary focus:outline-none text-foreground font-sans font-medium"
           />
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <select
-            value={movementTypeFilter ?? ''}
-            onChange={(e) => setMovementTypeFilter(e.target.value)}
-            className="px-3 py-2 text-xs rounded-medium bg-content1 border border-divider text-foreground font-bold focus:outline-none"
-          >
-            <option value="All">All Movement Types</option>
-            <option value="IN">Stock Inflow (IN)</option>
-            <option value="OUT">Stock Outflow (OUT)</option>
-            <option value="ADJUST">Manual Adjustments</option>
-            <option value="DAMAGE">Damage & Breakage</option>
-          </select>
+
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          <HeroDropdownSelect
+            items={[
+              { key: 'All', label: 'All Operations' },
+              { key: 'IN', label: 'Stock Inflow (IN)' },
+              { key: 'OUT', label: 'Stock Outflow (OUT)' },
+              { key: 'ADJUST', label: 'Manual Adjustments' },
+              { key: 'DAMAGE', label: 'Damage & Breakage' },
+            ]}
+            selectedKey={movementTypeFilter ?? 'All'}
+            onSelectionChange={(k) => setMovementTypeFilter(k)}
+            size="sm"
+            variant="pill"
+            className="min-w-[170px]"
+          />
         </div>
       </div>
 

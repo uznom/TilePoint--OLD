@@ -48,39 +48,40 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     <HeroCard
       id={id}
       variant="bordered"
+      radius="2xl"
       isHoverable
-      className={`bg-content1 border border-divider/25 p-5 relative overflow-hidden shadow-sm ${className}`}
+      className={`bg-content1 dark:bg-[#18181B] border border-divider dark:border-white/10 p-5 relative overflow-hidden shadow-xs ${className}`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wider text-default-500">
+        <div className="space-y-1.5 flex-1 min-w-0">
+          <p className="text-xs font-medium text-default-500 tracking-tight">
             {title}
           </p>
-          <div className="flex items-baseline gap-2">
-            <h3 className="text-2xl font-black text-foreground">{value}</h3>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h3 className="text-2xl sm:text-3xl font-bold text-foreground font-sans tracking-tight tabular-nums truncate">{value}</h3>
             {trendValue && (
-              <span
-                className={`text-xs font-bold ${
-                  isPositiveTrend ? 'text-emerald-400' : 'text-rose-400'
-                }`}
+              <HeroChip
+                variant="flat"
+                color={isPositiveTrend ? 'success' : 'danger'}
+                size="sm"
               >
                 {isPositiveTrend ? '↑' : '↓'} {trendValue}
-              </span>
+              </HeroChip>
             )}
           </div>
           {subtitle && (
-            <p className="text-xs text-default-500/80">{subtitle}</p>
+            <p className="text-xs text-default-400 font-normal">{subtitle}</p>
           )}
         </div>
 
         {Icon && (
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-default-100 dark:bg-zinc-800 text-default-600 dark:text-zinc-300">
             <Icon className="h-5 w-5" />
           </div>
         )}
       </div>
 
-      {badgeText && (
+      {badgeText && !trendValue && (
         <div className="mt-3 flex items-center gap-1.5">
           <HeroChip variant={getChipVariant()} size="sm">
             {badgeText}

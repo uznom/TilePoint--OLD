@@ -74,7 +74,7 @@ verifyAndUnwrapBackup
 } from '../lib/fileBackupHelper';
 import { ArchivableCategory,UserRole } from '../types/db';
 import { ActionButton } from './ActionButton';
-import { HeroCheckbox } from './common/ui';
+import { HeroCheckbox, HeroDropdownSelect } from './common/ui';
 import { HeroUIAppearanceSettings } from './HeroUIAppearanceSettings';
 
 interface PrivacyAccessibilityHubProps {
@@ -2596,26 +2596,29 @@ startxref
  </div>
 
  <div className="flex items-center justify-between text-[9.5px]">
- <span className="text-default-500 ">Retention Policy:</span>
- <select
- value={currentMonths}
- onChange={(e) => {
- const val = Number(e.target.value);
- db.updateRetentionPolicy(item.id, val);
- if (selectedArchivalCategory === item.id) {
- setSelectedArchivalAgeMonths(val);
- }
- }}
- className="px-2 py-1 bg-zinc-900 border border-zinc-700 rounded-lg text-amber-300 font-bold text-[10px] cursor-pointer focus:outline-none focus:border-primary"
- >
- <option value={1}>1 Month (30 Days)</option>
- <option value={3}>3 Months (90 Days)</option>
- <option value={6}>6 Months (180 Days)</option>
- <option value={12}>1 Year (365 Days)</option>
- <option value={24}>2 Years (730 Days)</option>
- <option value={0}>Keep Indefinitely (Never Purge)</option>
- </select>
- </div>
+  <span className="text-default-500 ">Retention Policy:</span>
+  <HeroDropdownSelect
+    items={[
+      { key: '1', label: '1 Month (30 Days)' },
+      { key: '3', label: '3 Months (90 Days)' },
+      { key: '6', label: '6 Months (180 Days)' },
+      { key: '12', label: '1 Year (365 Days)' },
+      { key: '24', label: '2 Years (730 Days)' },
+      { key: '0', label: 'Keep Indefinitely (Never Purge)' },
+    ]}
+    selectedKey={String(currentMonths)}
+    onSelectionChange={(val) => {
+      const numVal = Number(val);
+      db.updateRetentionPolicy(item.id, numVal);
+      if (selectedArchivalCategory === item.id) {
+        setSelectedArchivalAgeMonths(numVal);
+      }
+    }}
+    size="sm"
+    variant="pill"
+    className="min-w-[140px]"
+  />
+  </div>
  </div>
  );
  })}

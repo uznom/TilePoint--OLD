@@ -4,6 +4,7 @@ import { Sliders, X } from 'lucide-react';
 import { Branch, Product, User } from '../../types/db';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
 import { HeroButton } from '../common/ui/HeroButton';
+import { HeroSelect } from '../common/ui/HeroSelect';
 
 interface ManualLedgerModalProps {
   isOpen: boolean;
@@ -79,60 +80,62 @@ export const ManualLedgerModal: React.FC<ManualLedgerModalProps> = React.memo(({
         </p>
 
         {/* Product selection dropdown */}
-        <div className="space-y-1">
-          <label className="text-[10px] font-black text-primary uppercase tracking-widest pl-1 select-none">Select Catalogue Tile</label>
-          <select
-            required
-            value={manualLedgerProductId}
-            onChange={e => setManualLedgerProductId(e.target.value)}
-            className="w-full bg-content2 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground rounded-medium focus:outline-none transition-colors font-sans cursor-pointer"
-          >
-            <option value="" disabled>-- Choose a product --</option>
-            {products.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.productName} ({p.sku || p.id.slice(-6)}) - Current Qty: {p.stockQuantity}
-              </option>
-            ))}
-          </select>
-        </div>
+        <HeroSelect
+          label="Select Catalogue Tile"
+          isRequired
+          placeholder="-- Choose a product --"
+          value={manualLedgerProductId}
+          onValueChange={(val) => setManualLedgerProductId(val)}
+          radius="md"
+          items={products.map(p => ({
+            key: p.id,
+            value: p.id,
+            label: `${p.productName} (${p.sku || p.id.slice(-6)}) - Stock: ${p.stockQuantity}`
+          }))}
+        />
 
         {/* Grid for parameters */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-primary uppercase tracking-widest pl-1 select-none">Impacted Yard / Branch</label>
             {currentUser?.role === 'Admin' ? (
-              <select
-                required
+              <HeroSelect
+                label="Impacted Yard / Branch"
+                isRequired
                 value={manualLedgerBranchId}
-                onChange={e => setManualLedgerBranchId(e.target.value)}
-                className="w-full bg-content2 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground rounded-medium focus:outline-none transition-colors font-sans cursor-pointer"
-              >
-                {branches.map(b => (
-                  <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
-                ))}
-              </select>
+                onValueChange={(val) => setManualLedgerBranchId(val)}
+                radius="md"
+                items={branches.map(b => ({
+                  key: b.id,
+                  value: b.id,
+                  label: getBranchOptionLabel(b)
+                }))}
+              />
             ) : (
-              <div className="w-full bg-content2/60 border border-divider px-3 py-2 text-xs rounded-medium font-bold text-default-400">
-                {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
+              <div>
+                <label className="text-xs font-semibold text-foreground select-none block mb-1">Impacted Yard / Branch</label>
+                <div className="w-full bg-default-100 border border-divider px-3 py-2 text-xs rounded-xl font-bold text-default-400">
+                  {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
+                </div>
               </div>
             )}
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black text-primary uppercase tracking-widest pl-1 select-none">Movement Ledger Type</label>
-            <select
-              required
+            <HeroSelect
+              label="Movement Ledger Type"
+              isRequired
               value={manualLedgerType}
-              onChange={e => setManualLedgerType(e.target.value as any)}
-              className="w-full bg-content2 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground rounded-medium focus:outline-none transition-colors font-sans font-bold cursor-pointer"
-            >
-              <option value="ADJUST">ADJUST (Signed variance +/-)</option>
-              <option value="IN">IN (Receive to stock +)</option>
-              <option value="OUT">OUT (Issue out / breakages -)</option>
-              <option value="PURCHASE">PURCHASE (Direct replenishment +)</option>
-              <option value="SALE">SALE (Floor sale issue out -)</option>
-              <option value="TRANSFER">TRANSFER (Signed Inter-branch +/-)</option>
-            </select>
+              onValueChange={(val) => setManualLedgerType(val as any)}
+              radius="md"
+              items={[
+                { key: 'ADJUST', label: 'ADJUST (Signed variance +/-)' },
+                { key: 'IN', label: 'IN (Receive to stock +)' },
+                { key: 'OUT', label: 'OUT (Issue out / breakages -)' },
+                { key: 'PURCHASE', label: 'PURCHASE (Direct replenishment +)' },
+                { key: 'SALE', label: 'SALE (Floor sale issue out -)' },
+                { key: 'TRANSFER', label: 'TRANSFER (Signed Inter-branch +/-)' },
+              ]}
+            />
           </div>
         </div>
 

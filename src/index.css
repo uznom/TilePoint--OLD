@@ -4,8 +4,8 @@
 
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "Courier New", Courier, monospace;
-  --font-receipt: "JetBrains Mono", ui-monospace, SFMono-Regular, "Courier New", Courier, monospace;
+  --font-mono: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-receipt: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   /* Color tokens */
   --color-background: var(--heroui-background);
@@ -84,32 +84,37 @@
   --radius-xs: 4px;
   --radius-small: 8px;
   --radius-medium: 12px;
-  --radius-large: 14px;
-  --radius-xl: 16px;
-  --radius-2xl: 20px;
+  --radius-large: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
   --radius-full: 9999px;
 }
 
 :root {
-  --heroui-background: #F7F9FC;
-  --heroui-foreground: #0F172A;
-  --heroui-divider: rgba(226, 232, 240, 0.85);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --heroui-background: #F4F4F5;
+  --heroui-foreground: #09090B;
+  --heroui-divider: rgba(0, 0, 0, 0.08);
   --heroui-content1: #FFFFFF;
-  --heroui-content2: #F1F5F9;
-  --heroui-content3: #E2E8F0;
-  --heroui-content4: #CBD5E1;
-  --heroui-default: #E2E8F0;
-  --heroui-default-foreground: #0F172A;
-  --heroui-default-50: #F8FAFC;
-  --heroui-default-100: #F1F5F9;
-  --heroui-default-200: #E2E8F0;
-  --heroui-default-300: #CBD5E1;
-  --heroui-default-400: #94A3B8;
-  --heroui-default-500: #64748B;
-  --heroui-default-600: #475569;
-  --heroui-default-700: #334155;
-  --heroui-default-800: #1E293B;
-  --heroui-default-900: #0F172A;
+  --heroui-content2: #F4F4F5;
+  --heroui-content3: #E4E4E7;
+  --heroui-content4: #D4D4D8;
+  --heroui-default: #E4E4E7;
+  --heroui-default-foreground: #09090B;
+  --heroui-default-50: #FAFAFA;
+  --heroui-default-100: #F4F4F5;
+  --heroui-default-200: #E4E4E7;
+  --heroui-default-300: #D4D4D8;
+  --heroui-default-400: #A1A1AA;
+  --heroui-default-500: #71717A;
+  --heroui-default-600: #52525B;
+  --heroui-default-700: #3F3F46;
+  --heroui-default-800: #27272A;
+  --heroui-default-900: #18181B;
   --heroui-primary: #006FEE;
   --heroui-primary-rgb: 0, 111, 238;
   --heroui-primary-foreground: #FFFFFF;
@@ -154,25 +159,25 @@
 :root.dark,
 .dark,
 html.dark {
-  --heroui-background: #0B0E14;
-  --heroui-foreground: #F8FAFC;
-  --heroui-divider: rgba(255, 255, 255, 0.15);
-  --heroui-content1: #151921;
-  --heroui-content2: #222733;
-  --heroui-content3: #353D4F;
-  --heroui-content4: #4B5569;
-  --heroui-default: #222733;
-  --heroui-default-foreground: #F8FAFC;
-  --heroui-default-50: #151921;
-  --heroui-default-100: #222733;
-  --heroui-default-200: #353D4F;
-  --heroui-default-300: #71717A;
-  --heroui-default-400: #A1A1AA;
-  --heroui-default-500: #CBD5E1;
-  --heroui-default-600: #E2E8F0;
-  --heroui-default-700: #F1F5F9;
-  --heroui-default-800: #F8FAFC;
-  --heroui-default-900: #FFFFFF;
+  --heroui-background: #09090B;
+  --heroui-foreground: #FAFAFA;
+  --heroui-divider: rgba(255, 255, 255, 0.08);
+  --heroui-content1: #18181B;
+  --heroui-content2: #222226;
+  --heroui-content3: #27272A;
+  --heroui-content4: #3F3F46;
+  --heroui-default: #27272A;
+  --heroui-default-foreground: #FAFAFA;
+  --heroui-default-50: #121215;
+  --heroui-default-100: #1E1E22;
+  --heroui-default-200: #27272A;
+  --heroui-default-300: #3F3F46;
+  --heroui-default-400: #71717A;
+  --heroui-default-500: #A1A1AA;
+  --heroui-default-600: #D4D4D8;
+  --heroui-default-700: #E4E4E7;
+  --heroui-default-800: #F4F4F5;
+  --heroui-default-900: #FAFAFA;
   --heroui-primary: #006FEE;
   --heroui-primary-rgb: 0, 111, 238;
   --heroui-primary-foreground: #FFFFFF;
@@ -428,7 +433,7 @@ select optgroup {
 html.dark select option,
 html.dark select optgroup {
   background-color: #18181B;
-  color: #F8FAFC;
+  color: #FAFAFA;
 }
 
 [data-slot="popover-content"],
@@ -445,7 +450,7 @@ html.dark [data-slot="popover-content"],
 html.dark [data-slot="dropdown-content"],
 html.dark [data-slot="select-listbox"] {
   background-color: #18181B;
-  color: #F8FAFC;
+  color: #FAFAFA;
 }
 
 /* ==========================================================================
@@ -490,7 +495,3 @@ html.dark [data-slot="select-listbox"] {
     border-color: #000000 !important;
   }
 }
-
-
-
-

@@ -91,27 +91,27 @@ export const HeroAutocomplete: React.FC<HeroAutocompleteProps> = ({
       />
 
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1 z-50 max-h-60 overflow-y-auto rounded-medium bg-content1 dark:bg-[#18181B] border border-divider shadow-large p-1 animate-fade-in text-foreground">
+        <div className="absolute left-0 right-0 top-full mt-1.5 z-50 max-h-60 overflow-y-auto rounded-2xl bg-content1 dark:bg-[#18181B] border border-divider dark:border-white/10 shadow-2xl p-1.5 animate-scale-in text-foreground backdrop-blur-md font-sans">
           {filteredItems.length > 0 ? (
             filteredItems.map((item) => (
               <button
                 key={item.key}
                 type="button"
                 onClick={() => handleSelect(item)}
-                className={`w-full text-left px-3 py-2 rounded-small text-xs flex flex-col gap-0.5 transition-colors cursor-pointer ${
+                className={`w-full text-left px-3 py-2 rounded-xl text-xs flex flex-col gap-0.5 transition-colors cursor-pointer active:scale-[0.98] ${
                   item.key === activeKey
-                    ? 'bg-primary-50 dark:bg-primary/20 text-primary font-bold'
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
                     : 'hover:bg-default-100 dark:hover:bg-[#27272A] text-foreground'
                 }`}
               >
-                <span>{item.label}</span>
+                <span className="font-semibold">{item.label}</span>
                 {item.description && (
-                  <span className="text-[10px] text-default-400 font-normal">{item.description}</span>
+                  <span className={`text-[10px] ${item.key === activeKey ? 'text-primary-foreground/80' : 'text-default-400'} font-normal`}>{item.description}</span>
                 )}
               </button>
             ))
           ) : (
-            <div className="p-3 text-center text-xs text-default-400">{emptyContent}</div>
+            <div className="p-3.5 text-center text-xs text-default-400 font-medium">{emptyContent}</div>
           )}
         </div>
       )}

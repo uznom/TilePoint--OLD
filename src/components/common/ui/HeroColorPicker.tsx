@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Pipette, Check, Copy, Sparkles, ChevronDown } from 'lucide-react';
+import { Pipette, Check, Copy, Sparkles } from 'lucide-react';
+import { HeroDropdownSelect } from './HeroDropdown';
 
 // Helper color conversion functions
 function hexToRgb(hex: string): { r: number; g: number; b: number; a: number } {
@@ -509,18 +510,19 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
       {showFormatToggle && (
         <div className="flex items-center gap-2 pt-1">
           {/* Format Select */}
-          <div className="relative shrink-0">
-            <select
-              value={format}
-              onChange={(e) => setFormat(e.target.value as 'hex' | 'rgb' | 'hsl')}
-              aria-label="Color Format"
-              className="px-2.5 py-1.5 rounded-xl bg-content2 border border-divider/30 text-xs font-bold uppercase text-foreground focus:outline-none focus:border-primary cursor-pointer pr-6 appearance-none"
-            >
-              <option value="hex">HEX</option>
-              <option value="rgb">RGB</option>
-              <option value="hsl">HSL</option>
-            </select>
-            <ChevronDown className="w-3 h-3 text-default-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <div className="shrink-0">
+            <HeroDropdownSelect
+              items={[
+                { key: 'hex', label: 'HEX' },
+                { key: 'rgb', label: 'RGB' },
+                { key: 'hsl', label: 'HSL' },
+              ]}
+              selectedKey={format}
+              onSelectionChange={(val) => setFormat(val as 'hex' | 'rgb' | 'hsl')}
+              size="sm"
+              variant="pill"
+              className="min-w-[80px]"
+            />
           </div>
 
           {/* Hex / Channel inputs */}

@@ -109,17 +109,17 @@ export const HeroModal: React.FC<HeroModalProps> & {
 
           {/* Modal Card */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            initial={{ opacity: 0, scale: 0.96, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className={`relative w-full ${getSizeClasses()} bg-content1 rounded-2xl shadow-2xl border border-divider/40 overflow-hidden z-10 flex flex-col max-h-[90vh] ${className}`}
+            exit={{ opacity: 0, scale: 0.96, y: 8 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className={`relative w-full ${getSizeClasses()} bg-content1 dark:bg-[#18181B] rounded-3xl shadow-2xl border border-divider dark:border-white/10 overflow-hidden z-10 flex flex-col max-h-[90vh] ${className}`}
           >
             {!hideCloseButton && (
               <button
                 type="button"
                 onClick={onClose}
-                className="absolute top-4 right-4 z-20 p-1.5 rounded-full text-default-400 hover:text-foreground hover:bg-default-100 transition-colors cursor-pointer"
+                className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-default-100 dark:bg-zinc-800/80 text-default-400 hover:text-foreground dark:hover:text-white transition-all flex items-center justify-center cursor-pointer active:scale-95"
                 title="Close"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -141,7 +141,7 @@ export const HeroModal: React.FC<HeroModalProps> & {
 
 HeroModal.Header = ({ children, className = '', ...props }) => (
   <div
-    className={`px-6 py-5 border-b border-divider font-bold text-base sm:text-lg text-foreground flex items-center gap-3 ${className}`}
+    className={`px-6 py-5 border-b border-divider font-semibold text-base sm:text-lg text-foreground flex items-center gap-3 font-sans tracking-tight ${className}`}
     {...props}
   >
     {children}
@@ -149,14 +149,14 @@ HeroModal.Header = ({ children, className = '', ...props }) => (
 );
 
 HeroModal.Body = ({ children, className = '', ...props }) => (
-  <div className={`px-6 py-5 overflow-y-auto flex-1 text-foreground ${className}`} {...props}>
+  <div className={`px-6 py-5 overflow-y-auto flex-1 text-foreground font-sans ${className}`} {...props}>
     {children}
   </div>
 );
 
 HeroModal.Footer = ({ children, className = '', ...props }) => (
   <div
-    className={`px-6 py-4 border-t border-divider bg-content2/50 flex items-center justify-end gap-3 ${className}`}
+    className={`px-6 py-4 border-t border-divider bg-content1 dark:bg-zinc-900/60 flex items-center justify-end gap-3 font-sans ${className}`}
     {...props}
   >
     {children}

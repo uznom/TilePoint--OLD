@@ -58,9 +58,9 @@ const DEFAULT_CONFIG: HeroUIConfig = {
   baseColorName: 'Sapphire (HeroUI Default)',
   autoContrastText: true,
   contrastTarget: 'aa',
-  radius: 'md',
+  radius: 'lg',
   formVariant: 'bordered',
-  formRadius: 'md',
+  formRadius: 'lg',
   formDensity: 'default',
 };
 

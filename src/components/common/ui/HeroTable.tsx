@@ -46,13 +46,13 @@ export const HeroTable: React.FC<HeroTableProps> & {
     <div
       ref={containerRef}
       onScroll={onScroll}
-      className={`w-full overflow-x-auto rounded-large border border-divider bg-content1 shadow-small ${containerClassName}`}
+      className={`w-full overflow-x-auto rounded-2xl border border-divider dark:border-white/10 bg-content1 dark:bg-[#18181B] shadow-xs ${containerClassName}`}
     >
       <table
         id={id}
-        className={`w-full text-left border-collapse text-xs font-sans ${
-          isStriped ? '[&_tbody_tr:nth-child(even)]:bg-default-50/50 dark:[&_tbody_tr:nth-child(even)]:bg-default-50/10' : ''
-        } ${isCompact ? '[&_th]:py-2 [&_th]:px-2.5 [&_td]:py-2 [&_td]:px-2.5' : ''} ${className}`}
+        className={`w-full text-left border-collapse text-xs sm:text-sm font-sans tabular-nums ${
+          isStriped ? '[&_tbody_tr:nth-child(even)]:bg-default-50/50 dark:[&_tbody_tr:nth-child(even)]:bg-white/[0.02]' : ''
+        } ${isCompact ? '[&_th]:py-2.5 [&_th]:px-3 [&_td]:py-2.5 [&_td]:px-3' : '[&_th]:py-3.5 [&_th]:px-4 [&_td]:py-3.5 [&_td]:px-4'} ${className}`}
         {...props}
       >
         {children}
@@ -63,7 +63,7 @@ export const HeroTable: React.FC<HeroTableProps> & {
 
 HeroTable.Header = ({ children, className = '', ...props }) => (
   <thead
-    className={`bg-default-100/70 border-b border-divider uppercase tracking-wider text-[10px] font-bold text-default-600 dark:text-default-400 select-none ${className}`}
+    className={`bg-default-100/60 dark:bg-zinc-800/40 border-b border-divider font-semibold text-xs text-default-500 select-none font-sans tracking-tight ${className}`}
     {...props}
   >
     {children}
@@ -71,18 +71,18 @@ HeroTable.Header = ({ children, className = '', ...props }) => (
 );
 
 HeroTable.Body = ({ children, className = '', ...props }) => (
-  <tbody className={`divide-y divide-divider/50 text-foreground ${className}`} {...props}>
+  <tbody className={`divide-y divide-divider/40 dark:divide-white/5 text-foreground font-sans ${className}`} {...props}>
     {children}
   </tbody>
 );
 
 HeroTable.Row = ({ children, isSelected = false, isHoverable = true, className = '', ...props }) => (
   <tr
-    className={`transition-colors duration-100 ${
+    className={`transition-colors duration-150 ${
       isSelected
-        ? 'bg-primary-50/70 dark:bg-primary/20 text-primary font-medium'
+        ? 'bg-primary-50/60 dark:bg-primary/20 text-primary font-medium'
         : isHoverable
-        ? 'hover:bg-default-100/60 dark:hover:bg-default-100/20'
+        ? 'hover:bg-default-100/50 dark:hover:bg-zinc-800/40'
         : ''
     } ${className}`}
     {...props}

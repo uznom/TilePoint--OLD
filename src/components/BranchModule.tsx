@@ -40,6 +40,7 @@ import { formatTin } from '../utils/formatters';
 import { HeroTable } from './common/ui/HeroTable';
 import { HeroButton } from './common/ui/HeroButton';
 import { HeroChip } from './common/ui/HeroChip';
+import { HeroSelect } from './common/ui/HeroSelect';
 import { HeaderBar } from './common/HeaderBar';
 import { useMultiSort } from '../hooks/useMultiSort';
 import { MultiSortBadgeBar } from './common/ui/MultiSortBadgeBar';
@@ -929,21 +930,18 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  <form onSubmit={handleSaveInlineReceiptSettings} className="lg:col-span-7 space-y-4">
  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
  <div className="space-y-1">
- <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">
- Select Branch to Configure
- </label>
- <select
- value={inlineBranchId ?? ''}
- onChange={e => setInlineBranchId(e.target.value)}
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-bold"
- >
- {activeBranchesForReceipt.map(b => (
- <option key={b.id} value={b.id}>
- {b.name} (ID: {b.id})
- </option>
- ))}
- </select>
- </div>
+    <HeroSelect
+      label="Select Branch to Configure"
+      value={inlineBranchId ?? ''}
+      onValueChange={(val) => setInlineBranchId(val)}
+      radius="md"
+      items={activeBranchesForReceipt.map((b) => ({
+        key: b.id,
+        value: b.id,
+        label: `${b.name} (ID: ${b.id})`,
+      }))}
+    />
+  </div>
 
  <div className="space-y-1">
  <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">
@@ -1730,16 +1728,17 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  </div>
 
  <div className="space-y-1 relative">
- <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">Gateway Rules</label>
- <select
- value={gatewayRules ?? ''}
- onChange={e => setGatewayRules(e.target.value)}
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-bold"
- >
- <option value="ALLOW-LOCAL-ONLY">Local Only</option>
- <option value="RESTRICTED-OUTBOUND">Restricted</option>
- <option value="ALLOW-ALL-TRAFFIC">Allow All</option>
- </select>
+   <HeroSelect
+     label="Gateway Rules"
+     value={gatewayRules ?? ''}
+     onValueChange={val => setGatewayRules(val)}
+     radius="md"
+     items={[
+       { key: 'ALLOW-LOCAL-ONLY', value: 'ALLOW-LOCAL-ONLY', label: 'Local Only' },
+       { key: 'RESTRICTED-OUTBOUND', value: 'RESTRICTED-OUTBOUND', label: 'Restricted' },
+       { key: 'ALLOW-ALL-TRAFFIC', value: 'ALLOW-ALL-TRAFFIC', label: 'Allow All' },
+     ]}
+   />
  </div>
  </div>
 
@@ -1974,15 +1973,16 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
         onChange={e => setInlineEmail(e.target.value)}
         className="w-full bg-content1 border-b border-divider/40 focus:border-primary px-2 py-1 text-xs text-foreground focus:outline-none rounded-t-sm"
        />
-       <select
+       <HeroSelect
         value={inlineRole ?? ''}
-        onChange={e => setInlineRole(e.target.value as UserRole)}
-        className="w-full bg-content1 border-b border-divider/40 focus:border-primary px-2 py-1 text-xs text-foreground focus:outline-none rounded-t-sm"
-       >
-        <option value={UserRole.CASHIER}>Cashier</option>
-        {isUserAdmin && <option value={UserRole.MANAGER}>Manager</option>}
-        <option value={UserRole.STAFF}>Staff</option>
-       </select>
+        onValueChange={val => setInlineRole(val as UserRole)}
+        radius="sm"
+        items={[
+          { key: UserRole.CASHIER, value: UserRole.CASHIER, label: 'Cashier' },
+          ...(isUserAdmin ? [{ key: UserRole.MANAGER, value: UserRole.MANAGER, label: 'Manager' }] : []),
+          { key: UserRole.STAFF, value: UserRole.STAFF, label: 'Staff' },
+        ]}
+       />
       </div>
       <button
        type="button"
@@ -2159,17 +2159,20 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
         </div>
 
         <div className="space-y-1 relative">
-          <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">Operational Role</label>
-          <select
+          <HeroSelect
+            label="Operational Role"
             value={enlistRole}
-            onChange={e => setEnlistRole(e.target.value as UserRole)}
-            className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg cursor-pointer font-bold"
-          >
-            {isUserAdmin && <option value={UserRole.ADMIN}>Admin - Full Corporate Access</option>}
-            {isUserAdmin && <option value={UserRole.MANAGER}>Manager - Branch Supervisor</option>}
-            <option value={UserRole.CASHIER}>Cashier - POS Sales Clerk</option>
-            <option value={UserRole.STAFF}>Staff - Stock Logistics Checker</option>
-          </select>
+            onValueChange={val => setEnlistRole(val as UserRole)}
+            radius="md"
+            items={[
+              ...(isUserAdmin ? [
+                { key: UserRole.ADMIN, value: UserRole.ADMIN, label: 'Admin - Full Corporate Access' },
+                { key: UserRole.MANAGER, value: UserRole.MANAGER, label: 'Manager - Branch Supervisor' },
+              ] : []),
+              { key: UserRole.CASHIER, value: UserRole.CASHIER, label: 'Cashier - POS Sales Clerk' },
+              { key: UserRole.STAFF, value: UserRole.STAFF, label: 'Staff - Stock Logistics Checker' },
+            ]}
+          />
         </div>
 
         {(enlistRole === UserRole.ADMIN || enlistRole === UserRole.MANAGER) && (
@@ -2188,16 +2191,17 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
         )}
 
         <div className="space-y-1 relative">
-          <label className="text-[10px] font-bold text-primary uppercase tracking-widest pl-1">Assigned Branch Location</label>
-          <select
+          <HeroSelect
+            label="Assigned Branch Location"
             value={enlistBranchId}
-            onChange={e => setEnlistBranchId(e.target.value)}
-            className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg cursor-pointer font-bold"
-          >
-            {branches.filter(b => isUserAdmin || b.id === userBranchId).map(b => (
-              <option key={b.id} value={b.id}>{b.name} (ID: {b.id})</option>
-            ))}
-          </select>
+            onValueChange={val => setEnlistBranchId(val)}
+            radius="md"
+            items={branches.filter(b => isUserAdmin || b.id === userBranchId).map(b => ({
+              key: b.id,
+              value: b.id,
+              label: `${b.name} (ID: ${b.id})`,
+            }))}
+          />
         </div>
 
         <div className="flex justify-end gap-2 border-t border-divider/20 pt-4 flex-shrink-0">

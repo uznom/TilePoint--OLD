@@ -1,7 +1,7 @@
 import React from 'react';
 
 export type HeroCardVariant = 'flat' | 'elevated' | 'bordered' | 'shadow';
-export type HeroCardRadius = 'none' | 'sm' | 'md' | 'lg';
+export type HeroCardRadius = 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
 export interface HeroCardProps extends React.HTMLAttributes<HTMLDivElement> {
   children?: React.ReactNode;
@@ -24,8 +24,8 @@ export const HeroCard: React.FC<HeroCardProps> & {
 } = ({
   children,
   variant = 'bordered',
-  radius = 'lg',
-  isHoverable = true,
+  radius = '2xl',
+  isHoverable = false,
   isPressable = false,
   onPress,
   className = '',
@@ -37,12 +37,12 @@ export const HeroCard: React.FC<HeroCardProps> & {
       case 'flat':
         return 'bg-content2 border-none shadow-none text-foreground';
       case 'elevated':
-        return 'bg-content1 border border-divider shadow-medium text-foreground';
+        return 'bg-content1 border border-divider shadow-md text-foreground';
       case 'shadow':
-        return 'bg-content1 border border-divider shadow-large text-foreground';
+        return 'bg-content1 border border-divider shadow-xl text-foreground';
       case 'bordered':
       default:
-        return 'bg-content1 border border-divider shadow-small text-foreground';
+        return 'bg-content1 border border-divider shadow-xs text-foreground';
     }
   };
 
@@ -55,13 +55,17 @@ export const HeroCard: React.FC<HeroCardProps> & {
       case 'md':
         return 'rounded-medium';
       case 'lg':
-      default:
         return 'rounded-large';
+      case 'xl':
+        return 'rounded-xl';
+      case '2xl':
+      default:
+        return 'rounded-2xl';
     }
   };
 
   const hoverStyle = isHoverable
-    ? 'hover:shadow-medium hover:border-default-400/50 transition-all duration-200 ease-out'
+    ? 'hover:border-default-400/60 hover:shadow-sm transition-all duration-200 ease-out'
     : '';
 
   const pressStyle = isPressable
@@ -91,7 +95,7 @@ HeroCard.Header = ({ children, className = '', ...props }) => (
 
 HeroCard.Title = ({ children, className = '', ...props }) => (
   <h3
-    className={`text-sm font-black uppercase tracking-wider text-foreground ${className}`}
+    className={`text-sm font-semibold tracking-tight text-foreground ${className}`}
     {...props}
   >
     {children}
@@ -99,7 +103,7 @@ HeroCard.Title = ({ children, className = '', ...props }) => (
 );
 
 HeroCard.Description = ({ children, className = '', ...props }) => (
-  <p className={`text-xs text-default-500 mt-0.5 ${className}`} {...props}>
+  <p className={`text-xs text-default-500 mt-0.5 font-normal ${className}`} {...props}>
     {children}
   </p>
 );
@@ -114,7 +118,7 @@ HeroCard.Content = HeroCard.Body;
 
 HeroCard.Footer = ({ children, className = '', ...props }) => (
   <div
-    className={`p-3.5 sm:p-4 border-t border-divider bg-content2/50 flex items-center justify-between gap-3 ${className}`}
+    className={`p-3.5 sm:p-4 border-t border-divider bg-content2/40 flex items-center justify-between gap-3 ${className}`}
     {...props}
   >
     {children}

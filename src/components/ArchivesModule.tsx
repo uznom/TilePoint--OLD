@@ -17,6 +17,7 @@ import {
 import { useDb } from '../context/DbContext';
 import { ToastNotification } from './ToastNotification';
 import { HeroPagination } from './common/ui/HeroPagination';
+import { HeroDropdownSelect } from './common/ui/HeroDropdown';
 
 interface ArchivesModuleProps {
   darkMode?: boolean;
@@ -717,19 +718,22 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
 
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5 text-default-400 text-xs">
-                    <span>Rows:</span>
-                    <select
-                      value={pageSize}
-                      onChange={(e) => {
-                        setPageSize(Number(e.target.value));
+                    <HeroDropdownSelect
+                      startIcon={<span>Rows:</span>}
+                      items={[
+                        { key: '10', label: '10' },
+                        { key: '20', label: '20' },
+                        { key: '50', label: '50' },
+                      ]}
+                      selectedKey={String(pageSize)}
+                      onSelectionChange={(val) => {
+                        setPageSize(Number(val));
                         setCurrentPage(1);
                       }}
-                      className="bg-content2 dark:bg-content1/70 border border-divider/40 text-foreground text-xs rounded-lg px-2 py-1 outline-none font-semibold cursor-pointer"
-                    >
-                      <option value={10}>10</option>
-                      <option value={20}>20</option>
-                      <option value={50}>50</option>
-                    </select>
+                      size="sm"
+                      variant="pill"
+                      className="min-w-[90px]"
+                    />
                   </div>
 
                   <HeroPagination

@@ -53,7 +53,7 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
   variant = 'solid',
   color = 'primary',
   size = 'md',
-  radius = 'md',
+  radius = 'lg',
   isLoading = false,
   isDisabled = false,
   onPress,
@@ -114,50 +114,50 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
       case 'solid':
         switch (resolvedColor) {
           case 'primary':
-            return 'bg-primary text-primary-foreground hover:bg-primary-400 active:bg-primary-600 shadow-md shadow-primary/25';
+            return 'bg-primary text-primary-foreground hover:brightness-105 active:brightness-95 shadow-sm shadow-primary/20';
           case 'secondary':
-            return 'bg-secondary text-secondary-foreground hover:bg-secondary-400 active:bg-secondary-600 shadow-md shadow-secondary/25';
+            return 'bg-secondary text-secondary-foreground hover:brightness-105 active:brightness-95 shadow-sm shadow-secondary/20';
           case 'success':
-            return 'bg-success text-success-foreground hover:bg-success-400 active:bg-success-600 shadow-md shadow-success/25';
+            return 'bg-success text-success-foreground hover:brightness-105 active:brightness-95 shadow-sm shadow-success/20';
           case 'warning':
-            return 'bg-warning text-warning-foreground hover:bg-warning-400 active:bg-warning-600 shadow-md shadow-warning/25';
+            return 'bg-warning text-warning-foreground hover:brightness-105 active:brightness-95 shadow-sm shadow-warning/20';
           case 'danger':
-            return 'bg-danger text-danger-foreground hover:bg-danger-400 active:bg-danger-600 shadow-md shadow-danger/25';
+            return 'bg-danger text-danger-foreground hover:brightness-105 active:brightness-95 shadow-sm shadow-danger/20';
           case 'default':
           default:
-            return 'bg-default text-default-foreground hover:bg-default-300 active:bg-default-400 shadow-sm';
+            return 'bg-default-200 text-default-foreground hover:bg-default-300 active:bg-default-400 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-100 shadow-xs';
         }
       case 'flat':
         switch (resolvedColor) {
           case 'primary':
-            return 'bg-primary-50 text-primary-600 hover:bg-primary-100 active:bg-primary-200 dark:bg-primary/20 dark:text-primary dark:hover:bg-primary/30';
+            return 'bg-primary/10 text-primary hover:bg-primary/20 active:bg-primary/25 dark:bg-primary/20 dark:text-primary dark:hover:bg-primary/30';
           case 'secondary':
-            return 'bg-secondary-50 text-secondary-600 hover:bg-secondary-100 active:bg-secondary-200 dark:bg-secondary/20 dark:text-secondary dark:hover:bg-secondary/30';
+            return 'bg-secondary/10 text-secondary hover:bg-secondary/20 active:bg-secondary/25 dark:bg-secondary/20 dark:text-secondary dark:hover:bg-secondary/30';
           case 'success':
-            return 'bg-success-50 text-success-600 hover:bg-success-100 active:bg-success-200 dark:bg-success/20 dark:text-success dark:hover:bg-success/30';
+            return 'bg-success/10 text-success hover:bg-success/20 active:bg-success/25 dark:bg-success/20 dark:text-success dark:hover:bg-success/30';
           case 'warning':
-            return 'bg-warning-50 text-warning-600 hover:bg-warning-100 active:bg-warning-200 dark:bg-warning/20 dark:text-warning dark:hover:bg-warning/30';
+            return 'bg-warning/10 text-warning hover:bg-warning/20 active:bg-warning/25 dark:bg-warning/20 dark:text-warning dark:hover:bg-warning/30';
           case 'danger':
-            return 'bg-danger-50 text-danger-600 hover:bg-danger-100 active:bg-danger-200 dark:bg-danger/20 dark:text-danger dark:hover:bg-danger/30';
+            return 'bg-danger/10 text-danger hover:bg-danger/20 active:bg-danger/25 dark:bg-danger/20 dark:text-danger dark:hover:bg-danger/30';
           case 'default':
           default:
-            return 'bg-default-100 text-default-700 hover:bg-default-200 active:bg-default-300 dark:text-default-300';
+            return 'bg-default-100 text-default-700 hover:bg-default-200 active:bg-default-300 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 dark:text-zinc-200';
         }
       case 'bordered':
         switch (resolvedColor) {
           case 'primary':
-            return 'border-2 border-primary text-primary hover:bg-primary/10 active:bg-primary/20';
+            return 'border border-primary text-primary hover:bg-primary/10 active:bg-primary/20';
           case 'secondary':
-            return 'border-2 border-secondary text-secondary hover:bg-secondary/10 active:bg-secondary/20';
+            return 'border border-secondary text-secondary hover:bg-secondary/10 active:bg-secondary/20';
           case 'success':
-            return 'border-2 border-success text-success hover:bg-success/10 active:bg-success/20';
+            return 'border border-success text-success hover:bg-success/10 active:bg-success/20';
           case 'warning':
-            return 'border-2 border-warning text-warning hover:bg-warning/10 active:bg-warning/20';
+            return 'border border-warning text-warning hover:bg-warning/10 active:bg-warning/20';
           case 'danger':
-            return 'border-2 border-danger text-danger hover:bg-danger/10 active:bg-danger/20';
+            return 'border border-danger text-danger hover:bg-danger/10 active:bg-danger/20';
           case 'default':
           default:
-            return 'border-2 border-default-200 text-default-700 hover:bg-default-100 active:bg-default-200 dark:text-default-300 dark:border-default-300/40';
+            return 'border border-divider dark:border-white/10 text-default-700 hover:bg-default-100 active:bg-default-200 dark:text-zinc-200 dark:hover:bg-zinc-800';
         }
       case 'light':
         switch (resolvedColor) {
@@ -173,16 +173,16 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
             return 'bg-transparent text-danger hover:bg-danger/10 active:bg-danger/20';
           case 'default':
           default:
-            return 'bg-transparent text-default-600 hover:bg-default-100 active:bg-default-200 dark:text-default-400';
+            return 'bg-transparent text-default-600 hover:bg-default-100 active:bg-default-200 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-200';
         }
       case 'ghost':
-        return 'border-2 border-transparent hover:border-current bg-transparent text-default-700 dark:text-default-300 hover:bg-default-100/50';
+        return 'border border-transparent hover:border-divider bg-transparent text-default-700 dark:text-zinc-300 hover:bg-default-100/50 dark:hover:bg-zinc-800/50';
       case 'shadow':
-        return 'bg-primary text-primary-foreground shadow-lg shadow-primary/40 hover:bg-primary-400 active:bg-primary-600';
+        return 'bg-primary text-primary-foreground shadow-md shadow-primary/30 hover:brightness-105 active:brightness-95';
       case 'faded':
-        return 'border border-divider bg-default-100 text-default-700 hover:bg-default-200 dark:text-default-300';
+        return 'border border-divider bg-default-100 text-default-700 hover:bg-default-200 dark:bg-zinc-800/60 dark:text-zinc-300';
       default:
-        return 'bg-primary text-primary-foreground hover:bg-primary-400';
+        return 'bg-primary text-primary-foreground hover:brightness-105';
     }
   };
 
@@ -192,13 +192,13 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
         return 'rounded-none';
       case 'sm':
         return 'rounded-small';
-      case 'lg':
-        return 'rounded-large';
+      case 'md':
+        return 'rounded-medium';
       case 'full':
         return 'rounded-full';
-      case 'md':
+      case 'lg':
       default:
-        return 'rounded-medium';
+        return 'rounded-xl';
     }
   };
 
@@ -207,21 +207,21 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
       case 'sm':
         return isIconOnly
           ? 'w-8 h-8 min-w-8 p-0 text-xs'
-          : 'h-8 min-h-8 px-3 text-xs gap-1.5 font-bold';
+          : 'h-8 min-h-8 px-3 text-xs gap-1.5 font-semibold';
       case 'lg':
         return isIconOnly
           ? 'w-12 h-12 min-w-12 p-0 text-base'
-          : 'h-12 min-h-12 px-6 text-sm gap-2.5 font-black';
+          : 'h-12 min-h-12 px-6 text-sm gap-2.5 font-semibold';
       case 'md':
       default:
         return isIconOnly
           ? 'w-10 h-10 min-w-10 p-0 text-sm'
-          : 'h-10 min-h-10 px-4 text-xs gap-2 font-bold tracking-wide';
+          : 'h-10 min-h-10 px-4 text-xs sm:text-sm gap-2 font-semibold tracking-tight';
     }
   };
 
   const baseClasses =
-    'relative inline-flex items-center justify-center font-sans tracking-wide transition-all duration-200 ease-out outline-none select-none cursor-pointer active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100';
+    'relative inline-flex items-center justify-center font-sans tracking-tight transition-all duration-200 ease-out outline-none select-none cursor-pointer active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100';
 
   const widthClass = fullWidth ? 'w-full' : '';
 

@@ -31,6 +31,7 @@ import { HeroButton } from '../common/ui/HeroButton';
 import { HeroTooltip } from '../common/ui/HeroTooltip';
 import { HeroTable } from '../common/ui/HeroTable';
 import { HeroChip } from '../common/ui/HeroChip';
+import { HeroDropdownSelect, HeroDropdownItem } from '../common/ui/HeroDropdown';
 import { useMultiSort } from '../../hooks/useMultiSort';
 import { MultiSortBadgeBar } from '../common/ui/MultiSortBadgeBar';
 
@@ -314,15 +315,62 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
     count++; // Sale Price
     count++; // Stock
     if (!isCompactColumns) count++; // Threshold
-    count++; // Status
     count++; // Controls
     return count;
   }, [hasActiveShift, isCompactColumns, canSeeFinancialCostsAndSources]);
 
+  // Memoized dropdown items for HeroUI v3 options floating menus
+  const branchFilterItems: HeroDropdownItem[] = useMemo(() => {
+    const list: HeroDropdownItem[] = [];
+    if (isAdminUser) {
+      list.push({ key: 'consolidated', label: 'HQ Consolidated (All Branches)' });
+    }
+    branches.filter(b => !b.isDeleted && (isAdminUser || b.id === (currentUser?.branchAssignmentId || 'B1'))).forEach(b => {
+      list.push({ key: b.id, label: getBranchOptionLabel(b) });
+    });
+    return list;
+  }, [isAdminUser, branches, currentUser]);
+
+  const scopeFilterItems: HeroDropdownItem[] = useMemo(() => [
+    { key: 'branch-only', label: 'Branch Items Only' },
+    { key: 'all-catalog', label: 'Full Enterprise Catalog' },
+  ], []);
+
+  const categoryFilterItems: HeroDropdownItem[] = useMemo(() => {
+    const list: HeroDropdownItem[] = [
+      { key: 'All', label: `All Categories (${branchProducts.length})` }
+    ];
+    categories.forEach(cat => {
+      const count = branchProducts.filter(p => p.category === cat).length;
+      list.push({ key: cat, label: `${cat} ${count > 0 ? `(${count})` : ''}` });
+    });
+    return list;
+  }, [branchProducts, categories]);
+
+  const statusFilterItems: HeroDropdownItem[] = useMemo(() => [
+    { key: 'All', label: 'All Statuses' },
+    { key: 'In Stock', label: 'In Stock' },
+    { key: 'Low Stock', label: '● Low Stock' },
+    { key: 'Critical', label: '● Critical Stock' },
+    { key: 'Out of Stock', label: '● Out of Stock' },
+  ], []);
+
+  const sortFilterItems: HeroDropdownItem[] = useMemo(() => [
+    { key: 'default', label: 'Default Order' },
+    { key: 'qty-desc', label: 'Stock (High → Low)' },
+    { key: 'qty-asc', label: 'Stock (Low → High)' },
+    { key: 'alpha-asc', label: 'Name (A → Z)' },
+    { key: 'alpha-desc', label: 'Name (Z → A)' },
+    { key: 'sku-asc', label: 'Code / SKU (A → Z)' },
+    { key: 'sku-desc', label: 'Code / SKU (Z → A)' },
+    { key: 'price-desc', label: 'Price (High → Low)' },
+    { key: 'price-asc', label: 'Price (Low → High)' },
+  ], []);
+
   return (
     <>
       {/* Main Filter Controller Panel Card */}
-      <div className="bg-content1 p-4 rounded-large border border-divider shadow-sm space-y-4">
+      <div className="bg-content1 dark:bg-[#18181B] p-5 rounded-2xl border border-divider dark:border-white/10 shadow-xs space-y-4 font-sans">
         <div className="flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between">
           {/* Search query box */}
           <div className="relative w-full xl:max-w-md shrink-0">
@@ -335,14 +383,14 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
               disabled={!branchProducts.some(p => !p.isDeleted)}
               value={term}
               onChange={e => setTerm(e.target.value)}
-              className="w-full bg-content2 border border-divider focus:border-primary px-3.5 py-2 pl-10 pr-8 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all rounded-medium font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-default-100 dark:bg-zinc-800/80 border border-divider/40 focus:border-primary px-3.5 py-2 pl-10 pr-8 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all rounded-full font-sans font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             />
             {term && (
               <HeroTooltip content="Clear search">
                 <button
                   type="button"
                   onClick={() => setTerm('')}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-default-400 hover:text-danger cursor-pointer text-xs font-black transition-colors"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-default-400 hover:text-rose-500 cursor-pointer text-xs font-semibold transition-colors"
                   aria-label="Clear search"
                 >
                   ✕
@@ -352,93 +400,59 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
           </div>
 
           {/* Advanced catalog filters and commands */}
-          <div className="flex flex-wrap gap-2.5 w-full justify-start xl:justify-end items-center">
+          <div className="flex flex-wrap gap-2 w-full justify-start xl:justify-end items-center font-sans">
             {/* Branch view select / consolidated */}
-            <div className="flex items-center gap-1.5 bg-content2 border border-success/30 px-3 py-1.5 rounded-medium shadow-sm">
-              <span className="text-[9px] uppercase font-black tracking-widest text-success">Branch:</span>
-              <select
-                value={selectedViewBranchId ?? ''}
-                onChange={e => handleBranchSelect(e.target.value)}
-                className="bg-transparent text-xs text-success focus:outline-none cursor-pointer transition-colors font-extrabold outline-none"
-              >
-                {isAdminUser && (
-                  <option value="consolidated">HQ Consolidated (All Branches)</option>
-                )}
-                {branches.filter(b => !b.isDeleted && (isAdminUser || b.id === (currentUser?.branchAssignmentId || 'B1'))).map((b) => (
-                  <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
-                ))}
-              </select>
-            </div>
+            <HeroDropdownSelect
+              items={branchFilterItems}
+              selectedKey={selectedViewBranchId ?? ''}
+              onSelectionChange={(k) => handleBranchSelect(k)}
+              size="sm"
+              variant="pill"
+              className="min-w-[180px]"
+            />
 
             {/* Branch inventory scope toggle when viewing a specific branch */}
             {selectedViewBranchId !== 'consolidated' && selectedViewBranchId && (
-              <div className="flex items-center gap-1 bg-content2 border border-divider px-2.5 py-1.5 rounded-medium shadow-sm">
-                <span className="text-[9px] uppercase font-black tracking-widest text-default-500">Scope:</span>
-                <select
-                  value={branchScopeFilter}
-                  onChange={e => setBranchScopeFilter(e.target.value as 'branch-only' | 'all-catalog')}
-                  className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer transition-colors font-bold outline-none"
-                >
-                  <option value="branch-only">Branch Items Only</option>
-                  <option value="all-catalog">Full Enterprise Catalog</option>
-                </select>
-              </div>
+              <HeroDropdownSelect
+                items={scopeFilterItems}
+                selectedKey={branchScopeFilter}
+                onSelectionChange={(k) => setBranchScopeFilter(k as 'branch-only' | 'all-catalog')}
+                size="sm"
+                variant="pill"
+                className="min-w-[160px]"
+              />
             )}
 
             {/* Category select */}
-            <div className="flex items-center gap-1.5 bg-content2 border border-divider px-3 py-1.5 rounded-medium shadow-sm">
-              <span className="text-[9px] uppercase font-black tracking-widest text-default-500">Category:</span>
-              <select
-                value={categoryFilter ?? ''}
-                onChange={e => setCategoryFilter(e.target.value)}
-                className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
-              >
-                <option value="All">All Categories ({branchProducts.length})</option>
-                {categories.map((cat, i) => {
-                  const count = branchProducts.filter(p => p.category === cat).length;
-                  return (
-                    <option key={i} value={cat}>{cat} {count > 0 ? `(${count})` : ''}</option>
-                  );
-                })}
-              </select>
-            </div>
+            <HeroDropdownSelect
+              items={categoryFilterItems}
+              selectedKey={categoryFilter ?? 'All'}
+              onSelectionChange={(k) => setCategoryFilter(k)}
+              size="sm"
+              variant="pill"
+              className="min-w-[160px]"
+            />
 
             {/* Status select */}
-            <div className="flex items-center gap-1.5 bg-content2 border border-divider px-3 py-1.5 rounded-medium shadow-sm">
-              <span className="text-[9px] uppercase font-black tracking-widest text-default-500">Status:</span>
-              <select
-                value={statusFilter ?? ''}
-                onChange={e => setStatusFilter(e.target.value)}
-                className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
-              >
-                <option value="All">All Statuses</option>
-                <option value="In Stock">In Stock</option>
-                <option value="Low Stock">● Low Stock</option>
-                <option value="Critical">● Critical Stock</option>
-                <option value="Out of Stock">● Out of Stock</option>
-              </select>
-            </div>
+            <HeroDropdownSelect
+              items={statusFilterItems}
+              selectedKey={statusFilter ?? 'All'}
+              onSelectionChange={(k) => setStatusFilter(k)}
+              size="sm"
+              variant="pill"
+              className="min-w-[140px]"
+            />
 
             {/* Sort select */}
-            <div className="flex items-center gap-1.5 bg-content2 border border-divider px-3 py-1.5 rounded-medium shadow-sm">
-              <ArrowUpDown className="h-3.5 w-3.5 text-primary" />
-              <span className="text-[9px] uppercase font-black tracking-widest text-default-500">Sort By:</span>
-              <select
-                value={sortBy ?? ''}
-                onChange={e => setSortBy(e.target.value as any)}
-                className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer transition-colors font-semibold outline-none"
-              >
-                <option value="default">Default Order</option>
-                <option value="qty-desc">Stock Quantity (High → Low)</option>
-                <option value="qty-asc">Stock Quantity (Low → High)</option>
-                <option value="alpha-asc">Product Name (A → Z)</option>
-                <option value="alpha-desc">Product Name (Z → A)</option>
-                <option value="sku-asc">Code / SKU (A → Z)</option>
-                <option value="sku-desc">Code / SKU (Z → A)</option>
-                <option value="price-desc">Sale Price (High → Low)</option>
-                <option value="price-asc">Sale Price (Low → High)</option>
-              </select>
-            </div>
+            <HeroDropdownSelect
+              items={sortFilterItems}
+              selectedKey={sortBy ?? 'default'}
+              onSelectionChange={(k) => setSortBy(k)}
+              startIcon={<ArrowUpDown className="h-3.5 w-3.5 text-primary" />}
+              size="sm"
+              variant="pill"
+              className="min-w-[170px]"
+            />
 
             {allowedToModify && (
               <HeroButton
@@ -446,7 +460,8 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                 color="primary"
                 variant="solid"
                 size="sm"
-                className="font-bold shadow-sm"
+                radius="full"
+                className="font-semibold shadow-xs"
                 startIcon={<Plus className="h-4 w-4" />}
               >
                 Register Product

@@ -17,6 +17,7 @@ X
 } from 'lucide-react';
 import React,{ useState } from 'react';
 import { createPortal } from 'react-dom';
+import { HeroSelect } from './common/ui/HeroSelect';
 import { useDb } from '../context/DbContext';
 import {
 CustomPaymentMethod,
@@ -897,21 +898,20 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                        Classification
-                      </label>
-                      <select
+                      <HeroSelect
+                        label="Classification"
                         value={pmCategory}
-                        onChange={(e) => setPmCategory(e.target.value as any)}
-                        className="w-full bg-content1 border border-divider/30 px-3.5 py-2 rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-primary"
-                      >
-                        <option value="Cash">Cash Drawer</option>
-                        <option value="E-Wallet">E-Wallet (GCash, Maya)</option>
-                        <option value="Card">Card / POS Terminal</option>
-                        <option value="Bank">Bank Transfer / InstaPay</option>
-                        <option value="Credit">Customer Credit</option>
-                        <option value="Other">Check / Other</option>
-                      </select>
+                        onValueChange={(val) => setPmCategory(val as any)}
+                        radius="md"
+                        items={[
+                          { key: 'Cash', value: 'Cash', label: 'Cash Drawer' },
+                          { key: 'E-Wallet', value: 'E-Wallet', label: 'E-Wallet (GCash, Maya)' },
+                          { key: 'Card', value: 'Card', label: 'Card / POS Terminal' },
+                          { key: 'Bank', value: 'Bank', label: 'Bank Transfer / InstaPay' },
+                          { key: 'Credit', value: 'Credit', label: 'Customer Credit' },
+                          { key: 'Other', value: 'Other', label: 'Check / Other' },
+                        ]}
+                      />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
@@ -1140,17 +1140,16 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                        Discount Type
-                      </label>
-                      <select
+                      <HeroSelect
+                        label="Discount Type"
                         value={discType}
-                        onChange={(e) => setDiscType(e.target.value as any)}
-                        className="w-full bg-content1 border border-divider/30 px-3.5 py-2 rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-primary"
-                      >
-                        <option value="PERCENT">Percentage (%) Off Subtotal</option>
-                        <option value="FLAT">Flat Amount (₱) Off Subtotal</option>
-                      </select>
+                        onValueChange={(val) => setDiscType(val as any)}
+                        radius="md"
+                        items={[
+                          { key: 'PERCENT', value: 'PERCENT', label: 'Percentage (%) Off Subtotal' },
+                          { key: 'FLAT', value: 'FLAT', label: 'Flat Amount (₱) Off Subtotal' },
+                        ]}
+                      />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
@@ -1398,34 +1397,32 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                        Category
-                      </label>
-                      <select
+                      <HeroSelect
+                        label="Category"
                         value={dmgCategory}
-                        onChange={(e) => setDmgCategory(e.target.value as any)}
-                        className="w-full bg-content1 border border-divider/30 px-3.5 py-2 rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-primary"
-                      >
-                        <option value="Warehouse Breakage">Warehouse Breakage</option>
-                        <option value="BOA">BOA (Broken On Arrival)</option>
-                        <option value="Showroom Casualty">Showroom Casualty</option>
-                        <option value="Delivery Transit">Delivery Transit</option>
-                      </select>
+                        onValueChange={(val) => setDmgCategory(val as any)}
+                        radius="md"
+                        items={[
+                          { key: 'Warehouse Breakage', value: 'Warehouse Breakage', label: 'Warehouse Breakage' },
+                          { key: 'BOA', value: 'BOA', label: 'BOA (Broken On Arrival)' },
+                          { key: 'Showroom Casualty', value: 'Showroom Casualty', label: 'Showroom Casualty' },
+                          { key: 'Delivery Transit', value: 'Delivery Transit', label: 'Delivery Transit' },
+                        ]}
+                      />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                        Default Action
-                      </label>
-                      <select
+                      <HeroSelect
+                        label="Default Action"
                         value={dmgAction}
-                        onChange={(e) => setDmgAction(e.target.value as any)}
-                        className="w-full bg-content1 border border-divider/30 px-3.5 py-2 rounded-xl text-xs font-bold text-foreground focus:outline-none focus:border-primary"
-                      >
-                        <option value="Disposed / Scrapped">Disposed / Scrapped</option>
-                        <option value="Returned to Supplier">Returned to Supplier</option>
-                        <option value="Discounted Clearance">Discounted Clearance</option>
-                        <option value="Repaired / Restocked">Repaired / Restocked</option>
-                      </select>
+                        onValueChange={(val) => setDmgAction(val as any)}
+                        radius="md"
+                        items={[
+                          { key: 'Disposed / Scrapped', value: 'Disposed / Scrapped', label: 'Disposed / Scrapped' },
+                          { key: 'Returned to Supplier', value: 'Returned to Supplier', label: 'Returned to Supplier' },
+                          { key: 'Discounted Clearance', value: 'Discounted Clearance', label: 'Discounted Clearance' },
+                          { key: 'Repaired / Restocked', value: 'Repaired / Restocked', label: 'Repaired / Restocked' },
+                        ]}
+                      />
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-black uppercase tracking-wider text-default-500">

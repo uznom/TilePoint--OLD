@@ -77,25 +77,25 @@ export const HeroInput = React.forwardRef<HTMLInputElement, HeroInputProps>(
           return 'rounded-none';
         case 'sm':
           return 'rounded-small';
-        case 'lg':
-          return 'rounded-large';
+        case 'md':
+          return 'rounded-medium';
         case 'full':
           return 'rounded-full';
-        case 'md':
+        case 'lg':
         default:
-          return 'rounded-medium';
+          return 'rounded-xl';
       }
     };
 
     const getSizeClasses = () => {
       switch (size) {
         case 'sm':
-          return 'h-8 px-2.5 text-xs';
+          return 'h-8 px-3 text-xs';
         case 'lg':
           return 'h-12 px-4 text-base';
         case 'md':
         default:
-          return 'h-10 px-3 text-sm';
+          return 'h-10 px-3.5 text-xs sm:text-sm';
       }
     };
 
@@ -106,14 +106,14 @@ export const HeroInput = React.forwardRef<HTMLInputElement, HeroInputProps>(
 
       switch (variant) {
         case 'flat':
-          return 'bg-default-100 border-transparent text-foreground hover:bg-default-200 focus-within:bg-default-100 focus-within:ring-2 focus-within:ring-primary/40';
+          return 'bg-default-100 dark:bg-zinc-900 border border-transparent dark:border-white/5 text-foreground hover:bg-default-200/70 dark:hover:bg-zinc-800/60 focus-within:bg-content1 dark:focus-within:bg-zinc-900 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20';
         case 'faded':
-          return 'bg-default-100 border border-divider text-foreground hover:border-default-400 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20';
+          return 'bg-default-100 dark:bg-zinc-900/80 border border-divider dark:border-white/10 text-foreground hover:border-default-400 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20';
         case 'underlined':
           return 'bg-transparent border-b-2 border-divider rounded-none px-0 text-foreground hover:border-default-400 focus-within:border-primary';
         case 'bordered':
         default:
-          return 'bg-content1 border border-default-200 dark:border-default-100/50 text-foreground hover:border-default-400 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 shadow-xs';
+          return 'bg-content1 dark:bg-zinc-900/60 border border-divider dark:border-white/10 text-foreground hover:border-default-400 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 shadow-xs';
       }
     };
 
@@ -124,7 +124,7 @@ export const HeroInput = React.forwardRef<HTMLInputElement, HeroInputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-xs font-bold text-default-700 dark:text-default-300 select-none flex items-center gap-1"
+            className="text-xs font-semibold text-foreground dark:text-zinc-200 select-none flex items-center gap-1 font-sans tracking-tight"
           >
             <span>{label}</span>
             {isRequired && <span className="text-danger">*</span>}

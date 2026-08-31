@@ -56,6 +56,7 @@ import { Sidebar } from "./components/Sidebar";
 import { SystemLoadingOverlay } from "./components/SystemLoadingOverlay";
 import { ToastNotification } from "./components/ToastNotification";
 import { HeroSpinner } from "./components/common/ui/HeroSpinner";
+import { HeroDropdownSelect } from "./components/common/ui/HeroDropdown";
 import { PATH_TO_TAB, useRouteSyncManager } from "./hooks";
 import { isSameBranch } from "./lib/branchUtils";
 
@@ -1682,18 +1683,21 @@ function AppContent() {
                           <div className="text-xs font-bold">Preservation Frequency Interval</div>
                           <div className="text-[10px] text-zinc-400 mt-0.5">Frequency for background state snapshots.</div>
                         </div>
-                        <select
-                          disabled={currentUser?.role !== UserRole.ADMIN}
-                          value={backupIntervalHours}
-                          onChange={(e) => setBackupIntervalHours(Number(e.target.value))}
-                          className="bg-background text-xs font-bold px-3 py-1.5 rounded-xl border border-divider/30 focus:outline-none focus:ring-1 focus:ring-primary/40 text-foreground"
-                        >
-                          <option value={1}>Every 1 Hour</option>
-                          <option value={3}>Every 3 Hours</option>
-                          <option value={6}>Every 6 Hours</option>
-                          <option value={12}>Every 12 Hours</option>
-                          <option value={24}>Every 24 Hours</option>
-                        </select>
+                        <HeroDropdownSelect
+                          isDisabled={currentUser?.role !== UserRole.ADMIN}
+                          items={[
+                            { key: '1', label: 'Every 1 Hour' },
+                            { key: '3', label: 'Every 3 Hours' },
+                            { key: '6', label: 'Every 6 Hours' },
+                            { key: '12', label: 'Every 12 Hours' },
+                            { key: '24', label: 'Every 24 Hours' },
+                          ]}
+                          selectedKey={String(backupIntervalHours)}
+                          onSelectionChange={(val) => setBackupIntervalHours(Number(val))}
+                          size="sm"
+                          variant="pill"
+                          className="min-w-[140px]"
+                        />
                       </div>
                     </div>
 

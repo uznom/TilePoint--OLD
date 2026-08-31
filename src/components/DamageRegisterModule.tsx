@@ -21,6 +21,8 @@ import { ConfirmationModal } from './ConfirmationModal';
 import { TablePagination,useResponsivePageSize } from './TablePagination';
 import { HeaderBar } from './common/HeaderBar';
 import { HeroButton } from './common/ui/HeroButton';
+import { HeroSelect } from './common/ui/HeroSelect';
+import { HeroDropdownSelect } from './common/ui/HeroDropdown';
 
 interface DamageRegisterModuleProps {
  darkMode: boolean;
@@ -355,23 +357,27 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <div className="space-y-4">
  
  <div>
- <label className="block text-[10px] uppercase font-black text-zinc-400 tracking-wider mb-1.5">2. Reporting Showroom Branch</label>
-  {currentUser?.role === 'Admin' ? (
-  <select
-  value={selectedBranchId ?? ''}
-  onChange={(e) => setSelectedBranchId(e.target.value)}
-  className="w-full p-2.5 text-xs font-semibold rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500"
-  >
-  <option value="">-- Choose Showroom Branch --</option>
-  {branches.map(b => (
-  <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
-  ))}
-  </select>
-  ) : (
- <div className="w-full p-2.5 text-xs font-black bg-background border border-divider/20 text-foreground rounded-lg">
-  {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
-  </div>
-  )}
+   {currentUser?.role === 'Admin' ? (
+    <HeroSelect
+      label="2. Reporting Showroom Branch"
+      value={selectedBranchId ?? ''}
+      placeholder="-- Choose Showroom Branch --"
+      onValueChange={(val) => setSelectedBranchId(val)}
+      radius="md"
+      items={branches.map(b => ({
+        key: b.id,
+        value: b.id,
+        label: getBranchOptionLabel(b),
+      }))}
+    />
+   ) : (
+   <div className="space-y-1">
+    <label className="block text-[10px] uppercase font-black text-zinc-400 tracking-wider">2. Reporting Showroom Branch</label>
+    <div className="w-full p-2.5 text-xs font-black bg-background border border-divider/20 text-foreground rounded-lg">
+      {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
+    </div>
+   </div>
+   )}
  </div>
 
  <div className="grid grid-cols-2 gap-3">
@@ -415,17 +421,18 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  </div>
 
  <div>
-  <label className="block text-[10px] uppercase font-bold text-default-500 tracking-wider mb-1.5">Incident Cause</label>
-  <select
-  value={category ?? ''}
-  onChange={(e) => setCategory(e.target.value as DamageCategory)}
-  className="w-full p-2.5 text-xs font-semibold rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500"
-  >
-  <option value="Warehouse Breakage">Warehouse Drop / Forklift Clash</option>
-  <option value="BOA">BOA (Broken On Arrival from Supplier)</option>
-  <option value="Showroom Casualty">Showroom Display Chipped</option>
-  <option value="Delivery Transit">Transport Transit Fractures</option>
-  </select>
+    <HeroSelect
+      label="Incident Cause"
+      value={category ?? ''}
+      onValueChange={(val) => setCategory(val as DamageCategory)}
+      radius="md"
+      items={[
+        { key: 'Warehouse Breakage', value: 'Warehouse Breakage', label: 'Warehouse Drop / Forklift Clash' },
+        { key: 'BOA', value: 'BOA', label: 'BOA (Broken On Arrival from Supplier)' },
+        { key: 'Showroom Casualty', value: 'Showroom Casualty', label: 'Showroom Display Chipped' },
+        { key: 'Delivery Transit', value: 'Delivery Transit', label: 'Transport Transit Fractures' },
+      ]}
+    />
   </div>
 
  </div>
@@ -434,18 +441,19 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <div className="space-y-4 flex flex-col justify-between">
  
  <div className="space-y-4">
- <div>
-  <label className="block text-[10px] uppercase font-bold text-default-500 tracking-wider mb-1.5">Action Taken</label>
-  <select
-  value={actionTaken ?? ''}
-  onChange={(e) => setActionTaken(e.target.value as DamageActionTaken)}
-  className="w-full p-2.5 text-xs font-semibold rounded-lg border border-default-200/40 bg-background focus:outline-none focus:ring-1 focus:ring-rose-500"
-  >
-  <option value="Disposed / Scrapped">Shattered - Disposed & Scrapped</option>
-  <option value="Saved for Mosaic">Saved for Low-Cost Mosaic Sales</option>
-  <option value="Claimed from Supplier / Insurance Code">Pending Supplier Cargo Claim / BOA Reimbursement</option>
-  <option value="Returned for Credit">Returned to Supplier Warehouse for Credit Note</option>
-  </select>
+  <div>
+    <HeroSelect
+      label="Action Taken"
+      value={actionTaken ?? ''}
+      onValueChange={(val) => setActionTaken(val as DamageActionTaken)}
+      radius="md"
+      items={[
+        { key: 'Disposed / Scrapped', value: 'Disposed / Scrapped', label: 'Shattered - Disposed & Scrapped' },
+        { key: 'Saved for Mosaic', value: 'Saved for Mosaic', label: 'Saved for Low-Cost Mosaic Sales' },
+        { key: 'Claimed from Supplier / Insurance Code', value: 'Claimed from Supplier / Insurance Code', label: 'Pending Supplier Cargo Claim / BOA Reimbursement' },
+        { key: 'Returned for Credit', value: 'Returned for Credit', label: 'Returned to Supplier Warehouse for Credit Note' },
+      ]}
+    />
   </div>
 
   <div>
@@ -504,39 +512,46 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
     {/* Category Filter */}
     <div className="space-y-1.5">
       <label className="text-[10px] uppercase font-bold text-default-500 tracking-wider mb-1">Category</label>
-      <select
-        value={categoryFilter ?? ''}
-        onChange={(e) => setCategoryFilter(e.target.value)}
-        className="w-full p-2 text-xs font-semibold rounded-lg border border-default-200/40 bg-background focus:outline-none"
-      >
-        <option value="All">All Causes</option>
-        <option value="Warehouse Breakage">Warehouse Drop / Forklift</option>
-        <option value="BOA">BOA (Broken on Arrival)</option>
-        <option value="Showroom Casualty">Showroom Casualty</option>
-        <option value="Delivery Transit">Delivery Transit</option>
-      </select>
+      <HeroDropdownSelect
+        items={[
+          { key: 'All', label: 'All Causes' },
+          { key: 'Warehouse Breakage', label: 'Warehouse Drop / Forklift' },
+          { key: 'BOA', label: 'BOA (Broken on Arrival)' },
+          { key: 'Showroom Casualty', label: 'Showroom Casualty' },
+          { key: 'Delivery Transit', label: 'Delivery Transit' },
+        ]}
+        selectedKey={categoryFilter ?? 'All'}
+        onSelectionChange={(val) => setCategoryFilter(val)}
+        size="sm"
+        variant="pill"
+        className="w-full"
+      />
     </div>
 
     {/* Branch Filter */}
     <div className="space-y-1.5">
       <label className="text-[10px] uppercase font-bold text-default-500 tracking-wider mb-1">Branch</label>
-  {currentUser?.role === 'Admin' ? (
-  <select
-  value={branchFilter ?? ''}
-  onChange={(e) => setBranchFilter(e.target.value)}
-  className="w-full p-2 text-xs font-semibold rounded-lg border border-default-200/40 bg-background focus:outline-none"
-  >
-  <option value="All">All Branches</option>
-  {branches.map(b => (
-  <option key={b.id} value={b.id}>{getBranchOptionLabel(b)}</option>
-  ))}
-  </select>
-  ) : (
- <div className="w-full p-2 text-xs font-semibold rounded-lg border border-divider/30 bg-background/60 text-foreground ">
-  {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
-  </div>
-  )}
- </div>
+      {currentUser?.role === 'Admin' ? (
+        <HeroDropdownSelect
+          items={[
+            { key: 'All', label: 'All Branches' },
+            ...branches.map(b => ({
+              key: b.id,
+              label: getBranchOptionLabel(b),
+            })),
+          ]}
+          selectedKey={branchFilter ?? 'All'}
+          onSelectionChange={(val) => setBranchFilter(val)}
+          size="sm"
+          variant="pill"
+          className="w-full"
+        />
+      ) : (
+        <div className="w-full p-2 text-xs font-semibold rounded-lg border border-divider/30 bg-background/60 text-foreground ">
+          {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
+        </div>
+      )}
+    </div>
 
  {/* Category Quick stats bar */}
  <div className="border-t border-divider/30 pt-4 mt-2">

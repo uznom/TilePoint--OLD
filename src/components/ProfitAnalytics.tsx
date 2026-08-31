@@ -24,6 +24,7 @@ import {
  Percent,
  Sparkles,
 } from "lucide-react";
+import { HeroDropdownSelect } from "./common/ui/HeroDropdown";
 
 interface ProfitAnalyticsProps {
  darkMode: boolean;
@@ -478,23 +479,21 @@ export function ProfitAnalytics({
  </div>
 
   {/* Branch Selector Dropdown */}
-  <div className="flex bg-zinc-200/50 dark:bg-background/40 p-1 rounded-xl border border-divider/15 text-xs font-bold items-center px-2">
-  <Building className="h-3.5 w-3.5 text-primary mr-1 shrink-0" />
-  <select
-  value={selectedBranchId ?? ''}
-  onChange={(e) => setSelectedBranchId(e.target.value)}
-  className="bg-transparent text-foreground dark:text-foreground text-xs font-bold focus:outline-none cursor-pointer py-1"
-  >
-  <option value="all" className="bg-background text-foreground dark:bg-content1 dark:text-foreground font-bold">
-  Consolidated (All Branches)
-  </option>
-  {branches.filter((b) => !b.isDeleted).map((b) => (
-  <option key={b.id} value={b.id} className="bg-background text-foreground dark:bg-content1 dark:text-foreground">
-  {b.name}
-  </option>
-  ))}
-  </select>
-  </div>
+  <HeroDropdownSelect
+    startIcon={<Building className="h-3.5 w-3.5 text-primary" />}
+    items={[
+      { key: 'all', label: 'Consolidated (All Branches)' },
+      ...branches.filter((b) => !b.isDeleted).map((b) => ({
+        key: b.id,
+        label: b.name,
+      })),
+    ]}
+    selectedKey={selectedBranchId ?? 'all'}
+    onSelectionChange={(val) => setSelectedBranchId(val)}
+    size="sm"
+    variant="pill"
+    className="min-w-[180px]"
+  />
  </div>
  </div>
 

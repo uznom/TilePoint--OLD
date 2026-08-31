@@ -44,6 +44,7 @@ import { useDb } from '../context/DbContext';
 import { saveHeroUIConfig } from '../lib/herouiThemeEngine';
 import { UserRole } from '../types/db';
 import { HeroSwitch } from './common/ui/HeroSwitch';
+import { HeroSelect } from './common/ui/HeroSelect';
 import { HoldToConfirmButton } from './HoldToConfirmButton';
 import { DynamicEntityConfigModal, DynamicConfigTab } from './DynamicEntityConfigModal';
 import { HeroUIAppearanceSettings } from './HeroUIAppearanceSettings';
@@ -1010,20 +1011,19 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
 
               {/* Currency Symbol */}
               <div className="flex flex-col gap-1.5 border border-divider/20 bg-content1 p-4 rounded-2xl">
-                <label className="text-[10px] font-black uppercase tracking-wider text-default-500">
-                  Base Currency
-                </label>
-                <select
+                <HeroSelect
+                  label="Base Currency"
                   value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="bg-content2 border border-divider/40 rounded-xl text-xs font-bold p-2.5 w-full text-foreground outline-none focus:border-primary font-sans"
-                >
-                  <option value="₱">₱ Philippine Peso (PHP)</option>
-                  <option value="$">$ US Dollar (USD)</option>
-                  <option value="€">€ Euro (EUR)</option>
-                  <option value="¥">¥ Japanese Yen (JPY)</option>
-                  <option value="£">£ British Pound (GBP)</option>
-                </select>
+                  onValueChange={(val) => setCurrency(val)}
+                  radius="md"
+                  items={[
+                    { key: '₱', value: '₱', label: '₱ Philippine Peso (PHP)' },
+                    { key: '$', value: '$', label: '$ US Dollar (USD)' },
+                    { key: '€', value: '€', label: '€ Euro (EUR)' },
+                    { key: '¥', value: '¥', label: '¥ Japanese Yen (JPY)' },
+                    { key: '£', value: '£', label: '£ British Pound (GBP)' },
+                  ]}
+                />
               </div>
 
               {/* Manager Safety PIN */}
@@ -1255,13 +1255,11 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
             </div>
 
             <div className="flex items-center gap-2">
-              <label className="text-xs text-default-600 font-medium whitespace-nowrap">
-                Interval:
-              </label>
-              <select
-                value={autoBackupEnabled ? backupIntervalHours : '0'}
-                onChange={(e) => {
-                  const val = Number(e.target.value);
+              <HeroSelect
+                label="Interval"
+                value={autoBackupEnabled ? String(backupIntervalHours) : '0'}
+                onValueChange={(valStr) => {
+                  const val = Number(valStr);
                   if (val === 0) {
                     setAutoBackupEnabled(false);
                   } else {
@@ -1269,14 +1267,15 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
                     setBackupIntervalHours(val);
                   }
                 }}
-                className="flex-1 bg-content2 border border-divider/40 rounded-xl text-xs font-bold p-2 text-foreground outline-none focus:border-primary cursor-pointer"
-              >
-                <option value="0">Disabled (Manual Only)</option>
-                <option value="1">Every 1 Hour</option>
-                <option value="6">Every 6 Hours</option>
-                <option value="12">Every 12 Hours</option>
-                <option value="24">Every 24 Hours (Daily)</option>
-              </select>
+                radius="md"
+                items={[
+                  { key: '0', value: '0', label: 'Disabled (Manual Only)' },
+                  { key: '1', value: '1', label: 'Every 1 Hour' },
+                  { key: '6', value: '6', label: 'Every 6 Hours' },
+                  { key: '12', value: '12', label: 'Every 12 Hours' },
+                  { key: '24', value: '24', label: 'Every 24 Hours (Daily)' },
+                ]}
+              />
             </div>
           </div>
         </div>

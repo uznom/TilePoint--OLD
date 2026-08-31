@@ -121,24 +121,24 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
   }, [filteredBatches, batchSortDescriptors, sortBatchData]);
 
   return (
-    <div className="space-y-6 text-left animate-fade-in">
+    <div className="space-y-6 text-left animate-fade-in font-sans">
       {/* Top Split: Calendar View Matrix (cols 1 & 2) + Analytics / Protocol (col 3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Column 1 & 2: Interactive Expiration Calendar Matrix */}
-        <div className="lg:col-span-2 bg-content1 border border-divider p-5 rounded-large space-y-4 shadow-sm">
+        <div className="lg:col-span-2 bg-content1 dark:bg-[#18181B] border border-divider dark:border-white/10 p-5 rounded-2xl space-y-4 shadow-xs">
           {/* Calendar Header Navigation */}
-          <div className="flex flex-wrap justify-between items-center gap-3 border-b border-divider pb-3">
+          <div className="flex flex-wrap justify-between items-center gap-3 border-b border-divider dark:border-white/10 pb-3">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-primary" />
-              <span className="font-sans font-black text-xs uppercase tracking-widest text-primary">
+              <span className="font-sans font-semibold text-xs tracking-tight text-foreground">
                 Interactive Expiration Calendar
               </span>
               {calendarSelectedDay && (
-                <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold border border-primary/20 flex items-center gap-1">
+                <span className="text-[10px] bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-semibold border border-primary/20 flex items-center gap-1">
                   Selected: {calendarSelectedDay}
                   <button 
                     onClick={() => setCalendarSelectedDay(null)}
-                    className="ml-1 hover:text-danger font-black cursor-pointer"
+                    className="ml-1 hover:text-rose-500 font-bold cursor-pointer"
                     title="Clear date filter"
                   >
                     ×
@@ -151,29 +151,32 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
               <HeroButton
                 size="sm"
                 variant="bordered"
+                radius="full"
                 onClick={jumpToToday}
-                className="text-[10px] font-extrabold uppercase h-8 px-2.5"
+                className="text-xs font-semibold h-8 px-3"
               >
                 Today
               </HeroButton>
-              <div className="flex items-center gap-1 bg-content2 rounded-medium p-1 border border-divider">
+              <div className="flex items-center gap-1 bg-default-100 dark:bg-zinc-800/80 rounded-full p-1 border border-divider/40 shadow-xs">
                 <HeroButton
                   size="sm"
                   variant="light"
                   isIconOnly
+                  radius="full"
                   onClick={prevMonth}
                   className="h-7 w-7 min-w-7 p-0"
                   aria-label="Previous month"
                 >
                   <ChevronLeft className="h-4 w-4 text-foreground" />
                 </HeroButton>
-                <span className="text-xs font-black font-sans px-3 min-w-[120px] text-center text-foreground">
+                <span className="text-xs font-semibold font-sans px-3 min-w-[120px] text-center text-foreground">
                   {MONTH_NAMES[calendarMonth]} {calendarYear}
                 </span>
                 <HeroButton
                   size="sm"
                   variant="light"
                   isIconOnly
+                  radius="full"
                   onClick={nextMonth}
                   className="h-7 w-7 min-w-7 p-0"
                   aria-label="Next month"
