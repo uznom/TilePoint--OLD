@@ -58,9 +58,9 @@ import { LogoutConfirmModal } from "./components/modals/LogoutConfirmModal";
 import { UnsavedCartModal } from "./components/modals/UnsavedCartModal";
 import { UserProfileModal } from "./components/modals/UserProfileModal";
 import { DatabaseBackupModal } from "./components/modals/DatabaseBackupModal";
+import { SystemSettingsModal } from "./components/modals/SystemSettingsModal";
+import { SessionSupersededModal } from "./components/modals/SessionSupersededModal";
 import { HeroSpinner } from "./components/common/ui/HeroSpinner";
-import { HeroModal } from "./components/common/ui/HeroModal";
-import { HeroButton } from "./components/common/ui/HeroButton";
 import { PATH_TO_TAB, useRouteSyncManager } from "./hooks";
 import { isSameBranch } from "./lib/branchUtils";
 
@@ -76,7 +76,6 @@ import {
 } from "./lib/themeGenerator";
 
 import {
-  AlertTriangle,
   Building2,
   ChevronRight,
   DollarSign,
@@ -1332,57 +1331,20 @@ function AppContent() {
         />
 
         {/* SYSTEM SETTINGS MODAL */}
-        <HeroModal
+        <SystemSettingsModal
           isOpen={showSystemSettingsModal}
           onClose={() => setShowSystemSettingsModal(false)}
-          size="4xl"
-          zIndex={99999}
-          className="max-h-[92vh]"
-        >
-          <div className="p-4 sm:p-6">
-            <SystemSettingsModule
-              darkMode={darkMode}
-              setDarkMode={handleToggleDarkMode}
-              followSystemTheme={followSystemTheme}
-              setFollowSystemTheme={setFollowSystemTheme}
-              isModal={true}
-              onClose={() => setShowSystemSettingsModal(false)}
-            />
-          </div>
-        </HeroModal>
+          darkMode={darkMode}
+          onToggleDarkMode={handleToggleDarkMode}
+          followSystemTheme={followSystemTheme}
+          setFollowSystemTheme={setFollowSystemTheme}
+        />
 
         {/* SESSION SUPERSEDED & DURATION EXPIRY MODAL */}
-        <HeroModal
-          isOpen={!!sessionSupersededNotice}
-          onClose={clearSessionNotice}
-          size="sm"
-          zIndex={999999}
-          className="border border-danger/30 text-center"
-        >
-          <HeroModal.Body className="p-6 space-y-4 text-center">
-            <div className="mx-auto w-14 h-14 rounded-2xl bg-danger/15 border border-danger/30 flex items-center justify-center text-danger">
-              <AlertTriangle className="h-7 w-7" />
-            </div>
-            <div className="space-y-1.5">
-              <h3 className="text-base font-black text-foreground">Single Active Terminal Security Alert</h3>
-              <p className="text-xs text-default-600 leading-relaxed font-medium text-left bg-content2/60 p-3.5 rounded-2xl border border-divider/25">
-                {sessionSupersededNotice}
-              </p>
-            </div>
-            <div className="pt-2">
-              <HeroButton
-                type="button"
-                color="primary"
-                variant="solid"
-                size="md"
-                onClick={clearSessionNotice}
-                className="w-full font-bold text-xs"
-              >
-                Acknowledge & Sign In
-              </HeroButton>
-            </div>
-          </HeroModal.Body>
-        </HeroModal>
+        <SessionSupersededModal
+          sessionNotice={sessionSupersededNotice}
+          onClearNotice={clearSessionNotice}
+        />
 
         {/* FLOATING TOAST NOTIFICATION */}
         <ToastNotification

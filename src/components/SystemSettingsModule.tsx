@@ -1486,3 +1486,5 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
     </div>
   );
 };
+
+export default SystemSettingsModule;
