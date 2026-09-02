@@ -12,7 +12,9 @@ import {
 import { Branch, BranchStock, Product, TransferType, User } from '../../types/db';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
 import { HeroButton } from '../common/ui/HeroButton';
+import { HeroInput } from '../common/ui/HeroInput';
 import { HeroSelect } from '../common/ui/HeroSelect';
+import { HeroTextarea } from '../common/ui/HeroTextarea';
 import { HeroModal } from '../common/ui/HeroModal';
 
 interface CreateTransferModalProps {
@@ -105,19 +107,19 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
             <ArrowRightLeft className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="text-sm sm:text-base font-black text-foreground uppercase tracking-wider">
+            <h3 className="text-sm sm:text-base font-bold text-foreground tracking-tight">
               Formulate Stock Transfer Request
             </h3>
-            <p className="text-[10.5px] text-default-500 font-medium mt-0.5">
-              Multi-branch dispatch & inventory allocation workflow
+            <p className="text-[11px] text-default-500 font-medium mt-0.5">
+              Multi-branch dispatch &amp; inventory allocation workflow
             </p>
           </div>
         </div>
       </HeroModal.Header>
 
-      <HeroModal.Body className="p-6 space-y-4">
+      <HeroModal.Body className="p-6 space-y-4 font-sans text-xs">
         {/* Step Indicator Header */}
-        <div className="grid grid-cols-2 gap-2 bg-content2/50 p-1.5 rounded-2xl border border-divider">
+        <div className="grid grid-cols-2 gap-2 bg-zinc-100/90 dark:bg-zinc-800/80 p-1.5 rounded-2xl border border-zinc-200/50 dark:border-white/5 shadow-2xs">
           {steps.map((s) => {
             const isCurrent = currentStep === s.id;
             const isCompleted = currentStep > s.id;
@@ -126,25 +128,25 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
                 type="button"
                 key={s.id}
                 onClick={() => setCurrentStep(s.id)}
-                className={`flex items-center gap-2.5 p-2 rounded-xl transition-all text-left cursor-pointer border ${
+                className={`flex items-center gap-2.5 p-2.5 rounded-xl transition-all text-left cursor-pointer border ${
                   isCurrent
-                    ? 'bg-content1 border-primary/40 text-primary shadow-xs ring-1 ring-primary/20'
+                    ? 'bg-white text-primary dark:bg-zinc-900 shadow-[0_2px_8px_rgba(0,0,0,0.08)] border-primary/40 ring-1 ring-primary/20 font-bold'
                     : isCompleted
-                    ? 'bg-success/5 border-success/20 text-success hover:bg-success/10'
-                    : 'bg-transparent border-transparent text-default-400 hover:text-foreground hover:bg-content2'
+                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold'
+                    : 'bg-transparent border-transparent text-default-400 hover:text-foreground'
                 }`}
               >
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold text-xs ${
                   isCurrent
-                    ? 'bg-primary text-primary-foreground'
+                    ? 'bg-primary text-white shadow-2xs'
                     : isCompleted
-                    ? 'bg-success text-success-foreground'
-                    : 'bg-default-200 text-default-600'
+                    ? 'bg-emerald-500 text-white shadow-2xs'
+                    : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
                 }`}>
                   {isCompleted ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : s.id}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-black uppercase truncate">{s.label}</div>
+                  <div className="text-xs font-bold truncate">{s.label}</div>
                   <div className="text-[10px] text-default-400 truncate font-medium">{s.desc}</div>
                 </div>
               </button>
@@ -169,7 +171,7 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
                       setTransferDest(branches.find(b => b.id !== val)?.id || '');
                     }
                   }}
-                  radius="md"
+                  radius="lg"
                   items={branches.filter(b => !b.isDeleted).map(b => ({
                     key: b.id,
                     value: b.id,
@@ -177,7 +179,7 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
                   }))}
                 />
                 {currentUser?.role !== 'Admin' && (
-                  <span className="text-[9px] text-default-500 pl-1">{branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name}</span>
+                  <span className="text-[10px] text-default-500 pl-1">{branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name}</span>
                 )}
               </div>
 
@@ -189,7 +191,7 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
                   placeholder="Select target branch..."
                   value={transferDest ?? ''}
                   onValueChange={val => setTransferDest(val)}
-                  radius="md"
+                  radius="lg"
                   items={branches.filter(b => !b.isDeleted && b.id !== transferSource).map(b => ({
                     key: b.id,
                     value: b.id,
@@ -200,7 +202,7 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
 
               {/* Transfer Type Selection */}
               <div className="space-y-1 md:col-span-2">
-                <label className="text-[10px] font-black text-primary uppercase tracking-widest pl-1 block select-none">
+                <label className="text-[10px] font-bold text-default-500 uppercase tracking-wider pl-1 block select-none">
                   Transfer Type Category
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -209,10 +211,10 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
                       key={type}
                       type="button"
                       onClick={() => setTransferTypeSelect(type)}
-                      className={`py-2 px-3 text-[10px] font-extrabold uppercase rounded-xl border text-center transition-all cursor-pointer ${
+                      className={`py-2 px-3 text-xs font-semibold rounded-xl border text-center transition-all cursor-pointer font-sans active:scale-95 ${
                         transferTypeSelect === type
-                          ? 'bg-primary/10 border-primary text-primary shadow-xs'
-                          : 'bg-content2 border-divider text-default-600 hover:bg-default-100'
+                          ? 'bg-primary text-white border-primary shadow-[0_2px_8px_rgba(0,111,238,0.25)] font-bold'
+                          : 'bg-zinc-100/90 dark:bg-zinc-800/80 border-zinc-200/50 dark:border-white/5 text-foreground hover:bg-zinc-200 dark:hover:bg-zinc-700'
                       }`}
                     >
                       {type}
@@ -223,15 +225,14 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
 
               {/* Purpose input */}
               <div className="space-y-1 md:col-span-2">
-                <label className="text-[10px] font-black text-primary uppercase tracking-widest pl-1 block select-none">
-                  Justification Remarks / Transfer Motivation
-                </label>
-                <textarea
+                <HeroTextarea
+                  label="Justification Remarks / Transfer Motivation"
                   rows={2}
                   value={transferReasonInput ?? ''}
-                  onChange={e => setTransferReasonInput(e.target.value)}
+                  onValueChange={val => setTransferReasonInput(val)}
                   placeholder="e.g. Urgent stock replenishment for high-demand showroom order"
-                  className="w-full bg-content2 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-sans active:scale-[0.98]"
+                  radius="lg"
+                  variant="flat"
                 />
               </div>
             </div>
@@ -242,13 +243,13 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
         {currentStep === 2 && (
           <div className="space-y-4 animate-fade-in">
             {/* Route Summary Pill */}
-            <div className="flex items-center justify-between p-2.5 bg-content2/60 rounded-2xl border border-divider text-xs">
+            <div className="flex items-center justify-between p-3 bg-zinc-100/90 dark:bg-zinc-900/80 rounded-2xl border border-zinc-200/60 dark:border-white/5 text-xs shadow-2xs">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-default-500">From:</span>
-                <span className="font-black text-foreground">{branches.find(b => b.id === transferSource)?.name || transferSource}</span>
+                <span className="font-bold text-foreground">{branches.find(b => b.id === transferSource)?.name || transferSource}</span>
                 <span className="text-default-400 font-bold">→</span>
                 <span className="font-bold text-default-500">To:</span>
-                <span className="font-black text-primary">{branches.find(b => b.id === transferDest)?.name || transferDest}</span>
+                <span className="font-bold text-primary">{branches.find(b => b.id === transferDest)?.name || transferDest}</span>
               </div>
               <span className="text-[10px] font-bold px-2 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded-full">
                 {transferTypeSelect}
@@ -256,18 +257,18 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
             </div>
 
             {/* NESTED BUILDER CAROUSEL */}
-            <div className="bg-content2/40 p-4 rounded-2xl border border-divider space-y-3.5">
-              <span className="text-[10px] font-extrabold text-primary uppercase tracking-wider block">
+            <div className="bg-zinc-100/90 dark:bg-zinc-900/80 p-4 rounded-2xl border border-zinc-200/60 dark:border-white/5 space-y-3.5 shadow-2xs">
+              <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">
                 Add Items to Transfer Order
               </span>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1 space-y-1">
+              <div className="flex flex-col sm:flex-row gap-3 items-end">
+                <div className="flex-1 space-y-1 w-full">
                   <HeroSelect
                     label="Select Ceramic Product"
                     placeholder="Choose a product..."
                     value={tempProductId ?? ''}
                     onValueChange={val => setTempProductId(val)}
-                    radius="md"
+                    radius="lg"
                     items={branchProducts.map(p => {
                       const stockInBranch = branchStock.find(bs => bs.productId === p.id && bs.branchId === transferSource)?.quantity || 0;
                       return {
@@ -279,21 +280,23 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
                   />
                 </div>
                 <div className="w-full sm:w-28 space-y-1">
-                  <span className="text-[9px] text-default-500 font-bold block">Request Qty</span>
-                  <input
+                  <HeroInput
+                    label="Request Qty"
                     type="number"
                     min={1}
-                    value={tempQty ?? ''}
-                    onChange={e => setTempQty(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full bg-content1 border border-divider focus:border-primary px-3 py-1.5 text-xs text-foreground text-center focus:outline-none transition-colors rounded-xl active:scale-[0.98]"
+                    value={tempQty ? String(tempQty) : '1'}
+                    onValueChange={val => setTempQty(Math.max(1, parseInt(val) || 1))}
+                    radius="lg"
+                    variant="flat"
                   />
                 </div>
-                <div className="flex items-end">
+                <div className="flex items-end shrink-0">
                   <HeroButton
                     type="button"
-                    color="secondary"
+                    color="primary"
                     variant="solid"
-                    size="sm"
+                    size="md"
+                    radius="lg"
                     onClick={() => {
                       if (!tempProductId) {
                         showToast('Please select a product from the list first.');
@@ -323,7 +326,7 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
                       showToast(`Added ${tempQty} units of "${matchedProd.productName}"`);
                       setTempProductId('');
                     }}
-                    className="w-full font-bold text-xs uppercase tracking-wider whitespace-nowrap"
+                    className="font-bold text-xs uppercase tracking-wider whitespace-nowrap shadow-2xs"
                     startIcon={<Plus className="h-4 w-4" />}
                   >
                     Add Line
@@ -338,17 +341,17 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
                     <span>Staged Items Manifest ({transferItems.length} lines)</span>
                     <span className="text-primary font-black">Total: {totalBoxes} units</span>
                   </div>
-                  <div className="bg-content1 border border-divider rounded-2xl divide-y divide-divider max-h-48 overflow-y-auto">
+                  <div className="bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-white/5 rounded-2xl divide-y divide-divider/20 max-h-48 overflow-y-auto shadow-2xs">
                     {transferItems.map((item, idx) => {
                       const prodDetails = products.find(p => p.id === item.productId);
                       return (
-                        <div key={idx} className="flex justify-between items-center p-2.5 text-xs text-foreground">
+                        <div key={idx} className="flex justify-between items-center p-3 text-xs text-foreground">
                           <div className="flex flex-col">
-                            <span className="font-extrabold">{prodDetails ? prodDetails.productName : 'Unknown Tile'}</span>
-                            <span className="text-[10px] text-default-500">Product Code: {prodDetails ? prodDetails.productCode : item.productId}</span>
+                            <span className="font-bold">{prodDetails ? prodDetails.productName : 'Unknown Tile'}</span>
+                            <span className="text-[10px] text-default-500 font-mono">Product Code: {prodDetails ? prodDetails.productCode : item.productId}</span>
                           </div>
                           <div className="flex items-center gap-4">
-                            <span className="font-black text-danger bg-danger/10 px-2 py-0.5 rounded-xl">{item.quantity} boxes</span>
+                            <span className="font-bold text-danger bg-danger/10 px-2 py-0.5 rounded-xl">{item.quantity} boxes</span>
                             <button
                               type="button"
                               onClick={() => setTransferItems(prev => prev.filter((_, i) => i !== idx))}
@@ -364,7 +367,7 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-6 text-default-400 text-xs italic bg-content1 rounded-2xl border border-dashed border-divider">
+                <div className="text-center py-6 text-default-400 text-xs italic bg-white dark:bg-zinc-900 rounded-2xl border border-dashed border-zinc-200/60 dark:border-white/5">
                   Item queue empty. Select tile and request quantity to populate list.
                 </div>
               )}
@@ -373,11 +376,12 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
         )}
       </HeroModal.Body>
 
-      <HeroModal.Footer className="justify-between items-center gap-3 p-4 px-6 border-t border-divider bg-content1">
+      <HeroModal.Footer className="justify-between items-center gap-3 p-4 px-6 border-t border-divider">
         <HeroButton
           type="button"
           variant="flat"
           size="sm"
+          radius="full"
           onClick={onClose}
           className="font-bold text-xs"
         >
@@ -390,6 +394,7 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
               type="button"
               variant="flat"
               size="sm"
+              radius="full"
               onClick={() => setCurrentStep(1)}
               className="font-bold text-xs"
               startIcon={<ChevronLeft className="h-3.5 w-3.5" />}
@@ -404,8 +409,9 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
               color="primary"
               variant="solid"
               size="sm"
+              radius="full"
               onClick={handleNextStep}
-              className="font-bold text-xs uppercase tracking-wider"
+              className="font-bold text-xs shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
               endIcon={<ChevronRight className="h-3.5 w-3.5" />}
             >
               Next: Select Products
@@ -416,6 +422,7 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
               color="primary"
               variant="solid"
               size="sm"
+              radius="full"
               onClick={() => {
                 if (transferItems.length === 0) {
                   showToast('Please add at least one product item to the transfer manifest.');
@@ -424,7 +431,7 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
                 onSubmit();
               }}
               disabled={transferItems.length === 0}
-              className="font-bold text-xs uppercase tracking-wider"
+              className="font-bold text-xs shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
               startIcon={<ArrowRightLeft className="h-4 w-4" />}
             >
               Submit Transfer Request ({totalBoxes} units)

@@ -3,6 +3,7 @@ import { Check, Building2 } from 'lucide-react';
 import { Branch } from '../../types/db';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
 import { HeroButton, HeroCheckbox, HeroSelect } from '../common/ui';
+import { HeroInput } from '../common/ui/HeroInput';
 import { HeroModal } from '../common/ui/HeroModal';
 
 interface BranchConfigsModalProps {
@@ -34,7 +35,7 @@ export const BranchConfigsModal: React.FC<BranchConfigsModalProps> = ({
             <Building2 className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-black text-foreground uppercase tracking-wider">
+            <h3 className="text-base font-bold text-foreground tracking-tight">
               Branch Outposts Detected in CSV
             </h3>
             <p className="text-xs text-default-500 font-medium mt-0.5">
@@ -45,205 +46,186 @@ export const BranchConfigsModal: React.FC<BranchConfigsModalProps> = ({
       </HeroModal.Header>
 
       <HeroModal.Body className="p-6 space-y-5">
-          {pendingBranches.map((pb, idx) => (
-            <div key={idx} className="p-5 rounded-medium bg-content2/40 border border-divider space-y-4 font-sans shadow-sm">
-              <div className="pb-3 border-b border-divider flex flex-wrap justify-between items-center gap-2">
-                <div>
-                  <span className="text-xs font-black uppercase tracking-wider text-warning block">
-                    CSV Detected Location: "{pb.detectedLocation}"
-                  </span>
-                  <span className="text-[10px] text-default-500 font-medium mt-0.5 block">
-                    Specify if this maps to an existing branch or should be created as a new outlet.
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 bg-content1 p-1 rounded-medium border border-divider">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const updated = [...pendingBranches];
-                      updated[idx].mode = 'existing';
-                      setPendingBranches(updated);
-                    }}
-                    className={`px-3 py-1.5 rounded-medium text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                      pb.mode === 'existing'
-                        ? 'bg-primary text-white shadow-sm'
-                        : 'text-default-600 hover:bg-default-100'
-                    }`}
-                  >
-                    Map to Existing
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const updated = [...pendingBranches];
-                      updated[idx].mode = 'new';
-                      setPendingBranches(updated);
-                    }}
-                    className={`px-3 py-1.5 rounded-medium text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                      pb.mode === 'new'
-                        ? 'bg-warning text-white shadow-sm'
-                        : 'text-default-600 hover:bg-default-100'
-                    }`}
-                  >
-                    Create as New
-                  </button>
+        {pendingBranches.map((pb, idx) => (
+          <div key={idx} className="p-5 rounded-2xl bg-zinc-100/90 dark:bg-zinc-900/80 border border-zinc-200/60 dark:border-white/5 space-y-4 font-sans shadow-2xs">
+            <div className="pb-3 border-b border-divider/20 flex flex-wrap justify-between items-center gap-2">
+              <div>
+                <span className="text-xs font-bold text-warning block">
+                  CSV Detected Location: "{pb.detectedLocation}"
+                </span>
+                <span className="text-[11px] text-default-500 font-medium mt-0.5 block">
+                  Specify if this maps to an existing branch or should be created as a new outlet.
+                </span>
+              </div>
+              <div className="flex items-center gap-1 bg-zinc-200/60 dark:bg-zinc-800 p-1 rounded-full border border-zinc-200/50 dark:border-white/5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = [...pendingBranches];
+                    updated[idx].mode = 'existing';
+                    setPendingBranches(updated);
+                  }}
+                  className={`px-3 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer font-sans active:scale-[0.98] ${
+                    pb.mode === 'existing'
+                      ? 'bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold'
+                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                  }`}
+                >
+                  Map to Existing
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = [...pendingBranches];
+                    updated[idx].mode = 'new';
+                    setPendingBranches(updated);
+                  }}
+                  className={`px-3 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer font-sans active:scale-[0.98] ${
+                    pb.mode === 'new'
+                      ? 'bg-warning text-white shadow-[0_2px_8px_rgba(245,165,36,0.25)] font-bold'
+                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                  }`}
+                >
+                  Create as New
+                </button>
+              </div>
+            </div>
+
+            {pb.mode === 'existing' ? (
+              <div className="p-4 bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-white/5 rounded-2xl space-y-2 shadow-2xs">
+                <HeroSelect
+                  label="Select Existing Destination Branch *"
+                  value={pb.selectedExistingBranchId ?? ''}
+                  onValueChange={(val) => {
+                    const updated = [...pendingBranches];
+                    updated[idx].selectedExistingBranchId = val;
+                    setPendingBranches(updated);
+                  }}
+                  radius="lg"
+                  items={branches.filter(b => !b.isDeleted).map(b => ({
+                    key: b.id,
+                    value: b.id,
+                    label: getBranchOptionLabel(b),
+                  }))}
+                />
+                <div className="flex items-center gap-1.5 text-[11px] text-default-500 pl-1">
+                  <Check className="h-3.5 w-3.5 text-success shrink-0" />
+                  <span>All imported items matching "{pb.detectedLocation}" will automatically be imported into this branch's stock.</span>
                 </div>
               </div>
+            ) : (
+              <div className="space-y-4 p-4 bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-white/5 rounded-2xl shadow-2xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <HeroInput
+                    label="Detected Branch ID (from CSV)"
+                    value={pb.id ?? ''}
+                    disabled
+                    radius="lg"
+                    variant="flat"
+                  />
 
-              {pb.mode === 'existing' ? (
-                <div className="p-4 bg-content1 border border-divider rounded-medium space-y-2">
-                  <HeroSelect
-                    label="Select Existing Destination Branch *"
-                    value={pb.selectedExistingBranchId ?? ''}
+                  <HeroInput
+                    label="Branch Outpost Name *"
+                    value={pb.name ?? ''}
                     onValueChange={(val) => {
                       const updated = [...pendingBranches];
-                      updated[idx].selectedExistingBranchId = val;
+                      updated[idx].name = val;
                       setPendingBranches(updated);
                     }}
-                    radius="md"
-                    items={branches.filter(b => !b.isDeleted).map(b => ({
-                      key: b.id,
-                      value: b.id,
-                      label: getBranchOptionLabel(b),
-                    }))}
+                    placeholder="Branch / Store Name"
+                    required
+                    radius="lg"
+                    variant="flat"
                   />
-                  <div className="flex items-center gap-1.5 text-[10px] text-default-500 pl-1">
-                    <Check className="h-3.5 w-3.5 text-success shrink-0" />
-                    <span>All imported items matching "{pb.detectedLocation}" will automatically be imported into this branch's stock.</span>
+
+                  <HeroInput
+                    label="Manager Name *"
+                    value={pb.manager ?? ''}
+                    onValueChange={(val) => {
+                      const updated = [...pendingBranches];
+                      updated[idx].manager = val;
+                      setPendingBranches(updated);
+                    }}
+                    placeholder="Manager Name"
+                    required
+                    radius="lg"
+                    variant="flat"
+                  />
+
+                  <HeroInput
+                    label="Contact Phone *"
+                    value={pb.phone ?? ''}
+                    onValueChange={(val) => {
+                      const updated = [...pendingBranches];
+                      updated[idx].phone = val;
+                      setPendingBranches(updated);
+                    }}
+                    placeholder="Phone number"
+                    required
+                    radius="lg"
+                    variant="flat"
+                  />
+
+                  <div className="sm:col-span-2">
+                    <HeroInput
+                      label="Full Workplace Dispatch Address *"
+                      value={pb.address ?? ''}
+                      onValueChange={(val) => {
+                        const updated = [...pendingBranches];
+                        updated[idx].address = val;
+                        setPendingBranches(updated);
+                      }}
+                      placeholder="Full workplace dispatch address"
+                      required
+                      radius="lg"
+                      variant="flat"
+                    />
+                  </div>
+
+                  <div className="pt-1 font-sans flex items-center">
+                    <HeroCheckbox
+                      id={`modal-dist-hub-${idx}`}
+                      checked={pb.isDistributionBranch}
+                      onChange={(e) => {
+                        const updated = [...pendingBranches];
+                        updated[idx].isDistributionBranch = e.target.checked;
+                        setPendingBranches(updated);
+                      }}
+                      label="Is Distribution Hub"
+                      size="sm"
+                      color="primary"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1 font-sans">
+                    <HeroInput
+                      label="Assigned Force Count"
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={pb.staffCount ? String(pb.staffCount) : '3'}
+                      onValueChange={(val) => {
+                        const updated = [...pendingBranches];
+                        updated[idx].staffCount = parseInt(val) || 3;
+                        setPendingBranches(updated);
+                      }}
+                      radius="lg"
+                      variant="flat"
+                    />
                   </div>
                 </div>
-              ) : (
-                <div className="space-y-4 p-4 bg-content1 border border-divider rounded-medium">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase text-primary tracking-wider pl-1">
-                        Detected Branch ID (from CSV)
-                      </label>
-                      <input
-                        type="text"
-                        value={pb.id ?? ''}
-                        disabled
-                        className="w-full bg-content2 opacity-75 border border-divider p-2.5 focus:outline-none text-default-500 font-bold rounded-medium cursor-not-allowed"
-                        title="Detected uniquely from the CSV records"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase text-primary tracking-wider pl-1">
-                        Branch Outpost Name *
-                      </label>
-                      <input
-                        type="text"
-                        value={pb.name ?? ''}
-                        onChange={(e) => {
-                          const updated = [...pendingBranches];
-                          updated[idx].name = e.target.value;
-                          setPendingBranches(updated);
-                        }}
-                        className="w-full bg-content2 border border-divider focus:border-primary p-2.5 focus:outline-none text-foreground transition-colors rounded-medium font-sans font-bold"
-                        placeholder="Branch / Store Name"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase text-primary tracking-wider pl-1">
-                        Manager Name *
-                      </label>
-                      <input
-                        type="text"
-                        value={pb.manager ?? ''}
-                        onChange={(e) => {
-                          const updated = [...pendingBranches];
-                          updated[idx].manager = e.target.value;
-                          setPendingBranches(updated);
-                        }}
-                        className="w-full bg-content2 border border-divider focus:border-primary p-2.5 focus:outline-none text-foreground transition-colors rounded-medium font-sans"
-                        placeholder="Manager Name"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-black uppercase text-primary tracking-wider pl-1">
-                        Contact Phone *
-                      </label>
-                      <input
-                        type="text"
-                        value={pb.phone ?? ''}
-                        onChange={(e) => {
-                          const updated = [...pendingBranches];
-                          updated[idx].phone = e.target.value;
-                          setPendingBranches(updated);
-                        }}
-                        className="w-full bg-content2 border border-divider focus:border-primary p-2.5 focus:outline-none text-foreground transition-colors rounded-medium font-sans"
-                        placeholder="Phone number"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-1 sm:col-span-2">
-                      <label className="text-[10px] font-black uppercase text-primary tracking-wider pl-1">
-                        Full Workplace Dispatch Address *
-                      </label>
-                      <input
-                        type="text"
-                        value={pb.address ?? ''}
-                        onChange={(e) => {
-                          const updated = [...pendingBranches];
-                          updated[idx].address = e.target.value;
-                          setPendingBranches(updated);
-                        }}
-                        className="w-full bg-content2 border border-divider focus:border-primary p-2.5 focus:outline-none text-foreground transition-colors rounded-medium font-sans"
-                        placeholder="Full workplace dispatch address"
-                        required
-                      />
-                    </div>
-
-                    <div className="pt-1 font-sans">
-                      <HeroCheckbox
-                        id={`modal-dist-hub-${idx}`}
-                        checked={pb.isDistributionBranch}
-                        onChange={(e) => {
-                          const updated = [...pendingBranches];
-                          updated[idx].isDistributionBranch = e.target.checked;
-                          setPendingBranches(updated);
-                        }}
-                        label="Is Distribution Hub"
-                        size="sm"
-                        color="primary"
-                      />
-                    </div>
-
-                    <div className="flex items-center gap-2 pt-1 font-sans">
-                      <label className="text-[10px] font-black uppercase text-default-600 block select-none">
-                        Assigned Force:
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={50}
-                        value={pb.staffCount ?? ''}
-                        onChange={(e) => {
-                          const updated = [...pendingBranches];
-                          updated[idx].staffCount = parseInt(e.target.value) || 3;
-                          setPendingBranches(updated);
-                        }}
-                        className="w-16 bg-content2 border border-divider focus:border-primary p-1 focus:outline-none text-foreground text-center text-xs rounded-medium"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+              </div>
+            )}
+          </div>
+        ))}
       </HeroModal.Body>
 
-      <HeroModal.Footer className="justify-end gap-2 p-4 px-6 border-t border-divider bg-content1">
+      <HeroModal.Footer className="justify-end gap-2 p-4 px-6 border-t border-divider">
         <HeroButton
           type="button"
           variant="flat"
           size="sm"
+          radius="full"
           onClick={onClose}
           className="font-bold text-xs"
         >
@@ -254,11 +236,12 @@ export const BranchConfigsModal: React.FC<BranchConfigsModalProps> = ({
           color="primary"
           variant="solid"
           size="sm"
+          radius="full"
           onClick={onFinalizeImport}
-          className="font-bold text-xs uppercase tracking-wider"
+          className="font-bold text-xs shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
           startIcon={<Check className="h-4 w-4" />}
         >
-          Instantiate Outlets & Commit Products
+          Instantiate Outlets &amp; Commit Products
         </HeroButton>
       </HeroModal.Footer>
     </HeroModal>
