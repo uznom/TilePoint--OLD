@@ -1,9 +1,8 @@
 import React, { useState } from "react";
-import { CalendarDays, Download, Receipt, Trash2 } from "lucide-react";
+import { Download, Receipt, Trash2 } from "lucide-react";
 import { Expense } from "../../../types/db";
 import { formatCurrency } from "../../../utils/formatters";
-import { HeroButton } from "../../common/ui/HeroButton";
-import { HeroDropdownSelect } from "../../common/ui/HeroDropdown";
+import { HeroButton, HeroDropdownSelect, HeroDatePicker } from "../../common/ui";
 import { saveFileToBackup } from "../../../lib/fileBackupHelper";
 
 export interface SearchExpensesTabProps {
@@ -88,24 +87,14 @@ export const SearchExpensesTab: React.FC<SearchExpensesTabProps> = ({
     <div className="space-y-4 font-sans text-xs text-left">
       <div className="flex flex-col md:flex-row bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-4 rounded-2xl items-stretch md:items-center justify-between gap-4 shadow-elevation-soft">
         <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4 text-primary" />
-            <span className="font-bold text-default-500">Filter Date:</span>
-            <input
-              type="date"
+          <div className="w-48">
+            <HeroDatePicker
               value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-white/5 rounded-xl px-2.5 py-1 outline-none text-foreground font-sans text-xs"
+              onChange={(dateStr) => setDateFilter(dateStr)}
+              size="sm"
+              radius="full"
+              placeholder="Filter Date"
             />
-            {dateFilter && (
-              <button
-                type="button"
-                onClick={() => setDateFilter("")}
-                className="text-[11px] text-rose-500 hover:underline font-bold cursor-pointer"
-              >
-                Clear
-              </button>
-            )}
           </div>
 
           <div className="flex items-center gap-2">

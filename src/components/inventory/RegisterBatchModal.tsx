@@ -2,11 +2,7 @@ import { Clock } from 'lucide-react';
 import React from 'react';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
 import { Branch, Product, User } from '../../types/db';
-import { HeroButton } from '../common/ui/HeroButton';
-import { HeroInput } from '../common/ui/HeroInput';
-import { HeroModal } from '../common/ui/HeroModal';
-import { HeroSelect } from '../common/ui/HeroSelect';
-import { HeroTextarea } from '../common/ui/HeroTextarea';
+import { HeroButton, HeroInput, HeroModal, HeroSelect, HeroTextarea, HeroDatePicker } from '../common/ui';
 
 interface RegisterBatchModalProps {
   isOpen: boolean;
@@ -138,21 +134,19 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
 
           {/* Mfg Date & Expiry Date */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <HeroInput
+            <HeroDatePicker
               label="Manufacture Date"
-              type="date"
-              required
+              isRequired
               value={batchFormMfgDate ?? ''}
-              onValueChange={val => setBatchFormMfgDate(val)}
+              onChange={val => setBatchFormMfgDate(val)}
               radius="lg"
               variant="flat"
             />
-            <HeroInput
+            <HeroDatePicker
               label="Expiry Date"
-              type="date"
-              required
+              isRequired
               value={batchFormExpDate ?? ''}
-              onValueChange={val => setBatchFormExpDate(val)}
+              onChange={val => setBatchFormExpDate(val)}
               radius="lg"
               variant="flat"
             />

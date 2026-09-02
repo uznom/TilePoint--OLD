@@ -29,7 +29,7 @@ import { saveFileToBackup } from "../lib/fileBackupHelper";
 import { UserRole } from "../types/db";
 import { ToastNotification } from "./ToastNotification";
 import { HeaderBar } from "./common/HeaderBar";
-import { HeroDropdownSelect } from "./common/ui/HeroDropdown";
+import { HeroDropdownSelect, HeroDatePicker } from "./common/ui";
 
 interface DailyReconciliationModuleProps {
   darkMode?: boolean;
@@ -460,16 +460,13 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
               </div>
             )}
 
-            <div className="flex items-center gap-2 bg-content2/60 border border-divider/30 p-1.5 rounded-xl shadow-sm pl-3 pr-2 shrink-0">
-              <span className="text-[10px] font-black uppercase text-default-500 tracking-widest">
-                Date:
-              </span>
-              <input
-                type="date"
+            <div className="w-44 shrink-0">
+              <HeroDatePicker
                 value={reportingDate ?? ''}
-                onChange={(e) => setReportingDate(e.target.value)}
-                max={new Date().toISOString().split("T")[0]}
-                className="text-xs bg-background text-foreground font-black tracking-wide border-0 focus:outline-none py-1 px-2 rounded-lg cursor-pointer"
+                onChange={(dateStr) => setReportingDate(dateStr)}
+                maxDate={new Date()}
+                size="sm"
+                radius="full"
               />
             </div>
           </div>

@@ -13,6 +13,7 @@ export * from './HeroSelect';
 export * from './HeroAutocomplete';
 export * from './HeroNumberInput';
 export * from './HeroDatePicker';
+export * from './HeroDateRangePicker';
 export * from './HeroErrorMessage';
 export * from './HeroColorArea';
 export * from './HeroForm';

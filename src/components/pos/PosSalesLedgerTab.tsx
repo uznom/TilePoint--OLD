@@ -2,9 +2,7 @@ import React from "react";
 import { Sale, User } from "../../types/db";
 import { formatCurrency } from "../../utils/formatters";
 import { Search, Eye, Printer, ShieldAlert, DollarSign, Receipt, Tag, AlertTriangle, RefreshCw } from "lucide-react";
-import { HeroButton } from "../common/ui/HeroButton";
-import { HeroSelect } from "../common/ui/HeroSelect";
-import { HeroInput } from "../common/ui/HeroInput";
+import { HeroButton, HeroSelect, HeroInput, HeroDateRangePicker } from "../common/ui";
 
 export interface PosSalesLedgerTabProps {
   sales: Sale[];
@@ -150,12 +148,18 @@ export const PosSalesLedgerTab: React.FC<PosSalesLedgerTabProps> = ({
             </HeroSelect>
           </div>
 
-          <input
-            type="date"
-            value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
-            className="h-8 bg-content2 border border-divider/40 rounded-xl px-3 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
+          <div className="min-w-[220px]">
+            <HeroDateRangePicker
+              value={{ start: filterDate, end: filterDateEnd }}
+              onChange={(range) => {
+                setFilterDate(range.start);
+                setFilterDateEnd(range.end);
+              }}
+              size="sm"
+              radius="full"
+              placeholder="Filter Date Range"
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-2">

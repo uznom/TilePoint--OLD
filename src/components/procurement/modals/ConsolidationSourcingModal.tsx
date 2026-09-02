@@ -1,8 +1,5 @@
 import React from "react";
-import { HeroModal } from "../../common/ui/HeroModal";
-import { HeroSelect } from "../../common/ui/HeroSelect";
-import { HeroButton } from "../../common/ui/HeroButton";
-import { HeroInput } from "../../common/ui/HeroInput";
+import { HeroModal, HeroSelect, HeroButton, HeroDatePicker } from "../../common/ui";
 import { Branch, Supplier } from "../../../types/db";
 import { Sparkles } from "lucide-react";
 
@@ -98,11 +95,10 @@ export const ConsolidationSourcingModal: React.FC<ConsolidationSourcingModalProp
             </div>
           </div>
 
-          <HeroInput
+          <HeroDatePicker
             label="Projected Due Date (Automated Calendar Sync)"
-            type="date"
             value={payoutDueDate}
-            onValueChange={(val) => {
+            onChange={(val) => {
               setPayoutDueDate(val);
               setIsCustomPayoutDate(true);
             }}

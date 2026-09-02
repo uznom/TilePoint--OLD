@@ -36,8 +36,7 @@ import { ActionButton } from './ActionButton';
 import { ConfirmationModal } from './ConfirmationModal';
 import { ToastNotification } from './ToastNotification';
 import { HeaderBar } from './common/HeaderBar';
-import { HeroButton } from './common/ui/HeroButton';
-import { HeroDropdownSelect } from './common/ui/HeroDropdown';
+import { HeroButton, HeroDropdownSelect, HeroDatePicker } from './common/ui';
 
 function validateAndMapInboundReport(rawParsed: any): { errors: string[]; mapped?: any } {
   const errors: string[] = [];
@@ -1103,12 +1102,12 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  Daily store closure & report submission matrix for accounting date <strong className="text-amber-500 ">{reportingDate}</strong>.
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
+            <div className="flex items-center gap-2 w-48">
+              <HeroDatePicker
                 value={reportingDate ?? ''}
-                onChange={(e) => setReportingDate(e.target.value)}
- className="bg-content2 border border-divider/40 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary "
+                onChange={(dateStr) => setReportingDate(dateStr)}
+                size="sm"
+                radius="full"
               />
             </div>
           </div>
