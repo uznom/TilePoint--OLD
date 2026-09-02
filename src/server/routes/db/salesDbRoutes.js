@@ -7,7 +7,6 @@ import {
 } from '../../db/degradedStore.js';
 import {
   getAlasqlDb,
-  alasqlExecute,
   saveAlasqlToDisk
 } from '../../db/alasqlEngine.js';
 import { emitPulseUpdate } from '../../realtime/socketHandler.js';

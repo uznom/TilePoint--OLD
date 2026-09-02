@@ -74,8 +74,6 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
   onSavePo,
   isSubmittingPo,
 }) => {
-  if (!isOpen || typeof document === "undefined") return null;
-
   const [productSearch, setProductSearch] = React.useState("");
   const [selectedProductId, setSelectedProductId] = React.useState("");
   const [itemQuantity, setItemQuantity] = React.useState<number>(10);

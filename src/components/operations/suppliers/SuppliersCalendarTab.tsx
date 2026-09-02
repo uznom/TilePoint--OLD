@@ -51,18 +51,6 @@ export const SuppliersCalendarTab: React.FC<SuppliersCalendarTabProps> = ({
   updatePOStatus,
   onAddCustomBill,
 }) => {
-  if (currentUser?.role !== UserRole.ADMIN) {
-    return (
-      <div className="p-8 text-center bg-rose-500/10 text-rose-500 rounded-2xl border border-rose-500/20 max-w-md mx-auto">
-        <AlertCircle className="h-8 w-8 mx-auto mb-2 text-rose-500" />
-        <h4 className="font-bold">Unauthorised Access</h4>
-        <p className="text-xs mt-1">
-          The Supplier Payment Calendar is restricted to Administrator personnel only.
-        </p>
-      </div>
-    );
-  }
-
   // Navigation & install state
   const [calendarMonth, setCalendarMonth] = useState<number>(() => new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState<number>(() => new Date().getFullYear());
@@ -246,7 +234,7 @@ export const SuppliersCalendarTab: React.FC<SuppliersCalendarTabProps> = ({
     });
 
     return list;
-  }, [purchaseOrders, suppliers, customBills, calendarMonth, calendarYear, getPoPaymentInfo]);
+  }, [purchaseOrders, suppliers, customBills, calendarMonth, calendarYear, daysInActiveMonth, getPoPaymentInfo]);
 
   const activePayables: Record<
     number,
@@ -451,6 +439,18 @@ export const SuppliersCalendarTab: React.FC<SuppliersCalendarTabProps> = ({
     setBillTitle("");
     setBillAmount("");
   };
+
+  if (currentUser?.role !== UserRole.ADMIN) {
+    return (
+      <div className="p-8 text-center bg-rose-500/10 text-rose-500 rounded-2xl border border-rose-500/20 max-w-md mx-auto font-sans">
+        <AlertCircle className="h-8 w-8 mx-auto mb-2 text-rose-500" />
+        <h4 className="font-bold">Unauthorised Access</h4>
+        <p className="text-xs mt-1">
+          The Supplier Payment Calendar is restricted to Administrator personnel only.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 font-sans text-xs">

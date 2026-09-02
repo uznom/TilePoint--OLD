@@ -250,7 +250,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
     }
 
     return filtered;
-  }, [productSearchIndex, branchStock, branches, term, categoryFilter, statusFilter, selectedViewBranchId, branchScopeFilter, sortBy, sortDescriptors, sortData]);
+  }, [branchProducts, productSearchIndex, branchStock, branches, term, categoryFilter, statusFilter, selectedViewBranchId, branchScopeFilter, sortBy, sortDescriptors, sortData]);
 
   const totalProdPages = Math.ceil(filteredProducts.length / prodsPerPage) || 1;
 

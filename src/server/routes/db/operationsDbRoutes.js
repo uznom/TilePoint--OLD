@@ -1,15 +1,13 @@
 import express from 'express';
-import { pool, isConnectionError } from '../../db/mysqlPool.js';
+import { pool } from '../../db/mysqlPool.js';
 import {
   getIsMysqlActive,
-  queueDegradedWrite,
-  markServerDegraded
+  queueDegradedWrite
 } from '../../db/degradedStore.js';
 import {
   getAlasqlDb,
   saveAlasqlToDisk
 } from '../../db/alasqlEngine.js';
-import { emitPulseUpdate } from '../../realtime/socketHandler.js';
 
 const router = express.Router();
 

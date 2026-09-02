@@ -26,7 +26,7 @@ export function useFloatingPlacement(
       const viewportHeight = window.innerHeight;
 
       // Horizontal collision check
-      let h: 'left' | 'right' | 'center' = 'left';
+      let h: 'left' | 'right' | 'center';
       if (viewportWidth < popoverWidth + 24) {
         h = 'center';
       } else if (rect.left + popoverWidth > viewportWidth - 16) {
@@ -36,7 +36,7 @@ export function useFloatingPlacement(
       }
 
       // Vertical collision check
-      let v: 'bottom' | 'top' = 'bottom';
+      let v: 'bottom' | 'top';
       const spaceBelow = viewportHeight - rect.bottom;
       const spaceAbove = rect.top;
 
