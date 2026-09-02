@@ -351,7 +351,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const { fontClass: receiptFontClass } = useReceiptFontSize();
 
   const [selectedPoolBranchId, _setSelectedPoolBranchId] = useState<string>("All");
-  const [selectedCategory, _setSelectedCategory] = useState<string>("All");
   const [searchTerm, _setSearchTerm] = useState("");
   const [_barcodeAddFeedback, setBarcodeAddFeedback] = useState<string | null>(null);
 
@@ -679,6 +678,20 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  // Barcode quick search/scanner states
  const [barcodeSearchTerm, setBarcodeSearchTerm] = useState("");
+
+  const matchedBarcodeProducts = React.useMemo(() => {
+    const q = barcodeSearchTerm.trim().toLowerCase();
+    if (!q) return [];
+    return products
+      .filter(
+        (p: Product) =>
+          !p.isDeleted &&
+          (p.productName.toLowerCase().includes(q) ||
+            p.sku.toLowerCase().includes(q) ||
+            (p.barcode && p.barcode.toLowerCase().includes(q)))
+      )
+      .slice(0, 6);
+  }, [products, barcodeSearchTerm]);
 
  // Keyboard shortcut assistant status
  const [_showHotkeysHelp, _setShowHotkeysHelp] = useState(false);
@@ -2876,23 +2889,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
         {barcodeSearchTerm.trim().length > 0 && (
           <div className="absolute left-0 right-0 top-full mt-2 bg-content1 border border-divider rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-divider/30 text-xs max-h-[220px] overflow-y-auto">
-            {(() => {
-              const matched = products.filter(
-                (p) =>
-                  !p.isDeleted &&
-                  (selectedCategory === "All" || p.category === selectedCategory) &&
-                  (p.productName.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
-                    p.sku.toLowerCase().includes(barcodeSearchTerm.toLowerCase()) ||
-                    p.barcode.toLowerCase().includes(barcodeSearchTerm.toLowerCase())),
-              );
-              if (matched.length === 0) {
-                return (
-                  <div className="p-4 text-center text-default-500 font-medium text-xs italic">
-                    No compatible tiles or SKU listings match "{barcodeSearchTerm}"
-                  </div>
-                );
-              }
-              return matched.slice(0, 6).map((p) => (
+            {matchedBarcodeProducts.length === 0 ? (
+              <div className="p-4 text-center text-default-500 font-medium text-xs italic">
+                No compatible tiles or SKU listings match "{barcodeSearchTerm}"
+              </div>
+            ) : (
+              matchedBarcodeProducts.map((p) => (
                 <div
                   key={p.id}
                   onClick={() => {
@@ -2919,8 +2921,8 @@ export const PosModule: React.FC<PosModuleProps> = ({
                     ₱{(Number(getBranchPrice(p)) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                   </div>
                 </div>
-              ));
-            })()}
+              ))
+            )}
           </div>
         )}
       </div>

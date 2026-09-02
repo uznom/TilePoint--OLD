@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   AlertCircle,
   CalendarDays,
@@ -68,6 +68,8 @@ export const SuppliersCalendarTab: React.FC<SuppliersCalendarTabProps> = ({
   const [calendarYear, setCalendarYear] = useState<number>(() => new Date().getFullYear());
   const [selectedCalendarDay, setSelectedCalendarDay] = useState<number | null>(null);
 
+  const daysInActiveMonth = useMemo(() => new Date(calendarYear, calendarMonth + 1, 0).getDate(), [calendarYear, calendarMonth]);
+
   const [leftPanelTab, setLeftPanelTab] = useState<"list" | "create" | "notes">("list");
   const [billTitle, setBillTitle] = useState("");
   const [billAmount, setBillAmount] = useState("");
@@ -100,7 +102,7 @@ export const SuppliersCalendarTab: React.FC<SuppliersCalendarTabProps> = ({
     localStorage.setItem("atpos_v2_payable_installments", JSON.stringify(updated));
   };
 
-  const getPoPaymentInfo = (po: any) => {
+  const getPoPaymentInfo = useCallback((po: any) => {
     const relatedItems = poItems.filter((item) => item.poId === po.id);
     const poSum = po.totalAmount || relatedItems.reduce(
       (s, it) => s + (it.costPrice || 0) * (it.quantityRequested || 0),
@@ -136,12 +138,12 @@ export const SuppliersCalendarTab: React.FC<SuppliersCalendarTabProps> = ({
       }
     }
     return { sum: poSum, day: dueDay, month: dueMonth, year: dueYear };
-  };
+  }, [poItems]);
 
-  const months = [
+  const months = useMemo(() => [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
-  ];
+  ], []);
 
   interface FlatPayableItem {
     day: number;
@@ -156,92 +158,95 @@ export const SuppliersCalendarTab: React.FC<SuppliersCalendarTabProps> = ({
     frequency?: string;
   }
 
-  const flatPayablesList: FlatPayableItem[] = [];
+  const flatPayablesList: FlatPayableItem[] = useMemo(() => {
+    const list: FlatPayableItem[] = [];
 
-  purchaseOrders.forEach((po) => {
-    if (po.status === "Cancelled" || po.status === "Completed") return;
-    const info = getPoPaymentInfo(po);
-    const supplier = suppliers.find((s) => s.id === po.supplierId);
-    if (supplier && !supplier.isDeleted) {
-      if (info.month === calendarMonth && info.year === calendarYear) {
-        flatPayablesList.push({
-          day: info.day,
-          month: calendarMonth,
-          year: calendarYear,
-          supplierName: supplier.name,
-          amount: info.sum,
-          poNumber: po.poNumber,
-          poId: po.id,
-          status: po.status,
-          type: "Purchase Order",
-        });
-      }
-    }
-  });
-
-  const daysInActiveMonth = new Date(calendarYear, calendarMonth + 1, 0).getDate();
-  customBills.forEach((bill) => {
-    if (bill.isDeleted) return;
-    try {
-      const baseDate = new Date(bill.nextDueDate);
-
-      for (let dayCheck = 1; dayCheck <= daysInActiveMonth; dayCheck++) {
-        const currentCheckDate = new Date(calendarYear, calendarMonth, dayCheck);
-        let matchesRecurrence = false;
-
-        const isSameDay =
-          currentCheckDate.getFullYear() === baseDate.getFullYear() &&
-          currentCheckDate.getMonth() === baseDate.getMonth() &&
-          currentCheckDate.getDate() === baseDate.getDate();
-
-        const timeDiff = currentCheckDate.getTime() - baseDate.getTime();
-        const daysDiff = Math.round(timeDiff / (1000 * 60 * 60 * 24));
-
-        if (isSameDay) {
-          matchesRecurrence = true;
-        } else if (currentCheckDate > baseDate) {
-          switch (bill.frequency) {
-            case "WEEKLY":
-              matchesRecurrence = daysDiff % 7 === 0;
-              break;
-            case "MONTHLY":
-              matchesRecurrence = baseDate.getDate() === dayCheck;
-              break;
-            case "SEMI_QUARTERLY":
-              matchesRecurrence = daysDiff % 45 === 0;
-              break;
-            case "QUARTERLY":
-              matchesRecurrence =
-                baseDate.getDate() === dayCheck &&
-                (currentCheckDate.getMonth() - baseDate.getMonth()) % 3 === 0;
-              break;
-            case "YEARLY":
-              matchesRecurrence =
-                baseDate.getDate() === dayCheck &&
-                baseDate.getMonth() === currentCheckDate.getMonth();
-              break;
-          }
-        }
-
-        if (matchesRecurrence) {
-          flatPayablesList.push({
-            day: dayCheck,
+    purchaseOrders.forEach((po) => {
+      if (po.status === "Cancelled" || po.status === "Completed") return;
+      const info = getPoPaymentInfo(po);
+      const supplier = suppliers.find((s) => s.id === po.supplierId);
+      if (supplier && !supplier.isDeleted) {
+        if (info.month === calendarMonth && info.year === calendarYear) {
+          list.push({
+            day: info.day,
             month: calendarMonth,
             year: calendarYear,
-            supplierName: bill.title,
-            amount: bill.remainingBalance !== undefined ? bill.remainingBalance : bill.totalAmount,
-            poNumber: `BILL-${bill.id.slice(0, 6).toUpperCase()}`,
-            poId: bill.id,
-            status: bill.status || "Active",
-            type: "Recurring Bill",
-            frequency: bill.frequency,
+            supplierName: supplier.name,
+            amount: info.sum,
+            poNumber: po.poNumber,
+            poId: po.id,
+            status: po.status,
+            type: "Purchase Order",
           });
         }
       }
-    } catch (err) {
-      console.warn("[Recurrence Projection Fault]:", err);
-    }
-  });
+    });
+
+    customBills.forEach((bill) => {
+      if (bill.isDeleted) return;
+      try {
+        const baseDate = new Date(bill.nextDueDate);
+
+        for (let dayCheck = 1; dayCheck <= daysInActiveMonth; dayCheck++) {
+          const currentCheckDate = new Date(calendarYear, calendarMonth, dayCheck);
+          let matchesRecurrence = false;
+
+          const isSameDay =
+            currentCheckDate.getFullYear() === baseDate.getFullYear() &&
+            currentCheckDate.getMonth() === baseDate.getMonth() &&
+            currentCheckDate.getDate() === baseDate.getDate();
+
+          const timeDiff = currentCheckDate.getTime() - baseDate.getTime();
+          const daysDiff = Math.round(timeDiff / (1000 * 60 * 60 * 24));
+
+          if (isSameDay) {
+            matchesRecurrence = true;
+          } else if (currentCheckDate > baseDate) {
+            switch (bill.frequency) {
+              case "WEEKLY":
+                matchesRecurrence = daysDiff % 7 === 0;
+                break;
+              case "MONTHLY":
+                matchesRecurrence = baseDate.getDate() === dayCheck;
+                break;
+              case "SEMI_QUARTERLY":
+                matchesRecurrence = daysDiff % 45 === 0;
+                break;
+              case "QUARTERLY":
+                matchesRecurrence =
+                  baseDate.getDate() === dayCheck &&
+                  (currentCheckDate.getMonth() - baseDate.getMonth()) % 3 === 0;
+                break;
+              case "YEARLY":
+                matchesRecurrence =
+                  baseDate.getDate() === dayCheck &&
+                  baseDate.getMonth() === currentCheckDate.getMonth();
+                break;
+            }
+          }
+
+          if (matchesRecurrence) {
+            list.push({
+              day: dayCheck,
+              month: calendarMonth,
+              year: calendarYear,
+              supplierName: bill.title,
+              amount: bill.remainingBalance !== undefined ? bill.remainingBalance : bill.totalAmount,
+              poNumber: `BILL-${bill.id.slice(0, 6).toUpperCase()}`,
+              poId: bill.id,
+              status: bill.status || "Active",
+              type: "Recurring Bill",
+              frequency: bill.frequency,
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("[Recurrence Projection Fault]:", err);
+      }
+    });
+
+    return list;
+  }, [purchaseOrders, suppliers, customBills, calendarMonth, calendarYear, getPoPaymentInfo]);
 
   const activePayables: Record<
     number,
@@ -252,67 +257,77 @@ export const SuppliersCalendarTab: React.FC<SuppliersCalendarTabProps> = ({
       poId: string;
       status: string;
     }[]
-  > = {};
-
-  flatPayablesList.forEach((item) => {
-    if (!activePayables[item.day]) {
-      activePayables[item.day] = [];
-    }
-    activePayables[item.day].push({
-      supplierName: item.supplierName,
-      amount: item.amount,
-      poNumber: item.poNumber,
-      poId: item.poId,
-      status: item.status,
+  > = useMemo(() => {
+    const map: Record<number, any[]> = {};
+    flatPayablesList.forEach((item) => {
+      if (!map[item.day]) {
+        map[item.day] = [];
+      }
+      map[item.day].push({
+        supplierName: item.supplierName,
+        amount: item.amount,
+        poNumber: item.poNumber,
+        poId: item.poId,
+        status: item.status,
+      });
     });
-  });
+    return map;
+  }, [flatPayablesList]);
 
-  const processedList = flatPayablesList.map((item) => {
-    const payHistory = installments[item.poId] || [];
-    const totalPaid = payHistory.reduce((sum, inst) => sum + inst.amount, 0);
-    const remaining = Math.max(0, item.amount - totalPaid);
-    const isFinished = remaining <= 0;
-    const statusState = isFinished ? "paid" : totalPaid > 0 ? "partial" : "active";
+  const processedList = useMemo(() => {
+    return flatPayablesList.map((item) => {
+      const payHistory = installments[item.poId] || [];
+      const totalPaid = payHistory.reduce((sum, inst) => sum + inst.amount, 0);
+      const remaining = Math.max(0, item.amount - totalPaid);
+      const isFinished = remaining <= 0;
+      const statusState = isFinished ? "paid" : totalPaid > 0 ? "partial" : "active";
 
-    const today = new Date();
-    const itemDate = new Date(item.year, item.month, item.day);
-    const diffTime = itemDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const today = new Date();
+      const itemDate = new Date(item.year, item.month, item.day);
+      const diffTime = itemDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    return {
-      ...item,
-      totalPaid,
-      remaining,
-      isFinished,
-      statusState,
-      diffDays,
-    };
-  });
+      return {
+        ...item,
+        totalPaid,
+        remaining,
+        isFinished,
+        statusState,
+        diffDays,
+      };
+    });
+  }, [flatPayablesList, installments]);
 
-  const filteredPayablesList = processedList.filter((item) => {
-    const matchesSearch =
-      item.supplierName.toLowerCase().includes(payableSearchQuery.toLowerCase()) ||
-      item.poNumber.toLowerCase().includes(payableSearchQuery.toLowerCase());
+  const filteredPayablesList = useMemo(() => {
+    return processedList.filter((item) => {
+      const matchesSearch =
+        item.supplierName.toLowerCase().includes(payableSearchQuery.toLowerCase()) ||
+        item.poNumber.toLowerCase().includes(payableSearchQuery.toLowerCase());
 
-    const matchesStatus =
-      payableStatusFilter === "all" || item.statusState === payableStatusFilter;
+      const matchesStatus =
+        payableStatusFilter === "all" || item.statusState === payableStatusFilter;
 
-    return matchesSearch && matchesStatus;
-  });
+      return matchesSearch && matchesStatus;
+    });
+  }, [processedList, payableSearchQuery, payableStatusFilter]);
 
-  const sortedPayablesList = [...filteredPayablesList].sort((a, b) => {
-    if (payableSortField === "amount") {
-      return b.remaining - a.remaining;
-    }
-    if (payableSortField === "supplier") {
-      return a.supplierName.localeCompare(b.supplierName);
-    }
-    return a.diffDays - b.diffDays;
-  });
+  const sortedPayablesList = useMemo(() => {
+    return [...filteredPayablesList].sort((a, b) => {
+      if (payableSortField === "amount") {
+        return b.remaining - a.remaining;
+      }
+      if (payableSortField === "supplier") {
+        return a.supplierName.localeCompare(b.supplierName);
+      }
+      return a.diffDays - b.diffDays;
+    });
+  }, [filteredPayablesList, payableSortField]);
 
-  const selectedDayEntries = selectedCalendarDay
-    ? activePayables[selectedCalendarDay] || []
-    : [];
+  const selectedDayEntries = useMemo(() => {
+    return selectedCalendarDay
+      ? activePayables[selectedCalendarDay] || []
+      : [];
+  }, [selectedCalendarDay, activePayables]);
 
   const handleInstallmentPayment = (payVal: any, payAmountNum: number, notesStr: string) => {
     if (!payAmountNum || payAmountNum <= 0) {

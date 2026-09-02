@@ -10,6 +10,7 @@ import { useDb } from "../context/DbContext";
 import { Member, Expense, ProductReturn, CustomCorporateBill, UserRole } from "../types/db";
 import { ConfirmationModal } from "./ConfirmationModal";
 import { useReceiptFontSize } from "./ReceiptFontSizeControl";
+import { debouncedSetItem } from "../utils/debouncedStorage";
 
 // Extracted Sub-Components
 import { MembersDirectoryTab } from "./operations/members/MembersDirectoryTab";
@@ -114,7 +115,7 @@ export default function StoreOperationsModule({
     };
     const updated = [...rawMembers, newMember];
     setMembers(updated);
-    localStorage.setItem(LOCAL_STORAGE_MEMBERS, JSON.stringify(updated));
+    debouncedSetItem(LOCAL_STORAGE_MEMBERS, updated);
     addAuditLog(
       "MEMBER_CREATE",
       `Registered new member "${newMember.fullName}" with credit limit ₱${newMember.creditLimit.toLocaleString()}`,
@@ -128,7 +129,7 @@ export default function StoreOperationsModule({
     if (!confirm("Are you sure you want to remove this member profile?")) return;
     const updated = rawMembers.filter((m) => m.id !== id);
     setMembers(updated);
-    localStorage.setItem(LOCAL_STORAGE_MEMBERS, JSON.stringify(updated));
+    debouncedSetItem(LOCAL_STORAGE_MEMBERS, updated);
     addAuditLog("MEMBER_DELETE", `Deleted member ID ${id}`, "Operations", id);
   };
 
@@ -149,7 +150,7 @@ export default function StoreOperationsModule({
     });
 
     setMembers(updated);
-    localStorage.setItem(LOCAL_STORAGE_MEMBERS, JSON.stringify(updated));
+    debouncedSetItem(LOCAL_STORAGE_MEMBERS, updated);
 
     setPrintReceiptData({
       title: "OFFICIAL ACCOUNT RECEIVABLE PAYMENT SLIP",
@@ -180,7 +181,7 @@ export default function StoreOperationsModule({
       return m;
     });
     setMembers(updated);
-    localStorage.setItem(LOCAL_STORAGE_MEMBERS, JSON.stringify(updated));
+    debouncedSetItem(LOCAL_STORAGE_MEMBERS, updated);
     addAuditLog(
       "LOYALTY_ADJUST",
       `Adjusted points by ${deltaPoints > 0 ? "+" : ""}${deltaPoints} for member ID ${memberId}. Reason: ${reason}`,

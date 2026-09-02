@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Download, FileText, Printer } from "lucide-react";
 import { Branch, Sale, User, UserRole } from "../../../types/db";
 import { formatCurrency } from "../../../utils/formatters";
@@ -23,58 +23,85 @@ export const BirReportsDesk: React.FC<BirReportsDeskProps> = ({
 }) => {
   const [reportDateFilter, setReportDateFilter] = useState("");
 
-  const activeSales = sales.filter((s) => {
-    if (s.isDeleted) return false;
-    if (
-      currentUser?.role !== UserRole.ADMIN &&
-      s.branchId !== currentUser?.branchAssignmentId
-    ) {
-      return false;
-    }
-    if (reportDateFilter) {
-      const sDate = s.createdAt || "";
-      if (!sDate.startsWith(reportDateFilter)) return false;
-    }
-    return true;
-  });
+  const activeSales = useMemo(() => {
+    return sales.filter((s) => {
+      if (s.isDeleted) return false;
+      if (
+        currentUser?.role !== UserRole.ADMIN &&
+        s.branchId !== currentUser?.branchAssignmentId
+      ) {
+        return false;
+      }
+      if (reportDateFilter) {
+        const sDate = s.createdAt || "";
+        if (!sDate.startsWith(reportDateFilter)) return false;
+      }
+      return true;
+    });
+  }, [sales, currentUser?.role, currentUser?.branchAssignmentId, reportDateFilter]);
 
-  const totalSalesFromDay = activeSales.reduce(
-    (acc, s) => acc + (Number(s.grandTotal) || 0),
-    0
-  );
-  const discountTotal = activeSales.reduce(
-    (acc, s) => acc + (Number(s.discount) || 0),
-    0
-  );
-  const vatOutput = activeSales.reduce((acc, s) => acc + (Number(s.vat) || 0), 0);
-  const vatableSales = activeSales.reduce(
-    (acc, s) => acc + (Number(s.vat) > 0 ? (Number(s.subtotal) - (Number(s.vat) || 0)) || 0 : 0),
-    0
-  );
-  const vatExemptSales = activeSales.reduce(
-    (acc, s) => acc + (Number(s.vat) === 0 ? Number(s.subtotal) || 0 : 0),
-    0
-  );
+  const {
+    totalSalesFromDay,
+    discountTotal,
+    vatOutput,
+    vatableSales,
+    vatExemptSales,
+  } = useMemo(() => {
+    let salesTotal = 0;
+    let discTotal = 0;
+    let vatTot = 0;
+    let vatable = 0;
+    let vatExempt = 0;
 
-  const activeBranchName = (branches.find(b => b.id === currentUser?.branchAssignmentId) || branches[0])?.name || "Main Branch";
+    for (let i = 0; i < activeSales.length; i++) {
+      const s = activeSales[i];
+      const gTotal = Number(s.grandTotal) || 0;
+      const disc = Number(s.discount) || 0;
+      const vat = Number(s.vat) || 0;
+      const sub = Number(s.subtotal) || 0;
+
+      salesTotal += gTotal;
+      discTotal += disc;
+      vatTot += vat;
+      if (vat > 0) {
+        vatable += (sub - vat) || 0;
+      } else {
+        vatExempt += sub || 0;
+      }
+    }
+
+    return {
+      totalSalesFromDay: salesTotal,
+      discountTotal: discTotal,
+      vatOutput: vatTot,
+      vatableSales: vatable,
+      vatExemptSales: vatExempt,
+    };
+  }, [activeSales]);
+
+  const activeBranchName = useMemo(() => {
+    return (branches.find(b => b.id === currentUser?.branchAssignmentId) || branches[0])?.name || "Main Branch";
+  }, [branches, currentUser?.branchAssignmentId]);
 
   // Filter sales per sub-tab
-  const filteredReportSales = activeSales.filter((s: any) => {
-    const sDiscountType = s.discountType || "";
-    const keyVal = s.discountOptionKey;
+  const filteredReportSales = useMemo(() => {
+    return activeSales.filter((s: any) => {
+      const sDiscountType = s.discountType || "";
+      const keyVal = s.discountOptionKey;
 
-    if (activeSubTab === "bir-pwd") return sDiscountType === "PWD" || keyVal === 0;
-    if (activeSubTab === "bir-senior20") return sDiscountType === "SENIOR" || keyVal === 1;
-    if (activeSubTab === "bir-senior5") return sDiscountType === "SENIOR5" || keyVal === 2;
-    if (activeSubTab === "bir-solo") return sDiscountType === "SOLO" || keyVal === 3;
-    if (activeSubTab === "bir-athletes") return sDiscountType === "ATHLETES" || keyVal === 4;
-    if (activeSubTab === "bir-regular") {
-      return (Number(s.discount) || 0) > 0 &&
-        !["PWD", "SENIOR", "SENIOR5", "SOLO", "ATHLETES"].includes(sDiscountType) &&
-        ![0, 1, 2, 3, 4].includes(keyVal);
-    }
-    return true; // summary or all
-  });
+      if (activeSubTab === "bir-pwd") return sDiscountType === "PWD" || keyVal === 0;
+      if (activeSubTab === "bir-senior20") return sDiscountType === "SENIOR" || keyVal === 1;
+      if (activeSubTab === "bir-senior5") return sDiscountType === "SENIOR5" || keyVal === 2;
+      if (activeSubTab === "bir-solo") return sDiscountType === "SOLO" || keyVal === 3;
+      if (activeSubTab === "bir-athletes") return sDiscountType === "ATHLETES" || keyVal === 4;
+      if (activeSubTab === "bir-regular") {
+        return (Number(s.discount) || 0) > 0 &&
+          !["PWD", "SENIOR", "SENIOR5", "SOLO", "ATHLETES"].includes(sDiscountType) &&
+          ![0, 1, 2, 3, 4].includes(keyVal);
+      }
+      return true; // summary or all
+    });
+  }, [activeSales, activeSubTab]);
 
   const handleExportCSV = () => {
     if (filteredReportSales.length === 0) {

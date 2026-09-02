@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, UIEvent, useCallback } from 'react';
+import { useState, useRef, useEffect, UIEvent, useCallback, useMemo } from 'react';
 
 interface UseVirtualListOptions {
   itemCount: number;
@@ -41,21 +41,34 @@ export function useVirtualList({
     setScrollTop(e.currentTarget.scrollTop);
   }, []);
 
-  const startIndex = Math.max(0, Math.floor(scrollTop / itemHeight) - overscan);
-  const endIndex = Math.min(
-    Math.max(0, itemCount - 1),
-    Math.ceil((scrollTop + containerHeight) / itemHeight) + overscan
-  );
+  const { startIndex, endIndex, visibleIndices, paddingTop, paddingBottom, totalHeight } =
+    useMemo(() => {
+      const start = Math.max(0, Math.floor(scrollTop / itemHeight) - overscan);
+      const end = Math.min(
+        Math.max(0, itemCount - 1),
+        Math.ceil((scrollTop + containerHeight) / itemHeight) + overscan
+      );
 
-  const visibleIndices: number[] = [];
-  if (itemCount > 0) {
-    for (let i = startIndex; i <= endIndex && i < itemCount; i++) {
-      visibleIndices.push(i);
-    }
-  }
+      const indices: number[] = [];
+      if (itemCount > 0) {
+        for (let i = start; i <= end && i < itemCount; i++) {
+          indices.push(i);
+        }
+      }
 
-  const paddingTop = startIndex * itemHeight;
-  const paddingBottom = Math.max(0, (itemCount - 1 - endIndex) * itemHeight);
+      const top = start * itemHeight;
+      const bottom = Math.max(0, (itemCount - 1 - end) * itemHeight);
+      const total = itemCount * itemHeight;
+
+      return {
+        startIndex: start,
+        endIndex: end,
+        visibleIndices: indices,
+        paddingTop: top,
+        paddingBottom: bottom,
+        totalHeight: total,
+      };
+    }, [scrollTop, itemHeight, overscan, itemCount, containerHeight]);
 
   return {
     containerRef,
@@ -65,6 +78,6 @@ export function useVirtualList({
     visibleIndices,
     paddingTop,
     paddingBottom,
-    totalHeight: itemCount * itemHeight,
+    totalHeight,
   };
 }
