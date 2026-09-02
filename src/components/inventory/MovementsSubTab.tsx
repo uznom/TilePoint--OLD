@@ -64,21 +64,24 @@ export const MovementsSubTab: React.FC<MovementsSubTabProps> = ({
   }, [filteredMovements, movementSortDescriptors, sortMovementData]);
 
   return (
-    <div className="space-y-6 text-left animate-fade-in font-sans">
+    <div className="space-y-6 text-left animate-fade-in font-sans text-xs">
       {/* Header & Primary Action Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-content1 p-5 rounded-2xl border border-divider shadow-xs">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200/70 dark:border-white/10 shadow-elevation-soft">
         <div>
           <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
             <Activity className="h-5 w-5 text-primary" />
-            <span>Stock Adjustments & Audit Movement Logs</span>
+            <span>Stock Adjustments &amp; Audit Movement Logs</span>
           </h2>
+          <p className="text-xs text-default-500 font-medium mt-0.5">
+            Audit ledger of stock adjustments, damaged write-offs, and transfers across all branches.
+          </p>
         </div>
         <HeroButton
           color="primary"
           onClick={() => setShowAdjustModal(true)}
           startIcon={<Sliders className="h-4 w-4" />}
           radius="full"
-          className="font-semibold shadow-xs"
+          className="font-bold shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
         >
           Record Manual Adjustment
         </HeroButton>
@@ -86,25 +89,25 @@ export const MovementsSubTab: React.FC<MovementsSubTabProps> = ({
 
       {/* KPI Overview Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-sans">
-        <div className="bg-content1 p-5 rounded-2xl border border-divider space-y-1 shadow-xs">
+        <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200/70 dark:border-white/10 space-y-1 shadow-elevation-soft">
           <span className="text-xs font-medium text-default-500 tracking-tight block">Total Movement Logs</span>
-          <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground tabular-nums">{filteredMovements.length}</div>
+          <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-mono">{filteredMovements.length}</div>
         </div>
-        <div className="bg-content1 p-5 rounded-2xl border border-emerald-500/25 space-y-1 shadow-xs">
+        <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-emerald-500/25 space-y-1 shadow-elevation-soft">
           <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 tracking-tight block">Stock Inflows (+)</span>
-          <div className="text-xl sm:text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
+          <div className="text-xl sm:text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
             +{filteredMovements.filter(m => Number(m.quantity || 0) > 0).reduce((acc, m) => acc + Number(m.quantity || 0), 0)} boxes
           </div>
         </div>
-        <div className="bg-content1 p-5 rounded-2xl border border-rose-500/25 space-y-1 shadow-xs">
-          <span className="text-xs font-medium text-rose-600 dark:text-rose-400 tracking-tight block">Deductions & Outflows (-)</span>
-          <div className="text-xl sm:text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400 tabular-nums">
+        <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-rose-500/25 space-y-1 shadow-elevation-soft">
+          <span className="text-xs font-medium text-rose-600 dark:text-rose-400 tracking-tight block">Deductions &amp; Outflows (-)</span>
+          <div className="text-xl sm:text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400 font-mono">
             {filteredMovements.filter(m => Number(m.quantity || 0) < 0).reduce((acc, m) => acc + Number(m.quantity || 0), 0)} boxes
           </div>
         </div>
-        <div className="bg-content1 p-5 rounded-2xl border border-amber-500/25 space-y-1 shadow-xs">
+        <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-amber-500/25 space-y-1 shadow-elevation-soft">
           <span className="text-xs font-medium text-amber-600 dark:text-amber-400 tracking-tight block">Damaged / Write-Offs</span>
-          <div className="text-xl sm:text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400 tabular-nums">
+          <div className="text-xl sm:text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400 font-mono">
             {filteredMovements.filter(m => (m.type || '').toUpperCase().includes('DAMAGE')).length} incidents
           </div>
         </div>
@@ -119,7 +122,7 @@ export const MovementsSubTab: React.FC<MovementsSubTabProps> = ({
             value={movementSearch ?? ''}
             onChange={(e) => setMovementSearch(e.target.value)}
             placeholder="Search log by notes, ref #, or operator..."
-            className="w-full pl-9 pr-3.5 py-2 text-xs rounded-full bg-default-100 dark:bg-content2/80 border border-divider/40 focus:border-primary focus:outline-none text-foreground font-sans font-medium"
+            className="w-full pl-9 pr-3.5 py-2 text-xs rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-white/5 focus:outline-none focus:ring-2 focus:ring-primary/30 text-foreground font-sans font-medium"
           />
         </div>
 
@@ -141,64 +144,62 @@ export const MovementsSubTab: React.FC<MovementsSubTabProps> = ({
         </div>
       </div>
 
-      {/* Multi-Sort Badge Bar */}
+      {/* Multi-Sort Active Badge Bar */}
       <MultiSortBadgeBar
         sortDescriptors={movementSortDescriptors}
         onRemoveSort={removeMovementSort}
         onClearSort={clearMovementSort}
         columnLabels={{
-          timestamp: 'Date & Time',
-          branchId: 'Branch',
-          productName: 'Product Name',
-          type: 'Movement Type',
-          quantity: 'Quantity Change',
-          referenceId: 'Reference No.',
-          username: 'Operator',
-          notes: 'Notes / Reason',
+          timestamp: 'Timestamp',
+          branchId: 'Branch / Yard',
+          productName: 'Product Item',
+          type: 'Operation Type',
+          quantity: 'Delta Quantity',
+          referenceId: 'Ticket Ref',
+          username: 'Operator / User',
         }}
       />
 
-      {/* Logs Table */}
-      <div className="overflow-x-auto rounded-large border border-divider bg-content1 shadow-sm">
+      {/* Primary Log Table */}
+      <div className="overflow-x-auto rounded-2xl border border-zinc-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-elevation-soft">
         <HeroTable isStriped className="min-w-full text-xs">
           <HeroTable.Header>
-            <tr className="bg-content2 border-b border-divider font-black text-foreground">
+            <tr className="bg-zinc-100/80 dark:bg-zinc-800/80 border-b border-divider/20 font-bold text-default-600 dark:text-default-400">
               <HeroTable.Column
                 allowsSorting
                 sortDirection={getMovementSortDir('timestamp')}
                 sortRank={getMovementSortRank('timestamp')}
                 onSort={(e) => handleMovementSort('timestamp', e)}
-                className="py-3 px-4"
+                className="py-3.5 px-4"
               >
-                Date & Time
+                Timestamp
               </HeroTable.Column>
               <HeroTable.Column
                 allowsSorting
                 sortDirection={getMovementSortDir('branchId')}
                 sortRank={getMovementSortRank('branchId')}
                 onSort={(e) => handleMovementSort('branchId', e)}
-                className="py-3 px-4"
+                className="py-3.5 px-4"
               >
-                Branch
+                Branch / Yard
               </HeroTable.Column>
               <HeroTable.Column
                 allowsSorting
                 sortDirection={getMovementSortDir('productName')}
                 sortRank={getMovementSortRank('productName')}
                 onSort={(e) => handleMovementSort('productName', e)}
-                className="py-3 px-4"
+                className="py-3.5 px-4"
               >
-                Product Name
+                Product Item
               </HeroTable.Column>
               <HeroTable.Column
-                align="center"
                 allowsSorting
                 sortDirection={getMovementSortDir('type')}
                 sortRank={getMovementSortRank('type')}
                 onSort={(e) => handleMovementSort('type', e)}
-                className="py-3 px-4 text-center"
+                className="py-3.5 px-4 text-center"
               >
-                Movement Type
+                Operation Type
               </HeroTable.Column>
               <HeroTable.Column
                 align="end"
@@ -206,87 +207,91 @@ export const MovementsSubTab: React.FC<MovementsSubTabProps> = ({
                 sortDirection={getMovementSortDir('quantity')}
                 sortRank={getMovementSortRank('quantity')}
                 onSort={(e) => handleMovementSort('quantity', e)}
-                className="py-3 px-4 text-right"
+                className="py-3.5 px-4 text-right"
               >
-                Quantity Change
+                Delta Qty
               </HeroTable.Column>
               <HeroTable.Column
                 allowsSorting
                 sortDirection={getMovementSortDir('referenceId')}
                 sortRank={getMovementSortRank('referenceId')}
                 onSort={(e) => handleMovementSort('referenceId', e)}
-                className="py-3 px-4"
+                className="py-3.5 px-4"
               >
-                Reference No.
+                Ticket Ref
               </HeroTable.Column>
               <HeroTable.Column
                 allowsSorting
                 sortDirection={getMovementSortDir('username')}
                 sortRank={getMovementSortRank('username')}
                 onSort={(e) => handleMovementSort('username', e)}
-                className="py-3 px-4"
+                className="py-3.5 px-4"
               >
-                Operator / User
+                Operator
               </HeroTable.Column>
-              <HeroTable.Column
-                allowsSorting
-                sortDirection={getMovementSortDir('notes')}
-                sortRank={getMovementSortRank('notes')}
-                onSort={(e) => handleMovementSort('notes', e)}
-                className="py-3 px-4"
-              >
-                Notes / Reason
-              </HeroTable.Column>
+              <th className="py-3.5 px-4 font-bold text-default-600 dark:text-default-400">
+                Audit Remarks
+              </th>
             </tr>
           </HeroTable.Header>
           <HeroTable.Body>
             {sortedMovements.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-12 text-center text-default-500 italic font-medium">
-                  No movement log entries match the selected filters or branch view scope.
+                <td colSpan={8} className="py-8 text-center text-default-500 italic">
+                  No stock adjustments or movement records matching current filter criteria.
                 </td>
               </tr>
             ) : (
               sortedMovements.map((m) => {
                 const prod = products.find(p => p.id === m.productId);
                 const br = branches.find(b => b.id === (m.sourceBranchId || m.destinationBranchId));
-                const brName = br ? br.name : (m.sourceBranchId || 'Central');
-                const qtyVal = Number(m.quantity || 0);
-                const isPositive = qtyVal > 0;
+                const isPositive = Number(m.quantity || 0) > 0;
+                const isNegative = Number(m.quantity || 0) < 0;
 
                 return (
-                  <tr key={m.id} className="hover:bg-content2/40 transition-colors">
-                    <td className="py-3 px-4 text-[11px] text-default-500">
-                      {new Date(m.timestamp).toLocaleString()}
+                  <tr key={m.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                    <td className="py-3.5 px-4 text-default-500 font-mono text-[11px]">
+                      {new Date(m.timestamp).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </td>
-                    <td className="py-3 px-4 font-bold text-foreground">
-                      {brName}
+                    <td className="py-3.5 px-4 font-bold text-foreground">
+                      {br?.name || m.sourceBranchId || 'Central Stock'}
                     </td>
-                    <td className="py-3 px-4 font-extrabold text-foreground">
-                      {prod ? prod.productName : m.productId}
+                    <td className="py-3.5 px-4">
+                      <div className="font-bold text-foreground">{prod?.productName || m.productId}</div>
+                      <div className="text-[10px] text-default-500 font-mono">{prod?.sku || prod?.productCode || ''}</div>
                     </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-black uppercase tracking-wider border ${
+                    <td className="py-3.5 px-4 text-center">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                         m.type === 'IN' || m.type === 'PURCHASE'
-                          ? 'bg-success/10 text-success border-success/20'
-                          : m.type === 'DAMAGE' || m.type === 'LOSS'
-                          ? 'bg-danger/10 text-danger border-danger/20'
-                          : 'bg-primary/10 text-primary border-primary/20'
+                          ? 'bg-emerald-500/10 text-emerald-500'
+                          : m.type === 'OUT' || m.type === 'SALE'
+                          ? 'bg-rose-500/10 text-rose-500'
+                          : m.type?.includes('DAMAGE')
+                          ? 'bg-amber-500/10 text-amber-500'
+                          : 'bg-primary/10 text-primary'
                       }`}>
                         {m.type}
                       </span>
                     </td>
-                    <td className={`py-3 px-4 text-right font-black ${isPositive ? 'text-success' : 'text-danger'}`}>
-                      {isPositive ? `+${qtyVal}` : `${qtyVal}`} units
+                    <td className={`py-3.5 px-4 text-right font-bold font-mono text-sm ${
+                      isPositive ? 'text-emerald-500' : isNegative ? 'text-rose-500' : 'text-foreground'
+                    }`}>
+                      {isPositive ? `+${m.quantity}` : m.quantity}
                     </td>
-                    <td className="py-3 px-4 text-default-500">
-                      {m.referenceId || 'N/A'}
+                    <td className="py-3.5 px-4 text-default-500 font-mono text-[11px]">
+                      {m.referenceId || '—'}
                     </td>
-                    <td className="py-3 px-4 text-default-500">
-                      {m.username || m.userId || 'System Admin'}
+                    <td className="py-3.5 px-4 font-medium text-foreground">
+                      {m.username || m.userId || 'System'}
                     </td>
-                    <td className="py-3 px-4 text-default-500 italic max-w-xs truncate" title={m.notes}>
-                      {m.notes || 'Routine stock operation'}
+                    <td className="py-3.5 px-4 text-default-500 text-[11px] max-w-xs truncate font-medium" title={m.notes}>
+                      {m.notes || '—'}
                     </td>
                   </tr>
                 );
@@ -298,3 +303,5 @@ export const MovementsSubTab: React.FC<MovementsSubTabProps> = ({
     </div>
   );
 };
+
+export default MovementsSubTab;

@@ -64,20 +64,23 @@ export const TransfersSubTab: React.FC<TransfersSubTabProps> = ({
   }, [branchFilteredTransfers, transferSortDescriptors, sortTransferData]);
 
   return (
-    <div className="space-y-6 text-left animate-fade-in font-sans">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-content1 p-5 rounded-2xl border border-divider shadow-xs">
+    <div className="space-y-6 text-left animate-fade-in font-sans text-xs">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200/70 dark:border-white/10 shadow-elevation-soft">
         <div>
           <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
             <ArrowRightLeft className="h-5 w-5 text-primary" />
             <span>Inter-Branch Stock Transfers &amp; Transmittals</span>
           </h2>
+          <p className="text-xs text-default-500 font-medium mt-0.5">
+            Monitor, approve, and track logistics dispatches across all store branches.
+          </p>
         </div>
         <HeroButton
           color="primary"
           onClick={() => setShowCreateTransfer(true)}
           startIcon={<Plus className="h-4 w-4" />}
           radius="full"
-          className="font-semibold shadow-xs"
+          className="font-bold shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
         >
           Initiate Stock Transfer Request
         </HeroButton>
@@ -85,25 +88,25 @@ export const TransfersSubTab: React.FC<TransfersSubTabProps> = ({
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-sans">
-        <div className="bg-content1 p-5 rounded-2xl border border-divider space-y-1 shadow-xs">
+        <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200/70 dark:border-white/10 space-y-1 shadow-elevation-soft">
           <span className="text-xs font-medium text-default-500 tracking-tight block">Total Transfer Orders</span>
-          <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground tabular-nums">{branchFilteredTransfers.length}</div>
+          <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground font-mono">{branchFilteredTransfers.length}</div>
         </div>
-        <div className="bg-content1 p-5 rounded-2xl border border-amber-500/25 space-y-1 shadow-xs">
+        <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-amber-500/25 space-y-1 shadow-elevation-soft">
           <span className="text-xs font-medium text-amber-600 dark:text-amber-400 tracking-tight block">Pending Approval</span>
-          <div className="text-xl sm:text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400 tabular-nums">
+          <div className="text-xl sm:text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400 font-mono">
             {branchFilteredTransfers.filter(t => t.status === 'Pending').length} requests
           </div>
         </div>
-        <div className="bg-content1 p-5 rounded-2xl border border-sky-500/25 space-y-1 shadow-xs">
+        <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-sky-500/25 space-y-1 shadow-elevation-soft">
           <span className="text-xs font-medium text-sky-600 dark:text-sky-400 tracking-tight block">In Transit / Dispatched</span>
-          <div className="text-xl sm:text-2xl font-bold tracking-tight text-sky-600 dark:text-sky-400 tabular-nums">
+          <div className="text-xl sm:text-2xl font-bold tracking-tight text-sky-600 dark:text-sky-400 font-mono">
             {branchFilteredTransfers.filter(t => t.status === 'Dispatched').length} orders
           </div>
         </div>
-        <div className="bg-content1 p-5 rounded-2xl border border-emerald-500/25 space-y-1 shadow-xs">
-          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 tracking-tight block">Received & Settled</span>
-          <div className="text-xl sm:text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tabular-nums">
+        <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-emerald-500/25 space-y-1 shadow-elevation-soft">
+          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 tracking-tight block">Received &amp; Settled</span>
+          <div className="text-xl sm:text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 font-mono">
             {branchFilteredTransfers.filter(t => t.status === 'Received').length} transfers
           </div>
         </div>
@@ -127,16 +130,16 @@ export const TransfersSubTab: React.FC<TransfersSubTabProps> = ({
       />
 
       {/* Transfers List Table */}
-      <div className="overflow-x-auto rounded-large border border-divider bg-content1 shadow-sm">
+      <div className="overflow-x-auto rounded-2xl border border-zinc-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-elevation-soft">
         <HeroTable isStriped className="min-w-full text-xs">
           <HeroTable.Header>
-            <tr className="bg-content2 border-b border-divider font-black text-foreground">
+            <tr className="bg-zinc-100/80 dark:bg-zinc-800/80 border-b border-divider/20 font-bold text-default-600 dark:text-default-400">
               <HeroTable.Column
                 allowsSorting
                 sortDirection={getTransferSortDir('transferNo')}
                 sortRank={getTransferSortRank('transferNo')}
                 onSort={(e) => handleTransferSort('transferNo', e)}
-                className="py-3 px-4"
+                className="py-3.5 px-4"
               >
                 Transfer Ref #
               </HeroTable.Column>
@@ -145,7 +148,7 @@ export const TransfersSubTab: React.FC<TransfersSubTabProps> = ({
                 sortDirection={getTransferSortDir('createdAt')}
                 sortRank={getTransferSortRank('createdAt')}
                 onSort={(e) => handleTransferSort('createdAt', e)}
-                className="py-3 px-4"
+                className="py-3.5 px-4"
               >
                 Date &amp; Time
               </HeroTable.Column>
@@ -154,7 +157,7 @@ export const TransfersSubTab: React.FC<TransfersSubTabProps> = ({
                 sortDirection={getTransferSortDir('fromBranchId')}
                 sortRank={getTransferSortRank('fromBranchId')}
                 onSort={(e) => handleTransferSort('fromBranchId', e)}
-                className="py-3 px-4"
+                className="py-3.5 px-4"
               >
                 Source Origin
               </HeroTable.Column>
@@ -163,98 +166,97 @@ export const TransfersSubTab: React.FC<TransfersSubTabProps> = ({
                 sortDirection={getTransferSortDir('toBranchId')}
                 sortRank={getTransferSortRank('toBranchId')}
                 onSort={(e) => handleTransferSort('toBranchId', e)}
-                className="py-3 px-4"
+                className="py-3.5 px-4"
               >
                 Destination Store
               </HeroTable.Column>
               <HeroTable.Column
-                align="center"
+                align="end"
                 allowsSorting
                 sortDirection={getTransferSortDir('itemCount')}
                 sortRank={getTransferSortRank('itemCount')}
                 onSort={(e) => handleTransferSort('itemCount', e)}
-                className="py-3 px-4 text-center"
+                className="py-3.5 px-4 text-right"
               >
-                Items Count
+                Total Items
               </HeroTable.Column>
               <HeroTable.Column
-                align="center"
                 allowsSorting
                 sortDirection={getTransferSortDir('status')}
                 sortRank={getTransferSortRank('status')}
                 onSort={(e) => handleTransferSort('status', e)}
-                className="py-3 px-4 text-center"
+                className="py-3.5 px-4 text-center"
               >
-                Status
+                Transfer Status
               </HeroTable.Column>
               <HeroTable.Column
                 allowsSorting
                 sortDirection={getTransferSortDir('requestedBy')}
                 sortRank={getTransferSortRank('requestedBy')}
                 onSort={(e) => handleTransferSort('requestedBy', e)}
-                className="py-3 px-4"
+                className="py-3.5 px-4"
               >
                 Requested By
               </HeroTable.Column>
-              <HeroTable.Column
-                allowsSorting
-                sortDirection={getTransferSortDir('reason')}
-                sortRank={getTransferSortRank('reason')}
-                onSort={(e) => handleTransferSort('reason', e)}
-                className="py-3 px-4"
-              >
+              <th className="py-3.5 px-4 font-bold text-default-600 dark:text-default-400">
                 Reason / Notes
-              </HeroTable.Column>
+              </th>
             </tr>
           </HeroTable.Header>
           <HeroTable.Body>
             {sortedTransfers.length === 0 ? (
               <tr>
-                <td colSpan={8} className="py-12 text-center text-default-500 italic font-medium">
-                  No stock transfer orders recorded yet for this branch. Click Initiate Stock Transfer Request to transfer items between branches.
+                <td colSpan={8} className="py-8 text-center text-default-500 italic">
+                  No inter-branch transfer orders found matching current branch filter.
                 </td>
               </tr>
             ) : (
               sortedTransfers.map((t) => {
-                const srcBranch = branches.find(b => b.id === t.fromBranchId);
-                const destBranch = branches.find(b => b.id === t.toBranchId);
-                const itemCount = (t.items || []).reduce((acc, item) => acc + item.quantity, 0);
+                const src = branches.find(b => b.id === t.fromBranchId);
+                const dest = branches.find(b => b.id === t.toBranchId);
+                const totalUnits = (t.items || []).reduce((acc, item) => acc + item.quantity, 0);
 
                 return (
-                  <tr key={t.id} className="hover:bg-content2/40 transition-colors">
-                    <td className="py-3 px-4 font-bold text-primary">
-                      {t.transferNo || t.id.slice(-8)}
+                  <tr key={t.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-primary font-mono">
+                      {t.transferNo || t.id}
                     </td>
-                    <td className="py-3 px-4 text-[11px] text-default-500">
-                      {new Date(t.createdAt).toLocaleString()}
+                    <td className="py-3.5 px-4 text-default-500 font-mono text-[11px]">
+                      {new Date(t.createdAt).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </td>
-                    <td className="py-3 px-4 font-bold text-foreground">
-                      {srcBranch ? srcBranch.name : t.fromBranchId}
+                    <td className="py-3.5 px-4 font-semibold text-foreground">
+                      {src?.name || t.fromBranchId}
                     </td>
-                    <td className="py-3 px-4 font-bold text-foreground">
-                      {destBranch ? destBranch.name : t.toBranchId}
+                    <td className="py-3.5 px-4 font-semibold text-foreground">
+                      {dest?.name || t.toBranchId}
                     </td>
-                    <td className="py-3 px-4 text-center font-bold">
-                      {itemCount} units ({t.items?.length || 0} SKUs)
+                    <td className="py-3.5 px-4 text-right font-bold text-foreground font-mono">
+                      {totalUnits} units
                     </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[9.5px] font-black uppercase tracking-wider border ${
-                        t.status === 'Completed' || t.status === 'Received'
-                          ? 'bg-success/10 text-success border-success/20'
+                    <td className="py-3.5 px-4 text-center">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        t.status === 'Received'
+                          ? 'bg-emerald-500/10 text-emerald-500'
                           : t.status === 'Dispatched'
-                          ? 'bg-sky-500/10 text-sky-500 border-sky-500/20'
-                          : t.status === 'Pending'
-                          ? 'bg-warning/10 text-warning border-warning/20'
-                          : 'bg-danger/10 text-danger border-danger/20'
+                          ? 'bg-sky-500/10 text-sky-500'
+                          : t.status === 'Cancelled'
+                          ? 'bg-rose-500/10 text-rose-500'
+                          : 'bg-amber-500/10 text-amber-500'
                       }`}>
                         {t.status}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-default-500">
-                      {t.requestedBy || 'Store Manager'}
+                    <td className="py-3.5 px-4 text-default-500 font-medium">
+                      {t.requestedBy || 'System'}
                     </td>
-                    <td className="py-3 px-4 text-default-500 italic max-w-xs truncate" title={t.reason}>
-                      {t.reason || 'Inter-branch inventory rebalancing'}
+                    <td className="py-3.5 px-4 text-default-500 text-[11px] max-w-xs truncate font-medium" title={t.reason}>
+                      {t.reason || '—'}
                     </td>
                   </tr>
                 );
@@ -266,3 +268,5 @@ export const TransfersSubTab: React.FC<TransfersSubTabProps> = ({
     </div>
   );
 };
+
+export default TransfersSubTab;
