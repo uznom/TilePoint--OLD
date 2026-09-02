@@ -43,8 +43,16 @@ import {
   authenticateUserForSyncBatch
 } from '../middleware/authMiddleware.js';
 import { emitPulseUpdate } from '../realtime/socketHandler.js';
+import salesDbRoutes from './db/salesDbRoutes.js';
+import inventoryDbRoutes from './db/inventoryDbRoutes.js';
+import operationsDbRoutes from './db/operationsDbRoutes.js';
 
 const router = express.Router();
+
+// Mount Domain Sub-Routers
+router.use(salesDbRoutes);
+router.use(inventoryDbRoutes);
+router.use(operationsDbRoutes);
 
 // Helper: Atomic Transaction Package MySQL Executor
 async function executeAtomicPackageMysql(tx) {

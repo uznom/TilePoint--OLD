@@ -6,10 +6,8 @@
 import {
 AlertCircle,
 Calculator,
-Calendar,
 ChevronDown,
 ChevronUp,
-Download,
 FileText,
 History,
 Keyboard,
@@ -18,7 +16,6 @@ LockKeyhole,
 RefreshCw,
 RotateCcw,
 Scissors,
-Search,
 ShieldCheck,
 ShoppingBag,
 ShoppingCart,
@@ -32,20 +29,19 @@ X
 import { AnimatePresence,motion } from "motion/react";
 import React,{ useCallback,useEffect,useRef,useState } from "react";
 import { useDb,useDbBranchStock,useDbProducts } from "../context/DbContext";
-import { useVirtualList } from "../hooks/useVirtualList";
 import { getBranchStockQuantity,getBranchStockRecord,isProductInBranch,isSameBranch } from "../lib/branchUtils";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
 import { Member,Product,Sale,UserRole } from "../types/db";
 import { formatCurrency } from "../utils/formatters";
 import { ToastNotification } from "./ToastNotification";
 import { useReceiptFontSize } from "./ReceiptFontSizeControl";
-import { HeroDropdownSelect } from "./common/ui/HeroDropdown";
 import { HeroButton } from "./common/ui/HeroButton";
 import { HeroChip } from "./common/ui/HeroChip";
 import { formatTin } from '../utils/formatters';
 import { PosAddMemberModal } from "./pos/modals/PosAddMemberModal";
 import { PosCustomerModal } from "./pos/modals/PosCustomerModal";
 import { PosDiscountModal } from "./pos/modals/PosDiscountModal";
+import { PosSalesLedgerTab } from "./pos/PosSalesLedgerTab";
 import { PosShiftModal } from "./pos/modals/PosShiftModal";
 import { PosCloseShiftModal } from "./pos/modals/PosCloseShiftModal";
 import { PosReceiptModal } from "./pos/modals/PosReceiptModal";
@@ -340,14 +336,12 @@ export const PosModule: React.FC<PosModuleProps> = ({
  }, [activeShift, viewMode, hasDismissedShiftPrompt]);
 
  // Pagination State for Ledger Sales
- const [salesPage, setSalesPage] = useState(1);
  const [selectedSaleDetail, setSelectedSaleDetail] = useState<Sale | null>(
  null,
  );
  const [ledgerSearchQuery, setLedgerSearchQuery] = useState("");
  const [ledgerPaymentFilter, setLedgerPaymentFilter] = useState<string>("All");
  const [ledgerDateFilter, setLedgerDateFilter] = useState<string>("");
- const [isStatsCollapsed, setIsStatsCollapsed] = useState(false);
  const { fontClass: receiptFontClass } = useReceiptFontSize();
 
   const [selectedPoolBranchId, _setSelectedPoolBranchId] = useState<string>("All");
@@ -420,7 +414,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  // Reset salesPage when filters change
  useEffect(() => {
- setSalesPage(1);
  }, [searchTerm, selectedPoolBranchId]);
 
  // Surcharges, limits and discounts
@@ -1632,80 +1625,95 @@ export const PosModule: React.FC<PosModuleProps> = ({
  }
  };
 
- const handleExportLedgerToExcel = () => {
- if (filteredSales.length === 0) {
- showToast("Cannot export empty report: No transactions match the current filters.");
- return;
- }
+  const handleExportLedgerToExcel = () => {
+    const query = ledgerSearchQuery.trim().toLowerCase();
+    const filteredLedgerSales = sales.filter((s) => {
+      if (selectedPoolBranchId !== "All" && s.branchId !== selectedPoolBranchId) return false;
+      if (ledgerPaymentFilter !== "All" && (s.paymentMethod || "").toLowerCase() !== ledgerPaymentFilter.toLowerCase()) return false;
+      if (ledgerDateFilter) {
+        const d = (s.createdAt || "").slice(0, 10);
+        if (d !== ledgerDateFilter) return false;
+      }
+      if (query) {
+        return (
+          (s.saleNumber || "").toLowerCase().includes(query) ||
+          (s.customerName || "").toLowerCase().includes(query) ||
+          (s.cashierName || "").toLowerCase().includes(query) ||
+          (s.paymentMethod || "").toLowerCase().includes(query)
+        );
+      }
+      return true;
+    });
 
- let csv = "";
- // Metadata Headers
- csv += `"TILEPOINT ENTERPRISES - RETAIL MANAGEMENT SYSTEM"\n`;
- csv += `"DAILY CASHIER SALES TRANSACTION REPORT"\n\n`;
- csv += `"Active Branch Pool:","${selectedPoolBranchId === "All" ? "Corporate (All Branches)" : (branches.find(b => b.id === selectedPoolBranchId)?.name || selectedPoolBranchId)}"\n`;
- csv += `"Filtered Payment Mode:","${ledgerPaymentFilter}"\n`;
- csv += `"Filtered Specific Date:","${ledgerDateFilter ? ledgerDateFilter : "All Recorded Dates"}"\n`;
- csv += `"Report Export Timestamp:","${new Date().toISOString()}"\n`;
- csv += `"Total Records Exported:","${filteredSales.length} Transactions"\n\n`;
+    if (filteredLedgerSales.length === 0) {
+      showToast("Cannot export empty report: No transactions match the current filters.");
+      return;
+    }
 
- // Statistics section
- const totalSubtotal = filteredSales.reduce((acc, s) => acc + (Number(s.subtotal) || 0), 0);
- const totalDiscount = filteredSales.reduce((acc, s) => acc + (Number(s.discount) || 0), 0);
- const totalVat = filteredSales.reduce((acc, s) => acc + (Number(s.vat) || 0), 0);
- const totalGrand = filteredSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+    let csv = "";
+    csv += `"TILEPOINT ENTERPRISES - RETAIL MANAGEMENT SYSTEM"\n`;
+    csv += `"DAILY CASHIER SALES TRANSACTION REPORT"\n\n`;
+    csv += `"Active Branch Pool:","${selectedPoolBranchId === "All" ? "Corporate (All Branches)" : (branches.find(b => b.id === selectedPoolBranchId)?.name || selectedPoolBranchId)}"\n`;
+    csv += `"Filtered Payment Mode:","${ledgerPaymentFilter}"\n`;
+    csv += `"Filtered Specific Date:","${ledgerDateFilter ? ledgerDateFilter : "All Recorded Dates"}"\n`;
+    csv += `"Report Export Timestamp:","${new Date().toISOString()}"\n`;
+    csv += `"Total Records Exported:","${filteredLedgerSales.length} Transactions"\n\n`;
 
- csv += `"AGGREGATE SUMS STATISTICS"\n`;
- csv += `"Total Base Subtotal","PHP ${(Number(totalSubtotal) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n`;
- csv += `"Total Applied Discounts","PHP ${(Number(totalDiscount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n`;
- csv += `"Total VAT Covered (12%)","PHP ${(Number(totalVat) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n`;
- csv += `"TOTAL REVENUE SETTLED","PHP ${(Number(totalGrand) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n\n`;
+    const totalSubtotal = filteredLedgerSales.reduce((acc, s) => acc + (Number(s.subtotal) || 0), 0);
+    const totalDiscount = filteredLedgerSales.reduce((acc, s) => acc + (Number(s.discount) || 0), 0);
+    const totalVat = filteredLedgerSales.reduce((acc, s) => acc + (Number(s.vat) || 0), 0);
+    const totalGrand = filteredLedgerSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
 
- // Detailed Table headers
- csv += `"Invoice Number","Date Settled","Branch Pool","Cashier Operator","Customer Profile","Payment Mode","Subtotal","Discount","VAT Amount","Grand Total Paid"\n`;
+    csv += `"AGGREGATE SUMS STATISTICS"\n`;
+    csv += `"Total Base Subtotal","PHP ${(Number(totalSubtotal) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n`;
+    csv += `"Total Applied Discounts","PHP ${(Number(totalDiscount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n`;
+    csv += `"Total VAT Covered (12%)","PHP ${(Number(totalVat) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n`;
+    csv += `"TOTAL REVENUE SETTLED","PHP ${(Number(totalGrand) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}"\n\n`;
 
- // Row detail population
- filteredSales.forEach((s) => {
- const branchName = branches.find((b) => b.id === s.branchId)?.name || s.branchId;
- const formattedDate = (s.createdAt && !isNaN(new Date(s.createdAt).getTime())) ? new Date(s.createdAt).toISOString().replace("T", " ").slice(0, 19) : "N/A";
- const customer = s.customerName || "Walk-in Buyer";
- 
- const row = [
- s.saleNumber,
- formattedDate,
- branchName,
- s.cashierName,
- customer,
- s.paymentMethod,
- (Number(s.subtotal) || 0).toFixed(2),
- (Number(s.discount) || 0).toFixed(2),
- (Number(s.vat) || 0).toFixed(2),
- (Number(s.grandTotal) || 0).toFixed(2),
- ];
+    csv += `"Invoice Number","Date Settled","Branch Pool","Cashier Operator","Customer Profile","Payment Mode","Subtotal","Discount","VAT Amount","Grand Total Paid"\n`;
 
- csv += row.map((val) => `"${val.replace(/"/g, '""')}"`).join(",") + "\n";
- });
+    filteredLedgerSales.forEach((s) => {
+      const branchName = branches.find((b) => b.id === s.branchId)?.name || s.branchId;
+      const formattedDate = (s.createdAt && !isNaN(new Date(s.createdAt).getTime())) ? new Date(s.createdAt).toISOString().replace("T", " ").slice(0, 19) : "N/A";
+      const customer = s.customerName || "Walk-in Buyer";
+      
+      const row = [
+        s.saleNumber,
+        formattedDate,
+        branchName,
+        s.cashierName,
+        customer,
+        s.paymentMethod,
+        (Number(s.subtotal) || 0).toFixed(2),
+        (Number(s.discount) || 0).toFixed(2),
+        (Number(s.vat) || 0).toFixed(2),
+        (Number(s.grandTotal) || 0).toFixed(2),
+      ];
 
- const fileDateSuffix = ledgerDateFilter ? `_${ledgerDateFilter}` : "";
- const filename = `TilePoint_Cashier_Ledger_Report${fileDateSuffix}.csv`;
- const csvWithBOM = "\uFEFF" + csv;
+      csv += row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(",") + "\n";
+    });
 
- saveFileToBackup(csvWithBOM, filename, "Sales_Reports", "text/csv;charset=utf-8;")
- .then(() => {
- showToast(`Excel-ready Daily sales report saved successfully!`);
- })
- .catch((err) => {
- console.error(err);
- showToast("Failed to save report. Initiating direct browser download...");
- const blob = new Blob([csvWithBOM], { type: "text/csv;charset=utf-8;" });
- const url = URL.createObjectURL(blob);
- const link = document.createElement("a");
- link.href = url;
- link.setAttribute("download", filename);
- document.body.appendChild(link);
- link.click();
- document.body.removeChild(link);
- });
- };
+    const fileDateSuffix = ledgerDateFilter ? `_${ledgerDateFilter}` : "";
+    const filename = `TilePoint_Cashier_Ledger_Report${fileDateSuffix}.csv`;
+    const csvWithBOM = "\uFEFF" + csv;
+
+    saveFileToBackup(csvWithBOM, filename, "Sales_Reports", "text/csv;charset=utf-8;")
+      .then(() => {
+        showToast("Excel-ready Daily sales report saved successfully!");
+      })
+      .catch((err) => {
+        console.error(err);
+        showToast("Failed to save report. Initiating direct browser download...");
+        const blob = new Blob([csvWithBOM], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      });
+  };
 
  const handleTriggerPriceOverride = (index: number) => {
  const item = cart[index];
@@ -1932,78 +1940,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setPinTargetSale(null);
  setSecurityPinInput("");
  };
-
- const filteredSales = React.useMemo(() => {
- const query = ledgerSearchQuery.trim().toLowerCase();
- return sales.filter((s) => {
- if (selectedPoolBranchId !== "All" && s.branchId !== selectedPoolBranchId) {
- return false;
- }
- if (ledgerPaymentFilter !== "All") {
- if ((s.paymentMethod || "").toLowerCase() !== ledgerPaymentFilter.toLowerCase()) {
- return false;
- }
- }
- if (ledgerDateFilter) {
- const dateObj = new Date(s.createdAt);
- const year = dateObj.getFullYear();
- const month = String(dateObj.getMonth() + 1).padStart(2, "0");
- const day = String(dateObj.getDate()).padStart(2, "0");
- const saleLocalDate = `${year}-${month}-${day}`;
- if (saleLocalDate !== ledgerDateFilter) {
- return false;
- }
- }
- if (query) {
- return (
- (s.saleNumber || "").toLowerCase().includes(query) ||
- (s.customerName || "").toLowerCase().includes(query) ||
- (s.cashierName || "").toLowerCase().includes(query) ||
- (s.paymentMethod || "").toLowerCase().includes(query) ||
- (s.notes || "").toLowerCase().includes(query) ||
- s.grandTotal.toString().includes(query)
- );
- }
- return true;
- });
- }, [sales, selectedPoolBranchId, ledgerSearchQuery, ledgerPaymentFilter, ledgerDateFilter]);
-
- const SALES_PER_PAGE = 50;
- const totalSalesPages = Math.ceil(filteredSales.length / SALES_PER_PAGE) || 1;
- const paginatedSales = React.useMemo(() => {
- return filteredSales.slice(
- (salesPage - 1) * SALES_PER_PAGE,
- salesPage * SALES_PER_PAGE,
- );
- }, [filteredSales, salesPage]);
-
- const {
- containerRef: salesVirtualRef,
- handleScroll: handleSalesVirtualScroll,
- visibleIndices: visibleSalesIndices,
- paddingTop: salesPaddingTop,
- paddingBottom: salesPaddingBottom
- } = useVirtualList({
- itemCount: paginatedSales.length,
- itemHeight: 48
- });
-
- const ledgerStats = React.useMemo(() => {
- const activeSales = filteredSales.filter(s => !s.isDeleted);
- const voidedSales = filteredSales.filter(s => s.isDeleted);
- const netRevenue = activeSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
- const totalDiscount = activeSales.reduce((acc, s) => acc + (Number(s.discount) || 0), 0);
- const totalVat = activeSales.reduce((acc, s) => acc + (Number(s.vat) || 0), 0);
- return {
- activeCount: activeSales.length,
- voidedCount: voidedSales.length,
- netRevenue,
- totalDiscount,
- totalVat,
- totalCount: filteredSales.length
- };
- }, [filteredSales]);
-
 
   const getCleanCashierName = (name?: string, id?: string) => {
     if (name && name.trim()) return name.trim();
@@ -3488,382 +3424,37 @@ export const PosModule: React.FC<PosModuleProps> = ({
   </div>
   </div>
   ) : (
-    <div className="flex-1 min-h-0 border border-divider/30 rounded-2xl bg-content1 p-5 sm:p-6 text-left flex flex-col gap-6 animate-fade-in shadow-lg overflow-visible">
-      {/* DAILY SALES LEDGER & VOID TERMINAL (SUB-MODULE TAB) */}
- 
- {/* Title Section */}
- <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b border-divider/20 pb-4 gap-4">
- <div>
- <h3 className="text-sm font-black text-rose-500 flex items-center gap-2 uppercase tracking-widest pl-1 ">
- <LockKeyhole className="h-5 w-5 text-rose-500" />
- <span>Corporate Daily Sales Ledger & Void Terminal</span>
- </h3>
- </div>
- 
- {/* Actions & Controls in header */}
- <div className="flex items-center gap-2.5 shrink-0 self-start md:self-center">
- <button
- type="button"
- onClick={() => setIsStatsCollapsed(!isStatsCollapsed)}
- className="flex items-center justify-center gap-2 px-3.5 py-2 bg-background hover:bg-content3 border border-divider/40 text-primary text-[11px] font-sans font-black uppercase tracking-wider rounded-xl transition-all shadow-sm cursor-pointer shrink-0"
- title="Toggle statistics visibility"
- >
- {isStatsCollapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
- <span>{isStatsCollapsed ? "Show Stats" : "Hide Stats"}</span>
- </button>
+      <PosSalesLedgerTab
+        sales={sales}
+        searchQuery={ledgerSearchQuery}
+        setSearchQuery={setLedgerSearchQuery}
+        filterPaymentMethod={ledgerPaymentFilter}
+        setFilterPaymentMethod={setLedgerPaymentFilter}
+        filterDate={ledgerDateFilter}
+        setFilterDate={setLedgerDateFilter}
+        filterDateEnd=""
+        setFilterDateEnd={() => {}}
+        currentUser={currentUser}
+        onViewReceipt={(sale: Sale) => {
+          setSelectedSaleDetail(sale);
+          setActiveReceipt(sale);
+          setShowReceiptModal(true);
+        }}
+        onPrintReceipt={(sale: Sale) => {
+          setActiveReceipt(sale);
+          setTimeout(() => window.print(), 100);
+        }}
+        onOpenVoidModal={(sale: Sale) => {
+          setPinAction("VOID");
+          setPinTargetSale(sale);
+          setPinModalOpen(true);
+        }}
+        onExportCsv={handleExportLedgerToExcel}
+        onRefreshSales={() => syncFromSharedServer(true).catch(() => {})}
+      />
+    )}
 
- <button
- type="button"
- onClick={handleExportLedgerToExcel}
- className="flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-[11px] font-sans font-black uppercase tracking-wider rounded-xl transition-all shadow-sm cursor-pointer border-0 shrink-0"
- title="Export current filtered sales report as a formatted Excel spreadsheet"
- >
- <Download className="h-3.5 w-3.5" />
- <span>Export Excel Report</span>
- </button>
- </div>
- </div>
-
-  <AnimatePresence initial={false}>
-  {!isStatsCollapsed && (
-  <motion.div
-    key="ledger-stats-panel"
-    initial={{ height: 0, opacity: 0, overflow: "hidden" }}
-    animate={{ height: "auto", opacity: 1 }}
-    exit={{ height: 0, opacity: 0, overflow: "hidden" }}
-    transition={{ duration: 0.25, ease: "easeInOut" }}
-  >
-  {/* Quick Stats Grid Dashboard */}
-  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
- {/* Stat 1: Net Revenue */}
- <div className="bg-background border border-divider/15 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
- <span className="text-[10px] text-default-500 font-black uppercase tracking-wider ">Net Settled Revenue</span>
- <div className="mt-2 flex items-baseline gap-1">
- <span className="text-lg font-black text-emerald-500 ">
- ₱{(Number(ledgerStats?.netRevenue) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
- </span>
- </div>
- <span className="text-[9px] text-default-500 font-bold font-sans mt-1">Excludes voided invoices</span>
- </div>
-
- {/* Stat 2: Active Tickets */}
- <div className="bg-background border border-divider/15 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
- <span className="text-[10px] text-default-500 font-black uppercase tracking-wider ">Settled Sales</span>
- <div className="mt-2 flex items-baseline gap-1">
- <span className="text-lg font-black text-primary ">{ledgerStats.activeCount}</span>
- <span className="text-xs text-default-500 font-bold font-sans"> invoices</span>
- </div>
- <span className="text-[9px] text-default-500 font-bold font-sans mt-1">Completed settlements</span>
- </div>
-
- {/* Stat 3: Total Discounts */}
- <div className="bg-background border border-divider/15 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
- <span className="text-[10px] text-rose-500 font-black uppercase tracking-wider ">Discounts Deducted</span>
- <div className="mt-2 flex items-baseline gap-1">
- <span className="text-lg font-black text-rose-500 ">
- ₱{(Number(ledgerStats?.totalDiscount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
- </span>
- </div>
- <span className="text-[9px] text-default-500 font-bold font-sans mt-1">Promotional markdowns</span>
- </div>
-
- {/* Stat 4: Voided count */}
- <div className="bg-background border border-divider/15 rounded-2xl p-4 flex flex-col justify-between shadow-sm">
- <span className="text-[10px] text-rose-500 font-black uppercase tracking-wider ">Voided &amp; Reclaimed</span>
- <div className="mt-2 flex items-baseline gap-1">
- <span className="text-lg font-black text-amber-500 ">{ledgerStats.voidedCount}</span>
- <span className="text-xs text-default-500 font-bold font-sans"> tickets</span>
- </div>
- <span className="text-[9px] text-default-500 font-bold font-sans mt-1">Reversed stock quantities</span>
- </div>
- </div>
- </motion.div>
- )}
- </AnimatePresence>
-
- {/* Refactored Filter Controls Deck Card */}
- <div className="bg-background/60 border border-divider/20 rounded-2xl p-4">
- <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
- 
- {/* Search Field */}
- <div className="flex flex-col gap-1.5">
- <span className="text-[10px] text-default-500 font-black uppercase tracking-wider ">Search ledger</span>
- <div className="relative">
- <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-default-500" />
- <input
- type="text"
- value={ledgerSearchQuery ?? ''}
- onChange={(e) => {
- setLedgerSearchQuery(e.target.value);
- setSalesPage(1);
- }}
- placeholder="Search invoice, customer, payment..."
- className="w-full bg-background border border-divider/40 focus:border-primary pl-9 pr-8 py-2 text-[11px] font-sans font-black text-zinc-200 placeholder-zinc-500 rounded-xl outline-none focus:ring-1 focus:ring-primary transition-all shadow-sm"
- />
- {ledgerSearchQuery && (
- <button
- type="button"
- onClick={() => {
- setLedgerSearchQuery("");
- setSalesPage(1);
- }}
- className="absolute right-2.5 top-2.5 text-default-500 hover:text-default-500 border-0 bg-transparent cursor-pointer"
- >
- <X className="h-3.5 w-3.5" />
- </button>
- )}
- </div>
- </div>
-
-  {/* Payment Filter */}
-  <div className="flex flex-col gap-1.5">
-    <span className="text-[10px] text-default-500 font-black uppercase tracking-wider flex items-center gap-1.5">
-      <span className="h-2 w-2 bg-primary rounded-full" />
-      <span>Payment Method</span>
-    </span>
-    <HeroDropdownSelect
-      items={[
-        { key: 'All', label: 'All Payments' },
-        { key: 'Cash', label: 'Cash Only' },
-        { key: 'GCash', label: 'GCash Only' },
-        { key: 'Maya', label: 'Maya Only' },
-        { key: 'Card / Bank Terminal', label: 'Card / Bank Terminal Only' },
-        { key: 'Member Credit', label: 'Member Credit Only' },
-      ]}
-      selectedKey={ledgerPaymentFilter ?? 'All'}
-      onSelectionChange={(val) => {
-        setLedgerPaymentFilter(val);
-        setSalesPage(1);
-      }}
-      size="sm"
-      variant="pill"
-    />
-  </div>
-
- {/* Date Selector */}
- <div className="flex flex-col gap-1.5">
- <span className="text-[10px] text-default-500 font-black uppercase tracking-wider flex items-center gap-1.5">
- <Calendar className="h-3.5 w-3.5 text-primary" />
- <span>Go to Date</span>
- </span>
- <div className="relative flex items-center gap-1">
- <input
- type="date"
- value={ledgerDateFilter ?? ''}
- onChange={(e) => {
- setLedgerDateFilter(e.target.value);
- setSalesPage(1);
- }}
- className="w-full text-[11px] font-sans font-black bg-background border border-divider/40 focus:border-primary px-3 py-1.5 rounded-xl text-primary focus:outline-none uppercase tracking-wider transition-colors cursor-pointer shadow-sm"
- />
- {ledgerDateFilter && (
- <button
- type="button"
- onClick={() => {
- setLedgerDateFilter("");
- setSalesPage(1);
- }}
- className="absolute right-2 top-2.5 p-0.5 bg-zinc-800 hover:bg-zinc-700 text-default-500 hover:text-zinc-200 rounded transition-colors border-0 cursor-pointer flex items-center justify-center"
- title="Clear Date"
- >
- <X className="h-3 w-3" />
- </button>
- )}
- </div>
- </div>
-
- </div>
- </div>
-
- <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-divider/20 shadow-inner bg-background overflow-hidden">
- <div ref={salesVirtualRef} onScroll={handleSalesVirtualScroll} className="overflow-auto scrollbar-thin scrollbar-thumb-divider h-[58vh] md:h-[64vh] lg:h-[68vh] min-h-[380px]">
- <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px] font-sans">
- <thead>
- <tr className="border-b border-divider/30 bg-background/30 text-[9px] uppercase font-black text-default-500 tracking-wider">
- <th className="py-3 px-4 w-28">Ref Invoice</th>
- <th className="py-3 px-4">timestamp settled</th>
- <th className="py-3 px-4">Client Profile</th>
- <th className="py-3 px-4 text-right">Subtotal</th>
- <th className="py-3 px-4 text-right">VAT (12%)</th>
- <th className="py-3 px-4 text-right">Discount Given</th>
- <th className="py-3 px-4 text-right">Grand Total Paid</th>
- <th className="py-3 px-4 text-center">Settlement Status</th>
- <th className="py-3 px-4 text-center w-48">
- Audit Controls
- </th>
- </tr>
- </thead>
- <tbody className="divide-y divide-divider/10 text-[11px] text-default-500">
- {filteredSales.length === 0 ? (
- <tr>
- <td
- colSpan={9}
- className="py-12 text-center text-default-500 font-sans font-bold"
- >
- {ledgerSearchQuery
- ? `No matching sales invoice ledgers found for "${ledgerSearchQuery}".`
- : "No matching sales invoice ledgers recorded today."}
- </td>
- </tr>
- ) : (
- <>
- {salesPaddingTop > 0 && (
- <tr style={{ height: salesPaddingTop }}>
- <td colSpan={9} className="p-0 border-0" />
- </tr>
- )}
- {visibleSalesIndices.map((vIdx) => {
- const s = paginatedSales[vIdx];
- if (!s) return null;
- return (
- <tr
- key={s.id || vIdx}
- onClick={() => setSelectedSaleDetail(s)}
- className={`hover:bg-content1/90 hover:text-white cursor-pointer transition-colors font-bold ${s.isDeleted ? "bg-red-500/5 text-default-500 line-through decoration-rose-500" : ""}`}
- title="Click to view full transaction invoice ledger details"
- >
- <td className="py-3 px-4 text-primary font-black uppercase hover:underline">
- {s.saleNumber}
- </td>
- <td
- className="py-3 px-4 text-zinc-550 font-sans font-medium hover:text-primary"
- title="Settled instant transaction date"
- >
- {(s.createdAt && !isNaN(new Date(s.createdAt).getTime())) ? new Date(s.createdAt).toLocaleString() : "N/A"}
- </td>
- <td className="py-3 px-4 text-foreground font-sans font-extrabold">
- {s.customerName}
- </td>
- <td className="py-3 px-4 text-right text-default-500">
- {formatCurrency(s.subtotal)}
- </td>
- <td className="py-3 px-4 text-right text-default-500">
- {formatCurrency(s.vat)}
- </td>
- <td className="py-3 px-4 text-right text-rose-500">
- -{formatCurrency(s.discount)}
- </td>
- <td className="py-3 px-4 text-right text-primary font-extrabold">
- {formatCurrency(s.grandTotal)}
- </td>
- <td className="py-3 px-4 text-center uppercase text-[9.5px]">
- {s.isDeleted ? (
- <span className="bg-rose-500/10 text-rose-500 border border-rose-500/25 py-0.5 px-2.5 rounded-full font-black">
- Voided / Reclaimed
- </span>
- ) : (
- <span className="bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/25 py-0.5 px-2.5 rounded-full font-black">
- Settled
- </span>
- )}
- </td>
- <td
- className="py-3 px-4 text-center"
- onClick={(e) => e.stopPropagation()}
- >
- <div className="flex gap-2 justify-center items-center">
- <button
- onClick={() => triggerReprintWithPin(s)}
- className="py-1 px-3 rounded-lg border border-divider/60 hover:border-primary hover:bg-primary/10 transition-all font-sans text-[10px] font-black uppercase text-primary cursor-pointer"
- title="Reprint receipt (Guarded by Manager PIN)"
- >
- Reprint Ticket
- </button>
-
- {!s.isDeleted && (
- <button
- onClick={() => triggerVoidWithPin(s)}
- className="py-1 px-3 rounded-lg border border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white transition-all font-sans text-[10px] font-black uppercase cursor-pointer"
- title="Void sale and reclaim inventory quantities (Guarded by Manager PIN)"
- >
- Void Sale
- </button>
- )}
- </div>
- </td>
- </tr>
-  );
-  })}
-  
-  {salesPaddingBottom > 0 && (
-  <tr style={{ height: salesPaddingBottom }}>
-  <td colSpan={9} className="p-0 border-0" />
-  </tr>
-  )}
-  </>
-  )}
- </tbody>
- </table>
- </div>
-
- <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-content1 border-t border-divider/20 text-xs font-sans">
- <span className="font-semibold text-default-500 ">
- Showing{" "}
- {Math.min(
- filteredSales.length,
- (salesPage - 1) * SALES_PER_PAGE + 1,
- )}
- -{Math.min(filteredSales.length, salesPage * SALES_PER_PAGE)} of{" "}
- {filteredSales.length} invoices
- </span>
- <div className="flex items-center gap-1.5 select-none font-sans">
- <button
- type="button"
- disabled={salesPage === 1}
- onClick={() => setSalesPage((prev) => Math.max(1, prev - 1))}
- className="px-3 py-1.5 rounded-lg border border-divider/60 hover:border-primary hover:bg-primary/10 text-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
- >
- Prev
- </button>
- {Array.from({ length: totalSalesPages }).map((_, i) => {
- const pNum = i + 1;
- if (
- totalSalesPages > 5 &&
- Math.abs(pNum - salesPage) > 2 &&
- pNum !== 1 &&
- pNum !== totalSalesPages
- ) {
- if (pNum === 2 || pNum === totalSalesPages - 1) {
- return (
- <span key={pNum} className="px-1 text-default-500">
- ...
- </span>
- );
- }
- return null;
- }
- return (
- <button
- key={pNum}
- type="button"
- onClick={() => setSalesPage(pNum)}
- className={`h-7 w-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
- salesPage === pNum
- ? "bg-primary text-primary-foreground shadow-md"
- : "border border-divider/20 hover:bg-primary/10 text-default-500"
- }`}
- >
- {pNum}
- </button>
- );
- })}
- <button
- type="button"
- disabled={salesPage === totalSalesPages}
- onClick={() =>
- setSalesPage((prev) => Math.min(totalSalesPages, prev + 1))
- }
- className="px-3 py-1.5 rounded-lg border border-divider/60 hover:border-primary hover:bg-primary/10 text-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
- >
- Next
- </button>
- </div>
- </div>
- </div>
- </div>
- )}
-
-  {/* Cashier Shift Opening Modal */}
+    {/* Cashier Shift Opening Modal */}
   <PosShiftModal
     isOpen={showShiftModal}
     onClose={() => {
