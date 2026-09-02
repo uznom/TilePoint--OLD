@@ -408,87 +408,99 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
               e.currentTarget.scrollLeft += e.deltaY;
             }
           }}
-          className="px-6 pt-3 border-b border-divider/15 flex gap-2 overflow-x-auto overflow-y-hidden bg-content1 shrink-0 scroll-smooth touch-pan-x whitespace-nowrap scrollbar-thin"
+          className="px-6 pt-3 pb-2 border-b border-divider/15 flex items-center gap-1.5 overflow-x-auto overflow-y-hidden bg-white dark:bg-zinc-900 shrink-0 scroll-smooth touch-pan-x whitespace-nowrap scrollbar-thin"
         >
-          <button
-            type="button"
-            onClick={() => { setActiveTab('categories'); setShowCatForm(false); }}
-            className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 shrink-0 whitespace-nowrap ${
-              activeTab === 'categories'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-default-500 hover:text-foreground'
-            }`}
-          >
-            <Tag className="h-4 w-4 shrink-0" />
-            <span>Product Categories</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600 shrink-0">
-              {productCategories.length}
-            </span>
-          </button>
+          <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-full border border-zinc-200/50 dark:border-white/5">
+            <button
+              type="button"
+              onClick={() => { setActiveTab('categories'); setShowCatForm(false); }}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-2 shrink-0 whitespace-nowrap cursor-pointer ${
+                activeTab === 'categories'
+                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+              }`}
+            >
+              <Tag className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <span>Product Categories</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold font-mono ${
+                activeTab === 'categories' ? 'bg-primary/10 text-primary' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
+              }`}>
+                {productCategories.length}
+              </span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => { setActiveTab('units'); setShowUnitForm(false); }}
-            className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 shrink-0 whitespace-nowrap ${
-              activeTab === 'units'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-default-500 hover:text-foreground'
-            }`}
-          >
-            <Ruler className="h-4 w-4 shrink-0" />
-            <span>Units of Measure</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600 shrink-0">
-              {unitTypes.length}
-            </span>
-          </button>
+            <button
+              type="button"
+              onClick={() => { setActiveTab('units'); setShowUnitForm(false); }}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-2 shrink-0 whitespace-nowrap cursor-pointer ${
+                activeTab === 'units'
+                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+              }`}
+            >
+              <Ruler className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <span>Units of Measure</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold font-mono ${
+                activeTab === 'units' ? 'bg-primary/10 text-primary' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
+              }`}>
+                {unitTypes.length}
+              </span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => { setActiveTab('payments'); setShowPmForm(false); }}
-            className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 shrink-0 whitespace-nowrap ${
-              activeTab === 'payments'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-default-500 hover:text-foreground'
-            }`}
-          >
-            <CreditCard className="h-4 w-4 shrink-0" />
-            <span>Payment Methods</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600 shrink-0">
-              {paymentMethodsList.length}
-            </span>
-          </button>
+            <button
+              type="button"
+              onClick={() => { setActiveTab('payments'); setShowPmForm(false); }}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-2 shrink-0 whitespace-nowrap cursor-pointer ${
+                activeTab === 'payments'
+                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+              }`}
+            >
+              <CreditCard className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <span>Payment Methods</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold font-mono ${
+                activeTab === 'payments' ? 'bg-primary/10 text-primary' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
+              }`}>
+                {paymentMethodsList.length}
+              </span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => { setActiveTab('discounts'); setShowDiscForm(false); }}
-            className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 shrink-0 whitespace-nowrap ${
-              activeTab === 'discounts'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-default-500 hover:text-foreground'
-            }`}
-          >
-            <Percent className="h-4 w-4 shrink-0" />
-            <span>Discount Schemes</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600 shrink-0">
-              {discountSchemes.length}
-            </span>
-          </button>
+            <button
+              type="button"
+              onClick={() => { setActiveTab('discounts'); setShowDiscForm(false); }}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-2 shrink-0 whitespace-nowrap cursor-pointer ${
+                activeTab === 'discounts'
+                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+              }`}
+            >
+              <Percent className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <span>Discount Schemes</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold font-mono ${
+                activeTab === 'discounts' ? 'bg-primary/10 text-primary' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
+              }`}>
+                {discountSchemes.length}
+              </span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => { setActiveTab('damages'); setShowDmgForm(false); }}
-            className={`px-4 py-2.5 text-xs font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 shrink-0 whitespace-nowrap ${
-              activeTab === 'damages'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-default-500 hover:text-foreground'
-            }`}
-          >
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            <span>Damage Causes</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-default-100 text-default-600 shrink-0">
-              {damageReasonsList.length}
-            </span>
-          </button>
+            <button
+              type="button"
+              onClick={() => { setActiveTab('damages'); setShowDmgForm(false); }}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-2 shrink-0 whitespace-nowrap cursor-pointer ${
+                activeTab === 'damages'
+                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+              }`}
+            >
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+              <span>Damage Causes</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold font-mono ${
+                activeTab === 'damages' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
+              }`}>
+                {damageReasonsList.length}
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* Tab Content Body */}

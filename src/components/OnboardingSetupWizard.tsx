@@ -405,19 +405,19 @@ export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ on
 
         {/* STEP Rendering */}
         {step === 'welcome' && (
-          <div className="space-y-6 animate-fade-in text-foreground py-2">
+          <div className="space-y-6 animate-fade-in text-foreground py-2 text-center">
             <div className="space-y-3 text-center">
-              <div className="h-14 w-14 bg-primary rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-primary/25/15">
+              <div className="h-14 w-14 bg-primary rounded-2xl flex items-center justify-center mx-auto shadow-[0_2px_12px_rgba(0,111,238,0.3)]">
                 <Sparkles className="h-7 w-7 text-white" />
               </div>
               <div className="space-y-1.5">
- <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-full">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-3 py-1 rounded-full font-mono">
                   Setup Assistant
                 </span>
-                <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">
+                <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight leading-tight">
                   Welcome to TilePoint ERP OS!
                 </h1>
-                <p className="text-xs text-default-500 max-w-md mx-auto leading-relaxed pt-1">
+                <p className="text-xs text-default-500 max-w-md mx-auto leading-relaxed pt-1 font-medium">
                   Your enterprise tile sales, stock inventory, and multi-branch operations platform is ready.
                 </p>
               </div>
@@ -428,10 +428,12 @@ export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ on
                 type="button"
                 disabled={isSubmitting}
                 onClick={handleLetsGo}
-                variant="primary"
+                color="primary"
+                variant="solid"
                 size="lg"
+                radius="full"
                 endIcon={<ArrowRight className="h-4 w-4" />}
-                className="py-3.5 px-10 font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/25/25"
+                className="py-3 px-10 font-bold text-xs uppercase tracking-wider shadow-[0_2px_8px_rgba(0,111,238,0.25)] font-mono"
               >
                 {isSubmitting ? 'Starting...' : "Let's Go"}
               </HeroButton>
@@ -439,7 +441,7 @@ export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ on
               <button
                 type="button"
                 onClick={() => setStep('yes_migrate')}
-                className="text-[11px] font-bold text-default-500 hover:text-primary uppercase tracking-wider transition-colors cursor-pointer pt-2"
+                className="text-[11px] font-bold text-default-500 hover:text-primary uppercase tracking-wider transition-colors cursor-pointer pt-2 font-mono"
               >
                 Import Legacy CSV / JSON Records &rarr;
               </button>
@@ -450,11 +452,11 @@ export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ on
         {step === 'yes_migrate' && (
           <div className="space-y-5 animate-fade-in text-left">
             <div className="space-y-1 text-center sm:text-left">
-              <h3 className="text-lg font-black uppercase tracking-wider text-primary flex items-center justify-center sm:justify-start gap-2">
+              <h3 className="text-lg font-bold uppercase tracking-wider text-primary flex items-center justify-center sm:justify-start gap-2 font-mono">
                 <Upload className="h-5 w-5" />
                 Legacy Product Importer Hub
               </h3>
-              <p className="text-xs text-default-500">
+              <p className="text-xs text-default-500 font-medium">
                 Paste raw values or drag &amp; drop files to import into the catalog!
               </p>
             </div>
@@ -468,7 +470,7 @@ export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ on
                 className={`p-6 border-2 border-dashed rounded-2xl text-center space-y-2 transition-all cursor-pointer ${
                   isDragging 
                     ? 'border-primary bg-primary/10' 
-                    : 'border-divider hover:border-slate-700 bg-content1/50'
+                    : 'border-zinc-200/70 dark:border-white/10 hover:border-primary/50 bg-zinc-50 dark:bg-zinc-800/50'
                 }`}
               >
                 <input 
@@ -480,53 +482,56 @@ export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ on
                 />
                 <Upload className="h-6 w-6 text-primary mx-auto animate-bounce" />
                 <div>
-                  <p className="text-xs font-black uppercase tracking-wide text-foreground">Drag &amp; Drop Old ERP OS File Here</p>
-                  <p className="text-[10px] text-default-500 mt-1 select-none">
+                  <p className="text-xs font-bold uppercase tracking-wider text-foreground font-mono">Drag &amp; Drop Old ERP OS File Here</p>
+                  <p className="text-[10px] text-default-500 mt-1 select-none font-medium">
                     Drop your spreadsheet .csv or ledger backup .json file, or click inside to browse local files
                   </p>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 pl-1 block">Or Paste Raw Clipboard text below:</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-default-500 pl-1 block font-mono">Or Paste Raw Clipboard text below:</span>
                 <textarea
                   value={rawImportText ?? ''}
                   onChange={(e) => setRawImportText(e.target.value)}
                   rows={6}
                   placeholder={`Product Name,Product Code,Cost Price,Selling Price,Quantity,Category\n"Legacy Premium Marble",L-PM-01,150,220,100,"Marble"\n"Eco Slate Tile",E-SL-02,80,130,150,"Porcelain"`}
- className="w-full bg-background border border-divider p-3 text-xs text-foreground rounded-xl focus:border-primary focus:outline-none transition-all placeholder:text-slate-600 leading-normal"
+                  className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-white/5 p-3 text-xs text-foreground rounded-2xl focus:ring-2 focus:ring-primary/30 focus:outline-none transition-all placeholder:text-default-400 leading-normal font-mono"
                 />
               </div>
             </div>
 
             {importStatus.type && (
-              <div className={`p-3 rounded-xl border text-xs font-medium ${
+              <div className={`p-3 rounded-2xl border text-xs font-medium ${
                 importStatus.type === 'success' 
                   ? 'bg-primary/10 border-primary/20 text-primary' 
-                  : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                  : 'bg-rose-500/10 border-rose-500/20 text-rose-500'
               }`}>
                 {importStatus.message}
               </div>
             )}
 
-            <div className="flex flex-wrap gap-3 justify-between items-center pt-4 border-t border-divider">
+            <div className="flex flex-wrap gap-3 justify-between items-center pt-4 border-t border-divider/15">
               <HeroButton
                 variant="flat"
                 size="sm"
+                radius="full"
                 onClick={() => {
                   setStep('welcome');
                   setImportStatus({ type: null, message: '' });
                 }}
-                className="text-[10px] font-bold uppercase tracking-wider"
+                className="text-[10px] font-bold uppercase tracking-wider font-mono"
               >
                 Back
               </HeroButton>
               <HeroButton
-                variant="primary"
+                color="primary"
+                variant="solid"
                 size="md"
+                radius="full"
                 onClick={handleImportMigrate}
                 startIcon={<CheckCircle className="h-4 w-4" />}
-                className="font-extrabold text-[11px] tracking-wider uppercase rounded-xl shadow-md"
+                className="font-bold text-[11px] tracking-wider uppercase shadow-[0_2px_8px_rgba(0,111,238,0.25)] font-mono"
               >
                 Verify &amp; Migrate Data
               </HeroButton>
@@ -537,27 +542,27 @@ export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ on
         {step === 'configure_branches' && (
           <div className="space-y-5 animate-fade-in text-foreground text-left max-h-[70vh] overflow-y-auto pr-2">
             <div className="space-y-1 text-center sm:text-left">
-              <h3 className="text-lg font-black uppercase tracking-wider text-amber-400 flex items-center justify-center sm:justify-start gap-2">
+              <h3 className="text-lg font-bold uppercase tracking-wider text-amber-500 flex items-center justify-center sm:justify-start gap-2 font-mono">
                 New Branch Outlets Detected!
               </h3>
-              <p className="text-xs text-default-500">
+              <p className="text-xs text-default-500 font-medium">
                 We found locations in your imported records that are not yet created in TilePoint. Please fill in their operational details to complete the migration:
               </p>
             </div>
 
             <div className="space-y-4 pt-2">
               {pendingBranches.map((pb, idx) => (
-                <div key={idx} className="p-4 rounded-2xl bg-content1/85 border border-divider space-y-3">
-                  <div className="pb-2 border-b border-divider flex justify-between items-center">
-                    <span className="text-xs font-black uppercase tracking-wider text-amber-400">
+                <div key={idx} className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/60 dark:border-white/5 space-y-3">
+                  <div className="pb-2 border-b border-divider/10 flex justify-between items-center">
+                    <span className="text-xs font-bold uppercase tracking-wider text-amber-500 font-mono">
                       Detected Branch {idx + 1}: {pb.name}
                     </span>
- <span className="text-[10px] bg-content2 text-default-500 px-2 py-0.5 rounded font-bold">Import Location</span>
+                    <span className="text-[10px] bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 px-2 py-0.5 rounded-full font-bold font-mono">Import Location</span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase text-default-500 block pl-1">Manager In Charge *</label>
+                      <label className="text-[10px] font-bold uppercase text-default-500 block pl-1 font-mono">Manager In Charge *</label>
                       <input
                         type="text"
                         value={pb.manager ?? ''}
@@ -567,13 +572,13 @@ export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ on
                           setPendingBranches(updated);
                         }}
                         required
-                        className="w-full bg-background border border-divider focus:border-primary rounded-xl px-3 py-2 focus:outline-none text-foreground transition-colors"
+                        className="w-full bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-white/5 focus:ring-2 focus:ring-primary/30 rounded-full px-3.5 py-1.5 focus:outline-none text-foreground transition-all"
                         placeholder="Manager name"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold uppercase text-default-500 block pl-1">Branch Contact Number *</label>
+                      <label className="text-[10px] font-bold uppercase text-default-500 block pl-1 font-mono">Branch Contact Number *</label>
                       <input
                         type="text"
                         value={pb.phone ?? ''}
@@ -583,13 +588,13 @@ export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ on
                           setPendingBranches(updated);
                         }}
                         required
-                        className="w-full bg-background border border-divider focus:border-primary rounded-xl px-3 py-2 focus:outline-none text-foreground transition-colors"
+                        className="w-full bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-white/5 focus:ring-2 focus:ring-primary/30 rounded-full px-3.5 py-1.5 focus:outline-none text-foreground transition-all"
                         placeholder="Phone number"
                       />
                     </div>
 
                     <div className="space-y-1 sm:col-span-2">
-                      <label className="text-[10px] font-bold uppercase text-default-500 block pl-1">Full Dispatch Address *</label>
+                      <label className="text-[10px] font-bold uppercase text-default-500 block pl-1 font-mono">Full Dispatch Address *</label>
                       <input
                         type="text"
                         value={pb.address ?? ''}
@@ -599,7 +604,7 @@ export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ on
                           setPendingBranches(updated);
                         }}
                         required
-                        className="w-full bg-background border border-divider focus:border-primary rounded-xl px-3 py-2 focus:outline-none text-foreground transition-colors"
+                        className="w-full bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-white/5 focus:ring-2 focus:ring-primary/30 rounded-full px-3.5 py-1.5 focus:outline-none text-foreground transition-all"
                         placeholder="Street, District, City"
                       />
                     </div>
@@ -614,15 +619,15 @@ export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ on
                           updated[idx].isDistributionBranch = e.target.checked;
                           setPendingBranches(updated);
                         }}
-                        className="rounded border-divider focus:ring-opacity-50 text-primary"
+                        className="rounded border-divider text-primary focus:ring-primary cursor-pointer"
                       />
-                      <label htmlFor={`wizard-dist-hub-${idx}`} className="text-[10px] text-default-500 font-bold uppercase cursor-pointer select-none">
+                      <label htmlFor={`wizard-dist-hub-${idx}`} className="text-[10px] text-default-500 font-bold uppercase cursor-pointer select-none font-mono">
                         Is Distribution Hub?
                       </label>
                     </div>
 
                     <div className="flex items-center gap-2 pt-1">
-                      <label className="text-[10px] text-default-500 font-bold uppercase block select-none">
+                      <label className="text-[10px] text-default-500 font-bold uppercase block select-none font-mono">
                         Allocated Staff:
                       </label>
                       <input
@@ -635,7 +640,7 @@ export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ on
                           updated[idx].staffCount = parseInt(e.target.value) || 3;
                           setPendingBranches(updated);
                         }}
- className="w-16 bg-background border border-divider focus:border-primary rounded-xl px-2 py-1 focus:outline-none text-foreground transition-colors text-center text-xs "
+                        className="w-16 bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-white/5 focus:ring-2 focus:ring-primary/30 rounded-full px-2 py-1 focus:outline-none text-foreground transition-all text-center text-xs font-mono"
                       />
                     </div>
                   </div>
@@ -644,33 +649,36 @@ export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ on
             </div>
 
             {importStatus.type && (
-              <div className={`p-3 rounded-xl border text-xs font-medium ${
+              <div className={`p-3 rounded-2xl border text-xs font-medium ${
                 importStatus.type === 'success' 
                   ? 'bg-primary/10 border-primary/20 text-primary' 
-                  : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                  : 'bg-rose-500/10 border-rose-500/20 text-rose-500'
               }`}>
                 {importStatus.message}
               </div>
             )}
 
-            <div className="flex justify-between items-center pt-4 border-t border-divider">
+            <div className="flex justify-between items-center pt-4 border-t border-divider/15">
               <HeroButton
                 variant="flat"
                 size="sm"
+                radius="full"
                 onClick={() => {
                   setStep('yes_migrate');
                   setImportStatus({ type: null, message: '' });
                 }}
-                className="text-[10px] font-bold uppercase tracking-wider"
+                className="text-[10px] font-bold uppercase tracking-wider font-mono"
               >
                 Back To Upload
               </HeroButton>
               <HeroButton
-                variant="primary"
+                color="primary"
+                variant="solid"
                 size="md"
+                radius="full"
                 onClick={handleCompleteWithBranches}
                 startIcon={<CheckCircle className="h-4 w-4" />}
-                className="font-extrabold text-[11px] tracking-wider uppercase rounded-xl shadow-md"
+                className="font-bold text-[11px] tracking-wider uppercase shadow-[0_2px_8px_rgba(0,111,238,0.25)] font-mono"
               >
                 Initialize Branches &amp; Catalog
               </HeroButton>

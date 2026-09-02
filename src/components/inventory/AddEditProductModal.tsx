@@ -18,6 +18,7 @@ import { Branch, Supplier, User, UserRole } from '../../types/db';
 import { useDb } from '../../context/DbContext';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
 import { HeroButton, HeroCheckbox, HeroSelect } from '../common/ui';
+import { HeroInput } from '../common/ui/HeroInput';
 import { HeroModal } from '../common/ui/HeroModal';
 
 interface AddEditProductModalProps {
@@ -201,15 +202,15 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
       onClose={onClose}
       size="4xl"
     >
-      <form onSubmit={onSubmit} className="flex flex-col h-full overflow-hidden">
+      <form onSubmit={onSubmit} className="flex flex-col h-full overflow-hidden font-sans">
         {/* Modal Title Header */}
-        <HeroModal.Header className="pb-4 border-b border-divider">
+        <HeroModal.Header className="pb-4 border-b border-divider/20">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-primary/10 text-primary border border-primary/20 shrink-0">
               <Layers className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-black text-foreground uppercase tracking-wider">
+              <h3 className="text-base font-bold text-foreground tracking-tight">
                 {isEditMode ? 'Modify Product Specifications' : 'Register New Hardware Inventory Unit'}
               </h3>
               <p className="text-[11px] text-default-500 font-medium mt-0.5">
@@ -222,7 +223,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
         <HeroModal.Body className="p-6 space-y-5 overflow-y-auto">
 
         {/* Multi-Step Wizard Progress Header */}
-        <div className="grid grid-cols-3 gap-2 bg-content2/50 p-1.5 rounded-large border border-divider">
+        <div className="grid grid-cols-3 gap-2 bg-zinc-100 dark:bg-zinc-800/80 p-1.5 rounded-2xl border border-zinc-200/50 dark:border-white/5">
           {steps.map((s) => {
             const isCurrent = currentStep === s.id;
             const isCompleted = currentStep > s.id;
@@ -231,28 +232,28 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                 type="button"
                 key={s.id}
                 onClick={() => setCurrentStep(s.id)}
-                className={`flex items-center gap-2.5 p-2.5 rounded-medium transition-all text-left cursor-pointer border ${
+                className={`flex items-center gap-2.5 p-2.5 rounded-xl transition-all text-left cursor-pointer border font-sans ${
                   isCurrent
-                    ? 'bg-content1 border-primary/40 text-primary shadow-sm ring-1 ring-primary/20'
+                    ? 'bg-white dark:bg-zinc-900 border-zinc-200/70 dark:border-white/10 text-primary shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
                     : isCompleted
-                    ? 'bg-success/5 border-success/20 text-success hover:bg-success/10'
-                    : 'bg-transparent border-transparent text-default-400 hover:text-foreground hover:bg-content2'
+                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-transparent border-transparent text-default-400 hover:text-foreground'
                 }`}
               >
                 <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 font-bold text-xs ${
                   isCurrent
                     ? 'bg-primary text-primary-foreground'
                     : isCompleted
-                    ? 'bg-success text-success-foreground'
-                    : 'bg-default-200 text-default-600'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-zinc-200 dark:bg-zinc-700 text-default-600'
                 }`}>
                   {isCompleted ? <Check className="h-4 w-4 stroke-[3]" /> : s.id}
                 </div>
                 <div className="min-w-0 flex-1 hidden sm:block">
-                  <div className="text-xs font-black uppercase truncate flex items-center gap-1">
+                  <div className="text-xs font-bold uppercase tracking-wider truncate flex items-center gap-1">
                     <span>{s.label}</span>
                   </div>
-                  <div className="text-[10px] text-default-400 truncate font-medium">{s.desc}</div>
+                  <div className="text-[10px] text-default-500 truncate font-medium">{s.desc}</div>
                 </div>
               </button>
             );
@@ -267,89 +268,79 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
           {currentStep === 1 && (
             <div className="space-y-5 animate-fade-in">
               {/* SECTION 1: GENERAL SPECIFICATIONS */}
-              <div className="p-4 rounded-large bg-content2/40 border border-divider space-y-4">
-                <div className="flex items-center gap-2 border-b border-divider pb-2 mb-1">
+              <div className="p-5 rounded-2xl bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-white/5 space-y-4 shadow-2xs">
+                <div className="flex items-center gap-2 border-b border-divider/20 pb-2 mb-1">
                   <Package className="h-4 w-4 text-primary" />
-                  <span className="text-xs font-black uppercase tracking-wider text-primary">1. General Product Identification</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary">1. General Product Identification</span>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-1 relative">
-                    <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none">
-                      Product Core Code <span className="text-danger">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={productCode ?? ''}
-                      onChange={e => setProductCode(e.target.value)}
-                      placeholder="e.g. TILE-6060-GR"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
-                    />
-                  </div>
+                  <HeroInput
+                    label="Product Core Code *"
+                    required
+                    value={productCode ?? ''}
+                    onValueChange={val => setProductCode(val)}
+                    placeholder="e.g. TILE-6060-GR"
+                    radius="lg"
+                    variant="flat"
+                  />
 
-                  <div className="space-y-1 relative">
-                    <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none">
-                      Warehouse SKU ID <span className="text-danger">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={sku ?? ''}
-                      onChange={e => setSku(e.target.value)}
-                      placeholder="e.g. SKU-10492"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
-                    />
-                  </div>
+                  <HeroInput
+                    label="Warehouse SKU ID *"
+                    required
+                    value={sku ?? ''}
+                    onValueChange={val => setSku(val)}
+                    placeholder="e.g. SKU-10492"
+                    radius="lg"
+                    variant="flat"
+                  />
 
-                  <div className="space-y-1 relative">
-                    <div className="flex items-center justify-between pl-1">
-                      <label className="text-[10px] font-black text-default-500 uppercase tracking-widest select-none">
-                        Barcode Sequence ID
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newBc = generateEan13Barcode();
-                          setBarcode(newBc);
-                          showToast(`Generated fresh EAN-13 barcode: ${newBc}`);
-                        }}
-                        className="text-[9px] font-black uppercase text-primary hover:underline flex items-center gap-1 cursor-pointer"
-                        title="Generate fresh valid 13-digit EAN-13 barcode"
-                      >
-                        <RefreshCw className="h-2.5 w-2.5" />
-                        <span>Auto-Generate</span>
-                      </button>
-                    </div>
-                    <input
-                      type="text"
+                  <div className="space-y-1">
+                    <HeroInput
+                      label="Barcode Sequence ID"
                       required
                       value={barcode ?? ''}
-                      onChange={e => setBarcode(e.target.value)}
+                      onValueChange={val => setBarcode(val)}
                       placeholder="e.g. 4801122334455"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
+                      radius="lg"
+                      variant="flat"
+                      endContent={
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newBc = generateEan13Barcode();
+                            setBarcode(newBc);
+                            showToast(`Generated fresh EAN-13 barcode: ${newBc}`);
+                          }}
+                          className="text-[10px] font-bold uppercase text-primary hover:underline flex items-center gap-1 cursor-pointer pr-1"
+                          title="Generate fresh valid 13-digit EAN-13 barcode"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          <span>Gen</span>
+                        </button>
+                      }
                     />
                   </div>
 
                   <div className="space-y-1 relative">
                     <div className="flex items-center justify-between pl-1">
-                      <label className="text-[10px] font-black text-default-500 uppercase tracking-widest select-none">Category Classification</label>
+                      <label className="text-[10px] font-bold text-default-500 uppercase tracking-wider select-none">Category Classification</label>
                       <button
                         type="button"
                         onClick={() => setIsCustomCategoryInput(!isCustomCategoryInput)}
-                        className="text-[9px] font-black uppercase text-primary hover:underline cursor-pointer"
+                        className="text-[10px] font-bold uppercase text-primary hover:underline cursor-pointer"
                       >
                         {isCustomCategoryInput ? "← Select List" : "+ Custom Category"}
                       </button>
                     </div>
                     {isCustomCategoryInput ? (
-                      <input
-                        type="text"
+                      <HeroInput
                         required
                         value={category ?? ''}
-                        onChange={e => setCategory(e.target.value)}
+                        onValueChange={val => setCategory(val)}
                         placeholder="e.g. Electrical Tools, Solar Modules"
-                        className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
+                        radius="lg"
+                        variant="flat"
                       />
                     ) : (
                       <HeroSelect
@@ -362,7 +353,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                             setCategory(val);
                           }
                         }}
-                        radius="md"
+                        radius="lg"
                         items={[
                           ...categories.map((cat) => ({ key: cat, value: cat, label: cat })),
                           { key: '__CUSTOM__', value: '__CUSTOM__', label: '+ Add Custom New Category...' }
@@ -371,63 +362,56 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                     )}
                   </div>
 
-                  <div className="space-y-1 relative">
-                    <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none">Corporate Brand / Label</label>
-                    <input
-                      type="text"
-                      required={!isRegisteringNewSupplier}
-                      value={brand ?? ''}
-                      onChange={e => setBrand(e.target.value)}
-                      placeholder="Brand name"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
-                    />
-                  </div>
+                  <HeroInput
+                    label="Corporate Brand / Label"
+                    required={!isRegisteringNewSupplier}
+                    value={brand ?? ''}
+                    onValueChange={val => setBrand(val)}
+                    placeholder="Brand name"
+                    radius="lg"
+                    variant="flat"
+                  />
 
-                  <div className="space-y-1 relative">
-                    <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none">Tile Design Name (Optional)</label>
-                    <input
-                      type="text"
-                      value={designName ?? ''}
-                      onChange={e => setDesignName(e.target.value)}
-                      placeholder="Tile design name"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
-                    />
-                  </div>
+                  <HeroInput
+                    label="Tile Design Name (Optional)"
+                    value={designName ?? ''}
+                    onValueChange={val => setDesignName(val)}
+                    placeholder="Tile design name"
+                    radius="lg"
+                    variant="flat"
+                  />
 
-                  <div className="space-y-1 md:col-span-3 relative">
-                    <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none">
-                      Product Full Descriptive Name <span className="text-danger">*</span>
-                    </label>
-                    <input
-                      type="text"
+                  <div className="md:col-span-3">
+                    <HeroInput
+                      label="Product Full Descriptive Name *"
                       required
                       value={productName ?? ''}
-                      onChange={e => setProductName(e.target.value)}
+                      onValueChange={val => setProductName(val)}
                       placeholder="Full descriptive product title (e.g. 60x60 Glazed Polished Porcelain Floor Tile)"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2.5 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-sans font-black text-sm active:scale-[0.98]"
+                      radius="lg"
+                      variant="flat"
                     />
                   </div>
                 </div>
               </div>
 
               {/* SECTION 2: PHYSICAL SPECS & PACKAGING */}
-              <div className="p-4 rounded-large bg-content2/40 border border-divider space-y-4">
-                <div className="flex items-center gap-2 border-b border-divider pb-2 mb-1">
+              <div className="p-5 rounded-2xl bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-white/5 space-y-4 shadow-2xs">
+                <div className="flex items-center gap-2 border-b border-divider/20 pb-2 mb-1">
                   <Layers className="h-4 w-4 text-primary" />
-                  <span className="text-xs font-black uppercase tracking-wider text-primary">2. Physical Attributes & Packaging</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary">2. Physical Attributes &amp; Packaging</span>
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="space-y-1 relative">
-                    <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none">Trading Unit</label>
-                    <input
-                      type="text"
+                    <HeroInput
+                      label="Trading Unit"
                       required
-                      list="dynamic-unit-options"
                       value={unit ?? ''}
-                      onChange={e => setUnit(e.target.value)}
+                      onValueChange={val => setUnit(val)}
                       placeholder="Box / Piece / Bag"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
+                      radius="lg"
+                      variant="flat"
                     />
                     <datalist id="dynamic-unit-options">
                       {(unitTypes || []).filter(u => u.isActive !== false).map(u => (
@@ -442,48 +426,37 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                     </datalist>
                   </div>
 
-                  <div className="space-y-1 relative">
-                    <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none">Dimensions</label>
-                    <input
-                      type="text"
-                      value={size ?? ''}
-                      onChange={e => setSize(e.target.value)}
-                      placeholder="Dimensions (e.g. 60x60 cm)"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
-                    />
-                  </div>
+                  <HeroInput
+                    label="Dimensions"
+                    value={size ?? ''}
+                    onValueChange={val => setSize(val)}
+                    placeholder="Dimensions (e.g. 60x60 cm)"
+                    radius="lg"
+                    variant="flat"
+                  />
 
-                  <div className="space-y-1 relative">
-                    <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none">
-                      {category.toLowerCase().includes('tile') ? 'Tiles Per Box' : 'Pack / Box Quantity'}
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      value={boxQuantity || ''}
-                      placeholder="1"
-                      onChange={e => setBoxQuantity(e.target.value === '' ? 0 : Number(e.target.value))}
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
-                    />
-                  </div>
+                  <HeroInput
+                    label={category.toLowerCase().includes('tile') ? 'Tiles Per Box' : 'Pack / Box Quantity'}
+                    type="number"
+                    required
+                    value={boxQuantity ? String(boxQuantity) : ''}
+                    placeholder="1"
+                    onValueChange={val => setBoxQuantity(val === '' ? 0 : Number(val))}
+                    radius="lg"
+                    variant="flat"
+                  />
 
-                  <div className="space-y-1 relative">
-                    <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none flex items-center justify-between gap-1">
-                      <span>Coverage (m²)</span>
-                      {category.toLowerCase().includes('tile') && (
-                        <span className="text-[8px] text-success font-extrabold normal-case bg-success/10 border border-success/20 px-1 rounded">Calculated</span>
-                      )}
-                    </label>
-                    <input
-                      type="number"
-                      step="0.001"
-                      required
-                      value={coveragePerBox === 0 ? '' : coveragePerBox ?? ''}
-                      placeholder="0.00"
-                      onChange={e => setCoveragePerBox(e.target.value === '' ? 0 : Number(e.target.value))}
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
-                    />
-                  </div>
+                  <HeroInput
+                    label="Coverage (m²)"
+                    type="number"
+                    step="0.001"
+                    required
+                    value={coveragePerBox === 0 ? '' : coveragePerBox ? String(coveragePerBox) : ''}
+                    placeholder="0.00"
+                    onValueChange={val => setCoveragePerBox(val === '' ? 0 : Number(val))}
+                    radius="lg"
+                    variant="flat"
+                  />
                 </div>
               </div>
             </div>
@@ -494,15 +467,15 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
           {/* ============================================================ */}
           {currentStep === 2 && (
             <div className="space-y-5 animate-fade-in">
-              <div className="p-4 rounded-large bg-content2/40 border border-divider space-y-4">
-                <div className="flex items-center gap-2 border-b border-divider pb-2 mb-1">
+              <div className="p-5 rounded-2xl bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-white/5 space-y-4 shadow-2xs">
+                <div className="flex items-center gap-2 border-b border-divider/20 pb-2 mb-1">
                   <Building2 className="h-4 w-4 text-primary" />
-                  <span className="text-xs font-black uppercase tracking-wider text-primary">Wholesaler Supplier & Sourcing Profile</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary">Wholesaler Supplier &amp; Sourcing Profile</span>
                 </div>
 
                 <div className="space-y-4 relative">
                   <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-black text-default-500 uppercase tracking-widest select-none">
+                    <label className="text-[10px] font-bold text-default-500 uppercase tracking-wider select-none">
                       Vendor / Wholesaler Assignment
                     </label>
                     {!isEditMode && (
@@ -523,7 +496,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                           <HeroSelect
                             value={supplierId ?? ''}
                             onValueChange={(val) => setSupplierId(val)}
-                            radius="md"
+                            radius="lg"
                             placeholder="Select Supplier"
                             items={suppliers.filter(s => !s.isDeleted).map((sup) => ({
                               key: sup.id,
@@ -537,6 +510,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                           variant="flat"
                           color="secondary"
                           size="sm"
+                          radius="full"
                           onClick={() => setShowQuickSupplierModal(true)}
                           className="font-bold text-xs uppercase tracking-wider whitespace-nowrap"
                           startIcon={<Plus className="h-3.5 w-3.5" />}
@@ -550,9 +524,9 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                         const activeSupplier = suppliers.find(s => s.id === supplierId);
                         if (!activeSupplier) return null;
                         return (
-                          <div className="p-3 bg-content1 rounded-medium border border-divider text-xs space-y-1">
-                            <div className="font-black text-primary text-sm">{activeSupplier.name}</div>
-                            <div className="text-default-500 text-[11px] flex flex-wrap gap-x-4 gap-y-1">
+                          <div className="p-4 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/70 dark:border-white/10 text-xs space-y-1 shadow-elevation-soft">
+                            <div className="font-bold text-primary text-sm">{activeSupplier.name}</div>
+                            <div className="text-default-500 text-[11px] flex flex-wrap gap-x-4 gap-y-1 font-medium">
                               {activeSupplier.contactPerson && <span>Agent: <strong className="text-foreground">{activeSupplier.contactPerson}</strong></span>}
                               {activeSupplier.phone && <span>Phone: <strong className="text-foreground">{activeSupplier.phone}</strong></span>}
                               {activeSupplier.email && <span>Email: <strong className="text-foreground">{activeSupplier.email}</strong></span>}
@@ -564,71 +538,60 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-3 pt-1">
-                      <p className="text-[10px] text-default-500 font-medium leading-normal bg-content1 p-2.5 rounded-medium border border-divider">
+                      <p className="text-[11px] text-default-500 font-medium leading-relaxed bg-white dark:bg-zinc-900 p-3.5 rounded-2xl border border-zinc-200/70 dark:border-white/10 shadow-elevation-soft">
                         This will register a new vendor profile in the database and automatically link it to this product.
                       </p>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-default-500 uppercase pl-0.5">
-                            Supplier Company Name <span className="text-danger">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            required={isRegisteringNewSupplier}
-                            value={newSupplierName ?? ''}
-                            onChange={e => setNewSupplierName(e.target.value)}
-                            placeholder="Supplier corporate name"
-                            className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
-                          />
-                        </div>
+                        <HeroInput
+                          label="Supplier Company Name *"
+                          required={isRegisteringNewSupplier}
+                          value={newSupplierName ?? ''}
+                          onValueChange={val => setNewSupplierName(val)}
+                          placeholder="Supplier corporate name"
+                          radius="lg"
+                          variant="flat"
+                        />
 
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-default-500 uppercase pl-0.5">Primary Contact Agent</label>
-                          <input
-                            type="text"
-                            value={newSupplierContact ?? ''}
-                            onChange={e => setNewSupplierContact(e.target.value)}
-                            placeholder="Contact agent name"
-                            className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium active:scale-[0.98]"
-                          />
-                        </div>
+                        <HeroInput
+                          label="Primary Contact Agent"
+                          value={newSupplierContact ?? ''}
+                          onValueChange={val => setNewSupplierContact(val)}
+                          placeholder="Contact agent name"
+                          radius="lg"
+                          variant="flat"
+                        />
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-default-500 uppercase pl-0.5">Contact Phone</label>
-                          <input
-                            type="text"
-                            value={newSupplierPhone ?? ''}
-                            onChange={e => setNewSupplierPhone(e.target.value)}
-                            placeholder="Phone number"
-                            className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium active:scale-[0.98]"
-                          />
-                        </div>
+                        <HeroInput
+                          label="Contact Phone"
+                          value={newSupplierPhone ?? ''}
+                          onValueChange={val => setNewSupplierPhone(val)}
+                          placeholder="Phone number"
+                          radius="lg"
+                          variant="flat"
+                        />
 
-                        <div className="space-y-1">
-                          <label className="text-[9px] font-bold text-default-500 uppercase pl-0.5">Corporate Email</label>
-                          <input
-                            type="email"
-                            value={newSupplierEmail ?? ''}
-                            onChange={e => setNewSupplierEmail(e.target.value)}
-                            placeholder="Corporate email address"
-                            className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium active:scale-[0.98]"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="text-[9px] font-bold text-default-500 uppercase pl-0.5">Office Address</label>
-                        <input
-                          type="text"
-                          value={newSupplierAddress ?? ''}
-                          onChange={e => setNewSupplierAddress(e.target.value)}
-                          placeholder="Street, City, Province"
-                          className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium active:scale-[0.98]"
+                        <HeroInput
+                          label="Corporate Email"
+                          type="email"
+                          value={newSupplierEmail ?? ''}
+                          onValueChange={val => setNewSupplierEmail(val)}
+                          placeholder="Corporate email address"
+                          radius="lg"
+                          variant="flat"
                         />
                       </div>
+
+                      <HeroInput
+                        label="Office Address"
+                        value={newSupplierAddress ?? ''}
+                        onValueChange={val => setNewSupplierAddress(val)}
+                        placeholder="Street, City, Province"
+                        radius="lg"
+                        variant="flat"
+                      />
                     </div>
                   )}
                 </div>
@@ -642,98 +605,81 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
           {currentStep === 3 && (
             <div className="space-y-5 animate-fade-in">
               {/* SECTION 4: FINANCIAL DETAILS */}
-              <div className="p-4 rounded-large bg-content2/40 border border-divider space-y-4">
-                <div className="flex items-center gap-2 border-b border-divider pb-2 mb-1">
+              <div className="p-5 rounded-2xl bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-white/5 space-y-4 shadow-2xs">
+                <div className="flex items-center gap-2 border-b border-divider/20 pb-2 mb-1">
                   <DollarSign className="h-4 w-4 text-primary" />
-                  <span className="text-xs font-black uppercase tracking-wider text-primary">3. Pricing, Markups & Tax</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary">3. Pricing, Markups &amp; Tax</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="space-y-1 relative pl-0">
-                    <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none">Cost Price (₱)</label>
-                    <input
-                      type="number"
-                      step="any"
-                      required
-                      value={costPrice === 0 ? '' : costPrice ?? ''}
-                      placeholder="0.00"
-                      onChange={e => handleCostPriceChange(e.target.value === '' ? 0 : Number(e.target.value))}
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
-                    />
-                  </div>
+                  <HeroInput
+                    label="Cost Price (₱)"
+                    type="number"
+                    step="any"
+                    required
+                    value={costPrice === 0 ? '' : costPrice ? String(costPrice) : ''}
+                    placeholder="0.00"
+                    onValueChange={val => handleCostPriceChange(val === '' ? 0 : Number(val))}
+                    radius="lg"
+                    variant="flat"
+                  />
 
-                  <div className="space-y-1 relative pl-0">
-                    <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none flex items-center justify-between">
-                      <span>Markup (%)</span>
-                      {costPrice > 0 && sellingPrice > 0 && (
-                        <span className="text-[9px] font-bold text-success">
-                          +₱{Math.max(0, Math.round((sellingPrice - costPrice) * 100) / 100).toFixed(2)}
-                        </span>
-                      )}
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      required
-                      value={markupPercent === 0 ? '' : markupPercent ?? ''}
-                      placeholder="0"
-                      onChange={e => handleMarkupChange(e.target.value === '' ? 0 : Number(e.target.value))}
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
-                    />
-                  </div>
+                  <HeroInput
+                    label="Markup (%)"
+                    type="number"
+                    step="any"
+                    required
+                    value={markupPercent === 0 ? '' : markupPercent ? String(markupPercent) : ''}
+                    placeholder="0"
+                    onValueChange={val => handleMarkupChange(val === '' ? 0 : Number(val))}
+                    helperText={costPrice > 0 && sellingPrice > 0 ? `+₱${Math.max(0, Math.round((sellingPrice - costPrice) * 100) / 100).toFixed(2)}` : undefined}
+                    radius="lg"
+                    variant="flat"
+                  />
 
-                  <div className="space-y-1 relative pl-0">
-                    <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none flex items-center justify-between">
-                      <span>Selling Price (Retail ₱)</span>
-                      {markupPercent > 0 && (
-                        <span className="text-[9px] font-bold text-success">
-                          ({markupPercent}% MU)
-                        </span>
-                      )}
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      required
-                      value={sellingPrice === 0 ? '' : sellingPrice ?? ''}
-                      placeholder="0.00"
-                      onChange={e => handleSellingPriceChange(e.target.value === '' ? 0 : Number(e.target.value))}
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-black text-primary active:scale-[0.98]"
-                    />
-                  </div>
+                  <HeroInput
+                    label="Selling Price (Retail ₱)"
+                    type="number"
+                    step="any"
+                    required
+                    value={sellingPrice === 0 ? '' : sellingPrice ? String(sellingPrice) : ''}
+                    placeholder="0.00"
+                    onValueChange={val => handleSellingPriceChange(val === '' ? 0 : Number(val))}
+                    helperText={markupPercent > 0 ? `(${markupPercent}% MU)` : undefined}
+                    radius="lg"
+                    variant="flat"
+                  />
 
-                  <div className="space-y-1 relative pl-0">
-                    <HeroSelect
-                      label="VAT Taxation Type"
-                      value={taxType ?? ''}
-                      onValueChange={(val) => setTaxType(val)}
-                      radius="md"
-                      items={[
-                        { key: '12% VAT', value: '12% VAT', label: 'Standard 12% VAT' },
-                        { key: 'VAT Exempt', value: 'VAT Exempt', label: 'VAT Exempt' },
-                        { key: 'Zero Rated', value: 'Zero Rated', label: 'Zero Rated (0% VAT)' },
-                      ]}
-                    />
-                  </div>
+                  <HeroSelect
+                    label="VAT Taxation Type"
+                    value={taxType ?? ''}
+                    onValueChange={(val) => setTaxType(val)}
+                    radius="lg"
+                    items={[
+                      { key: '12% VAT', value: '12% VAT', label: 'Standard 12% VAT' },
+                      { key: 'VAT Exempt', value: 'VAT Exempt', label: 'VAT Exempt' },
+                      { key: 'Zero Rated', value: 'Zero Rated', label: 'Zero Rated (0% VAT)' },
+                    ]}
+                  />
                 </div>
               </div>
 
               {/* SECTION 5: STOCK LEVELS & EXPIRATION */}
-              <div className="p-4 rounded-large bg-content2/40 border border-divider space-y-4">
-                <div className="flex items-center gap-2 border-b border-divider pb-2 mb-1">
+              <div className="p-5 rounded-2xl bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-white/5 space-y-4 shadow-2xs">
+                <div className="flex items-center gap-2 border-b border-divider/20 pb-2 mb-1">
                   <Sliders className="h-4 w-4 text-primary" />
-                  <span className="text-xs font-black uppercase tracking-wider text-primary">4. Stock Control & Branch Allocation</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary">4. Stock Control &amp; Branch Allocation</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-1 relative pl-0 md:col-span-3 bg-content1 p-3 rounded-large border border-divider">
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-[10px] font-black text-primary uppercase tracking-widest pl-1 select-none flex items-center gap-1.5">
+                  <div className="space-y-1 relative pl-0 md:col-span-3 bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200/70 dark:border-white/10 shadow-elevation-soft">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-[10px] font-bold text-primary uppercase tracking-wider pl-1 select-none flex items-center gap-1.5">
                         <MapPin className="h-3.5 w-3.5" />
                         <span>Assigned Branch / Stock Location</span>
                       </label>
                       {currentUser?.role !== UserRole.ADMIN && (
-                        <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                        <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-mono">
                           {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || `Branch ${currentUser?.branchAssignmentId}`}
                         </span>
                       )}
@@ -745,7 +691,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                           setTargetBranchId(val);
                           setOrigin(val);
                         }}
-                        radius="md"
+                        radius="lg"
                         items={branches.filter(b => !b.isDeleted).map(b => ({
                           key: b.id,
                           value: b.id,
@@ -753,50 +699,48 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                         }))}
                       />
                     ) : (
-                      <div className="px-3 py-2 text-xs font-bold text-foreground bg-content2 rounded-medium border border-divider flex items-center justify-between">
+                      <div className="px-3.5 py-2 text-xs font-bold text-foreground bg-zinc-100 dark:bg-zinc-800 rounded-xl border border-zinc-200/50 dark:border-white/5 flex items-center justify-between">
                         <span>{branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || currentUser?.branchAssignmentId}</span>
-                        <span className="text-[10px] font-bold text-secondary">ID: {currentUser?.branchAssignmentId || 'B1'}</span>
+                        <span className="text-[10px] font-bold text-secondary font-mono">ID: {currentUser?.branchAssignmentId || 'B1'}</span>
                       </div>
                     )}
                   </div>
 
-                  <div className="space-y-1 relative pl-0">
-                    <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none">Initial Warehouse Stock</label>
-                    <input
-                      type="number"
-                      required
-                      value={stockQuantity === 0 ? '' : stockQuantity ?? ''}
-                      placeholder="0"
-                      onChange={e => setStockQuantity(e.target.value === '' ? 0 : Number(e.target.value))}
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
-                    />
-                  </div>
+                  <HeroInput
+                    label="Initial Warehouse Stock"
+                    type="number"
+                    required
+                    value={stockQuantity === 0 ? '' : stockQuantity ? String(stockQuantity) : ''}
+                    placeholder="0"
+                    onValueChange={val => setStockQuantity(val === '' ? 0 : Number(val))}
+                    radius="lg"
+                    variant="flat"
+                  />
 
-                  <div className="space-y-1 relative pl-0">
-                    <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none">Alert Stock Limit</label>
-                    <input
-                      type="number"
-                      required
-                      value={minimumStock === 0 ? '' : minimumStock ?? ''}
-                      placeholder="0"
-                      onChange={e => setMinimumStock(e.target.value === '' ? 0 : Number(e.target.value))}
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
-                    />
-                  </div>
+                  <HeroInput
+                    label="Alert Stock Limit"
+                    type="number"
+                    required
+                    value={minimumStock === 0 ? '' : minimumStock ? String(minimumStock) : ''}
+                    placeholder="0"
+                    onValueChange={val => setMinimumStock(val === '' ? 0 : Number(val))}
+                    radius="lg"
+                    variant="flat"
+                  />
 
-                  <div className="space-y-1 relative pl-0 bg-content1 p-3.5 rounded-large border border-divider flex flex-col justify-between">
+                  <div className="space-y-1 relative pl-0 bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200/70 dark:border-white/10 flex flex-col justify-between shadow-elevation-soft">
                     <div>
-                      <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none block">Shelf-Life Expiration</label>
+                      <label className="text-[10px] font-bold text-default-500 uppercase tracking-wider pl-1 select-none block">Shelf-Life Expiration</label>
                       <span className="text-[10px] text-default-500 font-medium pl-1 select-none block mt-0.5 leading-snug">Requires expiration date?</span>
                     </div>
                     <div className="flex items-center gap-2 mt-2">
                       <button
                         type="button"
                         onClick={() => setHasExpiration(true)}
-                        className={`flex-1 py-2 px-3 rounded-medium border text-[11px] font-extrabold transition-all text-center cursor-pointer ${
+                        className={`flex-1 py-1.5 px-3 rounded-full border text-[11px] font-bold transition-all text-center cursor-pointer ${
                           hasExpiration 
-                            ? 'bg-warning/10 border-warning text-warning shadow-xs' 
-                            : 'bg-content2 border-divider text-default-500 hover:bg-content3'
+                            ? 'bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-400 shadow-2xs' 
+                            : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200/50 dark:border-white/5 text-default-500'
                         }`}
                       >
                         Yes, Has Expiry
@@ -804,10 +748,10 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setHasExpiration(false)}
-                        className={`flex-1 py-2 px-3 rounded-medium border text-[11px] font-extrabold transition-all text-center cursor-pointer ${
+                        className={`flex-1 py-1.5 px-3 rounded-full border text-[11px] font-bold transition-all text-center cursor-pointer ${
                           !hasExpiration 
-                            ? 'bg-primary/10 border-primary text-primary shadow-xs' 
-                            : 'bg-content2 border-divider text-default-500 hover:bg-content3'
+                            ? 'bg-primary/15 border-primary/30 text-primary shadow-2xs' 
+                            : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200/50 dark:border-white/5 text-default-500'
                         }`}
                       >
                         No Expiry Date
@@ -816,30 +760,29 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                   </div>
 
                   {hasExpiration && (
-                    <div className="space-y-2 relative pl-0 md:col-span-3 bg-warning/5 p-4 rounded-large border border-warning/20 animate-fade-in flex flex-col gap-2.5">
-                      <div className="flex items-center gap-2 text-warning">
-                        <Clock className="h-4 w-4 text-warning" />
-                        <span className="text-xs font-black uppercase tracking-wider">Specify Product Expiration Date</span>
+                    <div className="space-y-2 relative pl-0 md:col-span-3 bg-amber-500/5 p-4 rounded-2xl border border-amber-500/20 animate-fade-in flex flex-col gap-2.5">
+                      <div className="flex items-center gap-2 text-amber-500 font-bold">
+                        <Clock className="h-4 w-4" />
+                        <span className="text-xs uppercase tracking-wider">Specify Product Expiration Date</span>
                       </div>
-                      <p className="text-[11px] text-default-500 leading-relaxed pl-0.5">
+                      <p className="text-[11px] text-default-500 leading-relaxed pl-0.5 font-medium">
                         Set the standard catalog expiration date for this listing. The system will flag this item in inventory tables and sales invoices when approaching or past expiration.
                       </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none block">Catalog Expiry Date *</label>
-                          <input
-                            type="date"
-                            required={hasExpiration}
-                            value={expirationDate ?? ''}
-                            onChange={e => setExpirationDate(e.target.value)}
-                            className="w-full bg-content1 border border-divider focus:border-warning px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold cursor-pointer active:scale-[0.98]"
-                          />
-                        </div>
-                        <div className="bg-content1 p-3 rounded-medium border border-warning/20 text-[11px] text-default-500 flex flex-col justify-center gap-0.5">
-                          <div className="font-bold text-warning flex items-center gap-1">
+                        <HeroInput
+                          label="Catalog Expiry Date *"
+                          type="date"
+                          required={hasExpiration}
+                          value={expirationDate ?? ''}
+                          onValueChange={val => setExpirationDate(val)}
+                          radius="lg"
+                          variant="flat"
+                        />
+                        <div className="bg-white dark:bg-zinc-900 p-3.5 rounded-2xl border border-amber-500/20 text-[11px] text-default-500 flex flex-col justify-center gap-0.5 shadow-2xs">
+                          <div className="font-bold text-amber-500 flex items-center gap-1">
                             <span>●</span> Active Expiry Flagging
                           </div>
-                          <div className="text-[10px] leading-relaxed text-default-400">
+                          <div className="text-[10px] leading-relaxed text-default-400 font-medium">
                             Items with active expirations are automatically tracked and marked on sales invoices, stock transfer forms, and listed in the central Expiry Calendar.
                           </div>
                         </div>
@@ -847,14 +790,14 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                     </div>
                   )}
 
-                  <div className="space-y-1 relative md:col-span-3">
-                    <label className="text-[10px] font-black text-default-500 uppercase tracking-widest pl-1 select-none">Acquired From / Stock Source</label>
-                    <input
-                      type="text"
+                  <div className="md:col-span-3">
+                    <HeroInput
+                      label="Acquired From / Stock Source"
                       value={origin ?? ''}
-                      onChange={e => setOrigin(e.target.value)}
+                      onValueChange={val => setOrigin(val)}
                       placeholder="Acquired from / Stock source (e.g. Local Import, Direct Factory Mill)"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-sans font-bold active:scale-[0.98]"
+                      radius="lg"
+                      variant="flat"
                     />
                   </div>
                 </div>
@@ -864,12 +807,13 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
         </div>
       </HeroModal.Body>
 
-      <HeroModal.Footer className="justify-between items-center gap-3 p-4 px-6 border-t border-divider bg-content1">
+      <HeroModal.Footer className="justify-between items-center gap-3 p-4 px-6 border-t border-divider/20 bg-white dark:bg-zinc-900">
         <div className="flex items-center gap-3">
           <HeroButton
             type="button"
             variant="flat"
             size="sm"
+            radius="full"
             onClick={onClose}
             className="font-bold text-xs"
           >
@@ -886,6 +830,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
               type="button"
               variant="flat"
               size="sm"
+              radius="full"
               onClick={() => setCurrentStep(prev => Math.max(1, prev - 1))}
               className="font-bold text-xs"
               startIcon={<ChevronLeft className="h-3.5 w-3.5" />}
@@ -900,8 +845,9 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
               color="primary"
               variant="solid"
               size="sm"
+              radius="full"
               onClick={handleNextStep}
-              className="font-bold text-xs uppercase tracking-wider"
+              className="font-bold text-xs uppercase tracking-wider shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
               endIcon={<ChevronRight className="h-3.5 w-3.5" />}
             >
               Next Step
@@ -912,7 +858,8 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
               color="primary"
               variant="solid"
               size="sm"
-              className="font-bold text-xs uppercase tracking-wider shadow-md shadow-primary/20"
+              radius="full"
+              className="font-bold text-xs uppercase tracking-wider shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
               startIcon={<Sparkles className="h-3.5 w-3.5" />}
             >
               {isEditMode ? 'Save Specifications' : 'Validate & Save Product'}

@@ -29,7 +29,7 @@ import { useDb } from '../context/DbContext';
 import { UserRole } from '../types/db';
 import { formatCurrency } from '../utils/formatters';
 import { useReceiptFontSize } from './ReceiptFontSizeControl';
-import { useResponsivePageSize } from './TablePagination';
+import { TablePagination, useResponsivePageSize } from './TablePagination';
 import { ToastNotification } from './ToastNotification';
 import { HeroTable } from './common/ui/HeroTable';
 import { HeroButton } from './common/ui/HeroButton';
@@ -371,7 +371,6 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
 
  const delivPageSize = useResponsivePageSize(48, 480, 10);
  const DELIV_PER_PAGE = delivPageSize;
- const totalDelivPages = Math.ceil(displayDeliveries.length / DELIV_PER_PAGE) || 1;
  const paginatedDeliveries = useMemo(() => {
  return displayDeliveries.slice((delivPage - 1) * DELIV_PER_PAGE, delivPage * DELIV_PER_PAGE);
  }, [displayDeliveries, delivPage, DELIV_PER_PAGE]);
@@ -770,111 +769,107 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  <span className="text-primary">Scheduled: {reconciliationStats.scheduled}</span>
  <span className="text-secondary">In-Transit: {reconciliationStats.transit}</span>
  <span className="text-emerald-500">Delivered: {reconciliationStats.delivered}</span>
- {reconciliationStats.reconciledCount > 0 && (
- <span className="bg-emerald-500 text-white px-2 py-0.5 rounded-md font-sans">
- {reconciliationStats.reconciledCount} Auto-Reconciled
- </span>
- )}
- </div>
- </div>
- )}
+                <span className="bg-emerald-500 text-white px-2 py-0.5 rounded-md font-sans">
+                  {reconciliationStats.reconciledCount} Auto-Reconciled
+                </span>
+              </div>
+          </div>
+        )}
 
- {/* METRIC CARD BENTO STATS */}
- <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
- 
- <div className="p-4 rounded-2xl border border-divider/30 bg-content1 flex flex-col justify-between">
- <span className="text-[9px] font-black uppercase tracking-widest text-default-500">Gross Deliveries</span>
- <div className="flex items-baseline gap-2 mt-2">
- <span className="text-2xl font-black">{stats.total}</span>
- <span className="text-[10px] text-default-500 font-bold">Invoices</span>
- </div>
- </div>
+        {/* METRIC CARD BENTO STATS */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="p-5 rounded-2xl border border-zinc-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-elevation-soft flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-default-500 font-mono">Gross Deliveries</span>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-2xl font-bold font-mono text-foreground">{stats.total}</span>
+              <span className="text-[10px] text-default-400 font-medium">Invoices</span>
+            </div>
+          </div>
 
- <div className="p-4 rounded-2xl border border-divider/30 bg-amber-500/5 flex flex-col justify-between">
- <span className="text-[9px] font-black uppercase tracking-widest text-amber-500">Pending Dispatch</span>
- <div className="flex items-baseline gap-2 mt-2">
- <span className="text-2xl font-black text-amber-400">{stats.pending}</span>
- <span className="text-[10px] text-amber-600 font-bold uppercase ">Unpacked</span>
- </div>
- </div>
+          <div className="p-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 shadow-2xs flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500 font-mono">Pending Dispatch</span>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-2xl font-bold text-amber-500 font-mono">{stats.pending}</span>
+              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold uppercase font-mono">Unpacked</span>
+            </div>
+          </div>
 
- <div className="p-4 rounded-2xl border border-divider/30 bg-primary/5 flex flex-col justify-between">
- <span className="text-[9px] font-black uppercase tracking-widest text-primary">Scheduled</span>
- <div className="flex items-baseline gap-2 mt-2">
- <span className="text-2xl font-black text-primary">{stats.scheduled}</span>
- <span className="text-[10px] text-primary font-bold uppercase ">Ready</span>
- </div>
- </div>
+          <div className="p-5 rounded-2xl border border-primary/20 bg-primary/5 shadow-2xs flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-primary font-mono">Scheduled</span>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-2xl font-bold text-primary font-mono">{stats.scheduled}</span>
+              <span className="text-[10px] text-primary font-bold uppercase font-mono">Ready</span>
+            </div>
+          </div>
 
- <div className="p-4 rounded-2xl border border-divider/30 bg-secondary/5 flex flex-col justify-between">
- <span className="text-[9px] font-black uppercase tracking-widest text-secondary">Active Trucks</span>
- <div className="flex items-baseline gap-2 mt-2">
- <span className="text-2xl font-black text-secondary">{stats.transit}</span>
- <span className="text-[10px] text-secondary font-bold uppercase ">In Transit</span>
- </div>
- </div>
+          <div className="p-5 rounded-2xl border border-purple-500/20 bg-purple-500/5 shadow-2xs flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 font-mono">Active Trucks</span>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-2xl font-bold text-purple-600 dark:text-purple-400 font-mono">{stats.transit}</span>
+              <span className="text-[10px] text-purple-600 dark:text-purple-400 font-bold uppercase font-mono">In Transit</span>
+            </div>
+          </div>
 
- <div className="col-span-2 md:col-span-1 p-4 rounded-2xl border border-divider/30 bg-emerald-500/5 flex flex-col justify-between">
- <span className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Completed Gate Pass</span>
- <div className="flex items-baseline gap-2 mt-2">
- <span className="text-2xl font-black text-emerald-400">{stats.completed}</span>
- <span className="text-[10px] text-emerald-600 font-bold uppercase ">Delivered</span>
- </div>
- </div>
+          <div className="col-span-2 md:col-span-1 p-5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 shadow-2xs flex flex-col justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500 font-mono">Completed Gate Pass</span>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-2xl font-bold text-emerald-500 font-mono">{stats.completed}</span>
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold uppercase font-mono">Delivered</span>
+            </div>
+          </div>
+        </div>
 
- </div>
+        {/* FILTER BUTTON TABS & SEARCH CONTAINER */}
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-3.5 rounded-2xl shadow-elevation-soft">
+          
+          {/* Status Tab buttons */}
+          <div className="flex flex-wrap gap-1 bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-full border border-zinc-200/50 dark:border-white/5 self-start w-full md:w-auto">
+            {[
+              { tag: 'All', count: stats.total, label: 'All cargo' },
+              { tag: 'Pending', count: stats.pending, label: 'Unscheduled' },
+              { tag: 'Scheduled', count: stats.scheduled, label: 'Scheduled' },
+              { tag: 'Transit', count: stats.transit, label: 'In Transit' },
+              { tag: 'Delivered', count: stats.completed, label: 'Delivered' },
+              { tag: 'Failed', count: stats.failed, label: 'Failed/Cancel' }
+            ].map(tab => (
+              <button
+                key={tab.tag}
+                type="button"
+                onClick={() => setSelectedStatusTab(tab.tag)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider cursor-pointer transition-all flex items-center gap-1.5 ${
+                  selectedStatusTab === tab.tag
+                    ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                    : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full font-mono ${
+                  selectedStatusTab === tab.tag ? 'bg-primary/10 text-primary' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
+                }`}>{tab.count}</span>
+              </button>
+            ))}
+          </div>
 
- {/* FILTER BUTTON TABS & SEARCH CONTAINER */}
- <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-content1 border border-divider/20 p-3.5 rounded-2xl shadow-sm">
- 
- {/* Status Tab buttons */}
- <div className="flex flex-wrap gap-1.5 self-start w-full md:w-auto">
- {[
- { tag: 'All', count: stats.total, label: 'All cargo' },
- { tag: 'Pending', count: stats.pending, label: 'Unscheduled' },
- { tag: 'Scheduled', count: stats.scheduled, label: 'Scheduled' },
- { tag: 'Transit', count: stats.transit, label: 'In Transit' },
- { tag: 'Delivered', count: stats.completed, label: 'Delivered' },
- { tag: 'Failed', count: stats.failed, label: 'Failed/Cancel' }
- ].map(tab => (
- <button
- key={tab.tag}
- onClick={() => setSelectedStatusTab(tab.tag)}
- className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wide cursor-pointer transition-all flex items-center gap-1.5 ${
- selectedStatusTab === tab.tag
- ? 'bg-primary text-primary-foreground shadow-sm font-black'
- : 'bg-content1 hover:bg-default-100 text-default-500'
- }`}
- >
- <span>{tab.label}</span>
- <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
- selectedStatusTab === tab.tag ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-default-100 text-foreground'
- }`}>{tab.count}</span>
- </button>
- ))}
- </div>
+          {/* Textual Search bar */}
+          <div className="relative w-full md:w-80">
+            <input
+              type="text"
+              value={searchTerm ?? ''}
+              onChange={e => setSearchTerm(e.target.value)}
+              placeholder="Search ref #, client, address, pilot..."
+              className="w-full bg-zinc-100 dark:bg-zinc-800 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 border border-zinc-200/50 dark:border-white/5 pl-9 pr-4 py-2 rounded-full placeholder:text-default-400 font-medium transition-all"
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-default-400" />
+            {searchTerm && (
+              <button type="button" onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-default-400 hover:text-rose-500 text-xs font-bold cursor-pointer">✕</button>
+            )}
+          </div>
+        </div>
 
- {/* Textual Search bar */}
- <div className="relative w-full md:w-80">
- <input
- type="text"
- value={searchTerm ?? ''}
- onChange={e => setSearchTerm(e.target.value)}
- placeholder="Search ref #, client, address, pilot..."
- className="w-full bg-content1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary border border-divider/30 pl-8 pr-4 py-2 rounded-xl placeholder:text-default-500 font-bold"
- />
- <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-default-500" />
- {searchTerm && (
- <button onClick={() => setSearchTerm('')} className="absolute right-2.5 top-2 hover:text-rose-500 p-0.5 text-default-500 font-bold active:scale-[0.98]"></button>
- )}
- </div>
- </div>
-
- {/* CORE CONTAINER: TABLE WITH DRILL-DOWN PREVIEWS */}
- <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
- 
-      {/* LEFT COMPONENT: MASTER TABULAR LIST */}
-      <div className={`col-span-1 lg:col-span-8 space-y-4`}>
+        {/* CORE CONTAINER: TABLE WITH DRILL-DOWN PREVIEWS */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* LEFT COMPONENT: MASTER TABULAR LIST */}
+          <div className={`col-span-1 lg:col-span-8 space-y-4`}>
         {/* Multi-Sort Active Badge Bar */}
         <MultiSortBadgeBar
           sortDescriptors={delivSortDescriptors}
@@ -1066,62 +1061,16 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
                 )}
               </HeroTable.Body>
             </HeroTable>
+            <TablePagination
+              currentPage={delivPage}
+              totalItems={displayDeliveries.length}
+              pageSize={DELIV_PER_PAGE}
+              onPageChange={setDelivPage}
+              itemName="deliveries"
+            />
           </div>
-
- {/* Pagination Controls bar */}
- <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-content1 border-t border-divider/15 text-xs font-sans">
- <span className="font-semibold text-default-500 ">
- Showing {Math.min(displayDeliveries.length, (delivPage - 1) * DELIV_PER_PAGE + 1)}-{Math.min(displayDeliveries.length, delivPage * DELIV_PER_PAGE)} of {displayDeliveries.length} items
- </span>
- <div className="flex items-center gap-1.5 select-none font-sans">
- <button
- type="button"
- disabled={delivPage === 1}
- onClick={() => setDelivPage(prev => Math.max(1, prev - 1))}
- className="px-3 py-1.5 rounded-lg border border-divider/60 hover:border-primary hover:bg-primary/10 text-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px] active:scale-[0.98]"
- >
- Prev
- </button>
- {Array.from({ length: totalDelivPages }).map((_, i) => {
- const pNum = i + 1;
- if (totalDelivPages > 5 && Math.abs(pNum - delivPage) > 2 && pNum !== 1 && pNum !== totalDelivPages) {
- if (pNum === 2 || pNum === totalDelivPages - 1) {
- return <span key={pNum} className="px-1 text-default-500">...</span>;
- }
- return null;
- }
- return (
- <button
- key={pNum}
- type="button"
- onClick={() => setDelivPage(pNum)}
- className={`h-7 w-7 rounded-lg text-xs font-bold transition-all cursor-pointer ${
- delivPage === pNum
- ? 'bg-primary text-primary-foreground shadow-md'
- : 'border border-divider/20 hover:bg-primary/10 text-default-700'
- }`}
- >
- {pNum}
- </button>
- );
- })}
- <button
- type="button"
- disabled={delivPage === totalDelivPages}
- onClick={() => setDelivPage(prev => Math.min(totalDelivPages, prev + 1))}
- className="px-3 py-1.5 rounded-lg border border-divider/60 hover:border-primary hover:bg-primary/10 text-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px] active:scale-[0.98]"
- >
- Next
- </button>
- </div>
- </div>
-
- {/* Footer page notes count */}
- <div className="bg-content1 border-t border-divider/15 px-4 py-2 text-[10px] text-default-500 font-bold select-none ">
- TOTAL RECORD ENTRIES: {displayDeliveries.length} OF {deliveries.length} SYSTEM CARGOES
- </div>
- </div>
- </div>
+        </div>
+      </div>
 
  {/* RIGHT COMPONENT: DRILL-DOWN DETAIL WORKSPACE */}
  <div className="col-span-1 lg:col-span-4">

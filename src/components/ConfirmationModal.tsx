@@ -33,32 +33,32 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     switch (alertType) {
       case 'danger':
         return {
-          icon: <ShieldAlert className="h-5 w-5 text-danger shrink-0" />,
-          chipVariant: 'danger' as const,
-          btnVariant: 'danger' as const,
-          border: 'border-danger/30',
+          icon: <ShieldAlert className="h-5 w-5 text-rose-500 shrink-0" />,
+          chipColor: 'danger' as const,
+          btnColor: 'danger' as const,
+          btnVariant: 'solid' as const,
         };
       case 'warning':
         return {
-          icon: <AlertTriangle className="h-5 w-5 text-warning shrink-0" />,
-          chipVariant: 'warning' as const,
-          btnVariant: 'primary' as const,
-          border: 'border-warning/30',
+          icon: <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />,
+          chipColor: 'warning' as const,
+          btnColor: 'warning' as const,
+          btnVariant: 'solid' as const,
         };
       case 'success':
         return {
-          icon: <CheckCircle2 className="h-5 w-5 text-success shrink-0" />,
-          chipVariant: 'success' as const,
-          btnVariant: 'success' as const,
-          border: 'border-success/30',
+          icon: <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />,
+          chipColor: 'success' as const,
+          btnColor: 'success' as const,
+          btnVariant: 'solid' as const,
         };
       case 'info':
       default:
         return {
           icon: <Info className="h-5 w-5 text-primary shrink-0" />,
-          chipVariant: 'info' as const,
-          btnVariant: 'primary' as const,
-          border: 'border-primary/30',
+          chipColor: 'primary' as const,
+          btnColor: 'primary' as const,
+          btnVariant: 'solid' as const,
         };
     }
   };
@@ -71,50 +71,52 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       onClose={onCancel}
       size="sm"
       isDismissable={!isSubmitting}
-      className={`border ${style.border}`}
       zIndex={9999}
     >
       <HeroModal.Header className="pb-3">
-        <div className="flex items-center gap-3 w-full">
-          <div className="p-2.5 rounded-2xl border border-divider/30 bg-content2/60 shrink-0">
+        <div className="flex items-center gap-3 w-full font-sans">
+          <div className="p-2.5 rounded-2xl border border-zinc-200/60 dark:border-white/5 bg-zinc-100 dark:bg-zinc-800 shrink-0 shadow-2xs">
             {style.icon}
           </div>
           <div className="space-y-1 min-w-0 flex-1">
-            <HeroChip variant={style.chipVariant} size="sm">
-              {alertType.toUpperCase()} ALERT
+            <HeroChip color={style.chipColor} variant="flat" size="sm" className="font-bold text-[9px] uppercase tracking-wider font-mono">
+              {alertType.toUpperCase()} Alert
             </HeroChip>
-            <h3 className="text-sm sm:text-base font-extrabold text-foreground leading-snug truncate">
+            <h3 className="text-sm sm:text-base font-bold text-foreground leading-snug truncate tracking-tight">
               {title}
             </h3>
           </div>
         </div>
       </HeroModal.Header>
 
-      <HeroModal.Body className="py-4">
-        <div className="text-xs text-default-500 leading-relaxed font-normal">
+      <HeroModal.Body className="py-4 font-sans text-xs">
+        <div className="text-xs text-default-500 leading-relaxed font-medium">
           {typeof message === 'string' ? <p>{message}</p> : message}
         </div>
       </HeroModal.Body>
 
-      <HeroModal.Footer className="pt-3 pb-4">
+      <HeroModal.Footer className="pt-3 pb-4 font-sans">
         <HeroButton
           type="button"
           variant="flat"
           size="sm"
+          radius="full"
           onClick={onCancel}
           disabled={isSubmitting}
-          className="font-semibold"
+          className="font-bold text-xs"
         >
           {cancelText}
         </HeroButton>
         <HeroButton
           type="button"
+          color={style.btnColor}
           variant={style.btnVariant}
           size="sm"
+          radius="full"
           onClick={onConfirm}
           isLoading={isSubmitting}
           loadingText="Processing..."
-          className="font-bold uppercase tracking-wider"
+          className="font-bold text-xs uppercase tracking-wider shadow-2xs"
         >
           {confirmText}
         </HeroButton>

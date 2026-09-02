@@ -657,12 +657,12 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
               return (
                 <div
                   key={b.id}
-                  className="bg-content1 border border-divider/30 rounded-2xl shadow-sm hover:shadow-md hover:border-primary/40 text-foreground transition-all duration-200 relative overflow-hidden flex flex-col justify-between p-5 space-y-4 active:scale-[0.98]"
+                  className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl shadow-elevation-soft hover:shadow-md text-foreground transition-all duration-200 relative overflow-hidden flex flex-col justify-between p-5 space-y-4 text-left"
                 >
                   {/* Top outline band */}
                   <div className="flex items-start justify-between border-b border-divider/15 pb-3">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <div className="h-10 w-10 rounded-xl border border-divider/20 overflow-hidden bg-content2 flex items-center justify-center shrink-0">
+                      <div className="h-10 w-10 rounded-2xl border border-zinc-200/50 dark:border-white/5 overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
                         {b.storeLogo ? (
                           <img src={b.storeLogo} alt="Logo" className="h-full w-full object-contain" referrerPolicy="no-referrer" />
                         ) : (
@@ -671,16 +671,16 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <h4 className="text-sm font-extrabold text-foreground leading-tight truncate">
+                          <h4 className="text-sm font-bold text-foreground leading-tight truncate">
                             {b.name}
                           </h4>
                           {b.id === primaryBranchId && (
-                            <HeroChip variant="warning" size="sm">
+                            <HeroChip variant="flat" color="warning" size="sm" className="text-[9px] font-bold uppercase font-mono">
                               Main HQ
                             </HeroChip>
                           )}
                           {(b.id === primaryBranchId || b.isDistributionBranch) && (
-                            <HeroChip variant="success" size="sm">
+                            <HeroChip variant="flat" color="success" size="sm" className="text-[9px] font-bold uppercase font-mono">
                               Hub
                             </HeroChip>
                           )}
@@ -692,16 +692,18 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
                     {isUserAdmin && (
                       <div className="flex items-center gap-1 shrink-0 ml-2">
                         <button
+                          type="button"
                           onClick={() => handleOpenEdit(b)}
-                          className="p-1.5 rounded-lg hover:bg-content2 text-primary cursor-pointer transition-colors active:scale-95"
+                          className="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-primary cursor-pointer transition-colors active:scale-95"
                           title="Edit Details"
                         >
                           <Edit2 className="h-4 w-4" />
                         </button>
                         {!isDeleteForbidden && (
                           <button
+                            type="button"
                             onClick={() => triggerDelete(b.id, b.name)}
-                            className="p-1.5 rounded-lg hover:bg-rose-500/10 text-default-400 hover:text-rose-500 cursor-pointer transition-colors active:scale-95"
+                            className="p-1.5 rounded-full hover:bg-rose-500/10 text-default-400 hover:text-rose-500 cursor-pointer transition-colors active:scale-95"
                             title="Archive Outlet"
                           >
                             <Trash2 className="h-4 w-4" />

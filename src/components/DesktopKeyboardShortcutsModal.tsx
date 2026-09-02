@@ -133,9 +133,9 @@ export const DesktopKeyboardShortcutsModal: React.FC<DesktopKeyboardShortcutsMod
             <Keyboard className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-base font-black tracking-wide text-foreground uppercase font-sans flex items-center gap-2">
+            <h2 className="text-base font-bold tracking-tight text-foreground uppercase font-sans flex items-center gap-2">
               Desktop Keyboard Shortcuts
-              <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25 font-bold uppercase tracking-widest">
+              <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-bold uppercase tracking-wider font-mono">
                 Pro Productivity
               </span>
             </h2>
@@ -146,12 +146,12 @@ export const DesktopKeyboardShortcutsModal: React.FC<DesktopKeyboardShortcutsMod
         </div>
       </HeroModal.Header>
 
-      <HeroModal.Body className="p-6 space-y-6 scrollbar-thin">
+      <HeroModal.Body className="p-6 space-y-6 scrollbar-thin text-left font-sans text-xs">
         {categories.map((cat) => {
           const Icon = cat.icon;
           return (
             <div key={cat.title} className="space-y-3">
-              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-foreground">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
                 <Icon className="h-4 w-4 text-primary" />
                 <span>{cat.title}</span>
               </div>
@@ -160,14 +160,14 @@ export const DesktopKeyboardShortcutsModal: React.FC<DesktopKeyboardShortcutsMod
                 {cat.items.map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between p-3 rounded-2xl bg-content2/50 hover:bg-content2 border border-divider/20 transition-all text-xs"
+                    className="flex items-center justify-between p-3.5 rounded-2xl bg-zinc-100/90 dark:bg-zinc-800/80 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200/50 dark:border-white/5 transition-all text-xs shadow-2xs"
                   >
                     <div className="min-w-0 pr-3">
-                      <span className="font-semibold text-foreground truncate block">
+                      <span className="font-medium text-foreground truncate block">
                         {item.description}
                       </span>
                       {item.badge && (
-                        <span className="text-[9px] font-bold text-primary tracking-wider uppercase mt-0.5 inline-block">
+                        <span className="text-[9px] font-bold text-primary tracking-wider uppercase mt-0.5 inline-block font-mono">
                           {item.badge}
                         </span>
                       )}
@@ -176,11 +176,11 @@ export const DesktopKeyboardShortcutsModal: React.FC<DesktopKeyboardShortcutsMod
                     <div className="flex items-center gap-1 shrink-0">
                       {item.keys.map((k, kIdx) => (
                         <React.Fragment key={kIdx}>
-                          <kbd className="px-2 py-1 bg-background text-foreground border border-divider/40 rounded-lg text-[11px] font-mono font-bold shadow-2xs">
+                          <kbd className="px-2 py-1 bg-white dark:bg-zinc-900 text-foreground border border-zinc-200/70 dark:border-white/10 rounded-xl text-[11px] font-mono font-bold shadow-2xs">
                             {k}
                           </kbd>
                           {kIdx < item.keys.length - 1 && (
-                            <span className="text-default-400 text-[10px]">+</span>
+                            <span className="text-default-400 text-[10px] font-mono">+</span>
                           )}
                         </React.Fragment>
                       ))}
@@ -193,18 +193,19 @@ export const DesktopKeyboardShortcutsModal: React.FC<DesktopKeyboardShortcutsMod
         })}
       </HeroModal.Body>
 
-      <HeroModal.Footer className="justify-between px-6 py-4 text-xs text-default-500">
+      <HeroModal.Footer className="justify-between px-6 py-4 text-xs text-default-500 font-sans">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-warning" />
-          <span>Press <kbd className="px-1.5 py-0.5 bg-background border border-divider/30 rounded font-mono font-bold text-[10px]">?</kbd> anywhere to toggle this guide</span>
+          <Sparkles className="h-4 w-4 text-amber-500" />
+          <span>Press <kbd className="px-1.5 py-0.5 bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-lg font-mono font-bold text-[10px]">?</kbd> anywhere to toggle this guide</span>
         </div>
         <HeroButton
           type="button"
           variant="solid"
           color="primary"
           size="sm"
+          radius="full"
           onClick={onClose}
-          className="font-bold text-xs"
+          className="font-bold text-xs shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
         >
           Got it
         </HeroButton>

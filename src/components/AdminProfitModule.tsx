@@ -576,18 +576,16 @@ export function AdminProfitModule({
             </HeroButton>
           </div>
         }
-      />
-
-      {/* 1. FINANCIAL MODEL CARDS & REVENUE ALLOCATION */}
-      <div className="bg-content1 border border-divider/30 rounded-2xl p-5 sm:p-6 shadow-sm space-y-6">
+      />      {/* 1. FINANCIAL MODEL CARDS & REVENUE ALLOCATION */}
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl p-5 sm:p-6 shadow-elevation-soft space-y-6 text-left">
         <div className="flex items-center justify-between border-b border-divider/15 pb-3">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4.5 w-4.5 text-primary" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-foreground">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-foreground font-mono">
               Financial Model
             </h3>
           </div>
-          <span className="text-[11px] text-default-500 font-semibold">
+          <span className="text-[11px] text-default-500 font-semibold font-mono">
             {selectedBranchId === "all" ? "Consolidated (All Branches)" : getBranchName(selectedBranchId)}
           </span>
         </div>
@@ -595,78 +593,78 @@ export function AdminProfitModule({
         {/* 3 Main Metric Cards Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Gross Revenue */}
-          <div className="bg-content1 border border-emerald-500/20 rounded-2xl p-4 flex flex-col justify-between hover:border-emerald-500/40 transition-colors active:scale-[0.98]">
+          <div className="bg-zinc-100 dark:bg-zinc-800/80 border border-emerald-500/20 rounded-2xl p-4 flex flex-col justify-between hover:border-emerald-500/40 transition-colors">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-default-500">Gross Revenue</span>
-              <span className="text-[9.5px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded-full font-bold uppercase">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-default-500 font-mono">Gross Revenue</span>
+              <span className="text-[9.5px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded-full font-bold uppercase font-mono">
                 Inflow
               </span>
             </div>
             <div className="my-3">
-              <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                ₱{metrics.grossRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                ₱{metrics.grossRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <p className="text-[10.5px] text-default-500 mt-1 font-medium">
-                Discounts Offset: <span className="font-bold">₱{metrics.discountsAllowed.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                Discounts Offset: <span className="font-bold font-mono">₱{metrics.discountsAllowed.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </p>
             </div>
-            <div className="text-[10px] text-default-500 pt-2 border-t border-divider/10 flex items-center gap-1.5">
+            <div className="text-[10px] text-default-500 pt-2 border-t border-divider/10 flex items-center gap-1.5 font-mono">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
               <span>Consolidated Sales Volume</span>
             </div>
           </div>
 
           {/* Outflows & Deductions */}
-          <div className="bg-content1 border border-rose-500/20 rounded-2xl p-4 flex flex-col justify-between hover:border-rose-500/40 transition-colors active:scale-[0.98]">
+          <div className="bg-zinc-100 dark:bg-zinc-800/80 border border-rose-500/20 rounded-2xl p-4 flex flex-col justify-between hover:border-rose-500/40 transition-colors">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-default-500">Total Deductions</span>
-              <span className="text-[9.5px] bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25 px-2 py-0.5 rounded-full font-bold uppercase">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-default-500 font-mono">Total Deductions</span>
+              <span className="text-[9.5px] bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25 px-2 py-0.5 rounded-full font-bold uppercase font-mono">
                 Outflow
               </span>
             </div>
             <div className="grid grid-cols-3 gap-2 my-2.5">
-              <div className="p-2 rounded-xl bg-content1 border border-divider/10">
-                <span className="text-[9px] font-bold text-default-500 uppercase block">COGS</span>
-                <span className="font-bold text-rose-600 dark:text-rose-400 text-xs mt-0.5 block">
+              <div className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-white/5">
+                <span className="text-[9px] font-bold text-default-500 uppercase block font-mono">COGS</span>
+                <span className="font-bold text-rose-600 dark:text-rose-400 text-xs mt-0.5 block font-mono">
                   ₱{metrics.cogs.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </span>
               </div>
-              <div className="p-2 rounded-xl bg-content1 border border-divider/10">
-                <span className="text-[9px] font-bold text-default-500 uppercase block">OpEx</span>
-                <span className="font-bold text-rose-600 dark:text-rose-400 text-xs mt-0.5 block">
+              <div className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-white/5">
+                <span className="text-[9px] font-bold text-default-500 uppercase block font-mono">OpEx</span>
+                <span className="font-bold text-rose-600 dark:text-rose-400 text-xs mt-0.5 block font-mono">
                   ₱{metrics.opex.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </span>
               </div>
-              <div className="p-2 rounded-xl bg-content1 border border-divider/10">
-                <span className="text-[9px] font-bold text-default-500 uppercase block">Shrink</span>
-                <span className="font-bold text-rose-600 dark:text-rose-400 text-xs mt-0.5 block">
+              <div className="p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-white/5">
+                <span className="text-[9px] font-bold text-default-500 uppercase block font-mono">Shrink</span>
+                <span className="font-bold text-rose-600 dark:text-rose-400 text-xs mt-0.5 block font-mono">
                   ₱{metrics.shrinkage.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </span>
               </div>
             </div>
-            <div className="text-[10px] text-default-500 pt-2 border-t border-divider/10 flex items-center justify-between font-extrabold">
-              <span className="uppercase text-[9px] text-default-500 font-sans">Sum Outflows</span>
-              <span>₱{(metrics.cogs + metrics.opex + metrics.shrinkage).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+            <div className="text-[10px] text-default-500 pt-2 border-t border-divider/10 flex items-center justify-between font-bold font-mono">
+              <span className="uppercase text-[9px] text-default-500">Sum Outflows</span>
+              <span>₱{(metrics.cogs + metrics.opex + metrics.shrinkage).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
           </div>
 
           {/* Net Profit Result */}
-          <div className={`bg-content1 border rounded-2xl p-4 flex flex-col justify-between transition-colors ${
+          <div className={`bg-zinc-100 dark:bg-zinc-800/80 border rounded-2xl p-4 flex flex-col justify-between transition-colors ${
             metrics.netProfit >= 0 ? "border-emerald-500/30 text-emerald-700 dark:text-emerald-300" : "border-rose-500/30 text-rose-700 dark:text-rose-300"
           }`}>
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-default-500">Net Earnings</span>
-              <span className={`text-[9.5px] px-2 py-0.5 rounded-full font-bold uppercase border ${
+              <span className="text-[10px] font-bold uppercase tracking-wider text-default-500 font-mono">Net Earnings</span>
+              <span className={`text-[9.5px] px-2 py-0.5 rounded-full font-bold uppercase border font-mono ${
                 metrics.netProfit >= 0 ? "bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400" : "bg-rose-500/10 border-rose-500/25 text-rose-600 dark:text-rose-400"
               }`}>
                 {metrics.netProfit >= 0 ? "Surplus" : "Deficit"}
               </span>
             </div>
             <div className="my-3">
-              <div className="text-2xl font-black">
-                ₱{metrics.netProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              <div className="text-2xl font-bold font-mono">
+                ₱{metrics.netProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
-              <div className="mt-1 flex items-center gap-1.5 text-xs font-bold text-foreground">
+              <div className="mt-1 flex items-center gap-1.5 text-xs font-bold text-foreground font-mono">
                 {metrics.netProfit >= 0 ? (
                   <TrendingUp className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                 ) : (
@@ -675,7 +673,7 @@ export function AdminProfitModule({
                 <span>Net Margin: {metrics.netMarginPercent.toFixed(1)}%</span>
               </div>
             </div>
- <div className="text-[10px] text-default-500 pt-2 border-t border-divider/10 flex items-center gap-1.5 ">
+            <div className="text-[10px] text-default-500 pt-2 border-t border-divider/10 flex items-center gap-1.5 font-mono">
               <span className={`h-1.5 w-1.5 rounded-full ${metrics.netProfit >= 0 ? "bg-emerald-500" : "bg-rose-500"} shrink-0`} />
               <span>Return on Enterprise Capital</span>
             </div>

@@ -425,7 +425,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 md:p-6 space-y-5 bg-background/30 pb-20 md:pb-16">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 md:p-6 space-y-5 bg-background/30 pb-20 md:pb-16 text-left">
       {/* Toast Alert */}
       <ToastNotification
         message={toastMessage}
@@ -433,17 +433,17 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
       />
 
       {/* HEADER BANNER */}
-      <div className="bg-content1 border border-divider rounded-large shadow-small text-foreground p-5 border border-divider/20 bg-gradient-to-r from-content1 via-content1 to-content1 shadow-sm rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl p-5 shadow-elevation-soft flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20 shrink-0">
             <Archive className="h-6 w-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black text-foreground">
+              <h1 className="text-xl font-bold text-foreground tracking-tight">
                 System Archives & Restore Center
               </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-mono">
                 Recovery Vault
               </span>
             </div>
@@ -455,73 +455,73 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
 
         {/* STATS OVERVIEW BADGES */}
         <div className="flex flex-wrap items-center gap-2 self-stretch md:self-auto justify-end">
-          <div className="p-2.5 px-4 rounded-2xl bg-content1 border border-divider/20 text-center min-w-[100px]">
-            <div className="text-[10px] uppercase font-bold text-default-500 tracking-wider">
+          <div className="p-2.5 px-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-white/5 text-center min-w-[100px]">
+            <div className="text-[10px] uppercase font-bold text-default-500 tracking-wider font-mono">
               Total Vault
             </div>
-            <div className="text-lg font-black text-primary">{counts.all}</div>
+            <div className="text-lg font-bold text-primary font-mono">{counts.all}</div>
           </div>
-          <div className="p-2.5 px-4 rounded-2xl bg-content1 border border-divider/20 text-center min-w-[100px]">
-            <div className="text-[10px] uppercase font-bold text-default-500 tracking-wider">
+          <div className="p-2.5 px-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-white/5 text-center min-w-[100px]">
+            <div className="text-[10px] uppercase font-bold text-default-500 tracking-wider font-mono">
               Products
             </div>
-            <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">{counts.product}</div>
+            <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono">{counts.product}</div>
           </div>
-          <div className="p-2.5 px-4 rounded-2xl bg-content1 border border-divider/20 text-center min-w-[100px]">
-            <div className="text-[10px] uppercase font-bold text-default-500 tracking-wider">
+          <div className="p-2.5 px-4 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-white/5 text-center min-w-[100px]">
+            <div className="text-[10px] uppercase font-bold text-default-500 tracking-wider font-mono">
               Staff / Other
             </div>
-            <div className="text-lg font-black text-primary">{counts.user + counts.branch}</div>
+            <div className="text-lg font-bold text-primary font-mono">{counts.user + counts.branch}</div>
           </div>
         </div>
       </div>
 
       {/* FILTER TABS & SEARCH BAR */}
-      <div className="bg-content1 border border-divider rounded-large shadow-small text-foreground p-4 border border-divider/20 rounded-2xl space-y-3 bg-content1 shadow-xs">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl p-4 shadow-elevation-soft space-y-3">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
           {/* SEARCH INPUT */}
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-default-500" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-default-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search archives by name, code, SKU, email, role..."
-              className="w-full pl-10 pr-4 py-2 text-xs rounded-2xl bg-content1 border border-divider/30 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all placeholder:text-default-500/50 active:scale-[0.98]"
+              className="w-full pl-9 pr-8 py-2 text-xs rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-white/5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all placeholder:text-default-400 font-medium"
             />
             {searchQuery && (
               <button
                 onClick={() => handleSearchChange('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-default-500 hover:text-foreground active:scale-95"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-default-400 hover:text-foreground cursor-pointer"
               >
-                Clear
+                ✕
               </button>
             )}
           </div>
 
           {/* QUICK BULK ACTIONS IF ANY SELECTED */}
           {getSelectedItems().length > 0 && (
-            <div className="flex items-center gap-2 bg-content1 p-1.5 px-3 rounded-2xl border border-primary/20 animate-fade-in">
-              <span className="text-xs font-black text-primary">
+            <div className="flex items-center gap-2 bg-zinc-100 dark:bg-zinc-800 p-1.5 px-3 rounded-full border border-primary/20 animate-fade-in">
+              <span className="text-xs font-bold text-primary font-mono">
                 {getSelectedItems().length} selected
               </span>
               <button
                 onClick={() => setShowBulkRestoreModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-[11px] font-bold uppercase tracking-wider cursor-pointer shadow-sm transition-all active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 text-[11px] font-bold uppercase tracking-wider cursor-pointer shadow-xs transition-all active:scale-95 font-mono"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 <span>Restore Selected</span>
               </button>
               <button
                 onClick={() => setShowBulkPurgeModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95 font-mono"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 <span>Purge Selected</span>
               </button>
               <button
                 onClick={() => setSelectedKeys({})}
-                className="text-[11px] font-bold text-default-500 hover:text-foreground px-2 py-1 active:scale-[0.98]"
+                className="text-[11px] font-bold text-default-500 hover:text-foreground px-2 py-1 cursor-pointer font-mono"
               >
                 Deselect
               </button>
@@ -530,48 +530,50 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
         </div>
 
         {/* CATEGORY TABS */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none pt-1">
-          {[
-            { id: 'all', label: 'All Items', count: counts.all, icon: Archive },
-            { id: 'product', label: 'Products', count: counts.product, icon: Package },
-            { id: 'user', label: 'Staff / Employees', count: counts.user, icon: Users },
-            { id: 'branch', label: 'Branches', count: counts.branch, icon: Building2 },
-            { id: 'supplier', label: 'Suppliers & Brands', count: counts.supplier, icon: Truck },
-            { id: 'transaction', label: 'Sales & Invoices', count: counts.transaction, icon: Receipt },
-            { id: 'procurement', label: 'POs & Transfers', count: counts.procurement, icon: FileText },
-            { id: 'log', label: 'Damage & Expenses', count: counts.log, icon: AlertOctagon },
-          ].map((tab) => {
-            const IconComp = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap cursor-pointer transition-all ${
-                  isActive
-                    ? 'bg-primary text-primary-foreground shadow-xs'
-                    : 'bg-content1 text-default-500 hover:bg-default-100/20'
-                }`}
-              >
-                <IconComp className="h-3.5 w-3.5" />
-                <span>{tab.label}</span>
-                <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none pt-1">
+          <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-full border border-zinc-200/50 dark:border-white/5">
+            {[
+              { id: 'all', label: 'All Items', count: counts.all, icon: Archive },
+              { id: 'product', label: 'Products', count: counts.product, icon: Package },
+              { id: 'user', label: 'Staff / Employees', count: counts.user, icon: Users },
+              { id: 'branch', label: 'Branches', count: counts.branch, icon: Building2 },
+              { id: 'supplier', label: 'Suppliers & Brands', count: counts.supplier, icon: Truck },
+              { id: 'transaction', label: 'Sales & Invoices', count: counts.transaction, icon: Receipt },
+              { id: 'procurement', label: 'POs & Transfers', count: counts.procurement, icon: FileText },
+              { id: 'log', label: 'Damage & Expenses', count: counts.log, icon: AlertOctagon },
+            ].map((tab) => {
+              const IconComp = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap cursor-pointer transition-all duration-200 font-mono ${
                     isActive
-                      ? 'bg-primary-foreground/20 text-primary-foreground'
-                      : 'bg-default-100 text-default-500'
+                      ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                      : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
                   }`}
                 >
-                  {tab.count}
-                </span>
-              </button>
-            );
-          })}
+                  <IconComp className="h-3.5 w-3.5 text-primary" />
+                  <span>{tab.label}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold font-mono ${
+                      isActive
+                        ? 'bg-primary/10 text-primary'
+                        : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* TABLE / LIST CONTAINER */}
-      <div className="bg-content1 border border-divider rounded-large shadow-small text-foreground p-0 border border-divider/20 rounded-2xl overflow-hidden bg-content1 shadow-sm">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl overflow-hidden shadow-elevation-soft">
         {filteredItems.length === 0 ? (
           <div className="p-12 text-center flex flex-col items-center justify-center space-y-3">
             <div className="p-4 rounded-full bg-content1 text-default-500/40 border border-divider/20">

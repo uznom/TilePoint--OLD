@@ -151,52 +151,56 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
       sku: (p) => p.productCode || p.sku || '',
       name: (p) => p.productName || '',
       category: (p) => p.category || '',
-      cost: (p) => p.costPrice || 0,
-      price: (p) => p.sellingPrice || 0,
+      cost: (p) => Number(p.costPrice) || 0,
+      price: (p) => Number(p.sellingPrice) || 0,
       stock: (p) => getBranchStockQuantity(p, selectedViewBranchId, branchStock, branches),
       threshold: (p) => {
-        const isConsolidated = selectedViewBranchId === 'consolidated' || !selectedViewBranchId;
         const bsRec = getBranchStockRecord(p, selectedViewBranchId, branchStock, branches);
-        return isConsolidated
-          ? (p.minimumStock ?? p.lowStockThreshold ?? 10)
-          : (bsRec?.lowStockThresholdOverride ?? bsRec?.lowStockThreshold ?? p.minimumStock ?? p.lowStockThreshold ?? 10);
+        return bsRec?.lowStockThresholdOverride ?? bsRec?.lowStockThreshold ?? p.minimumStock ?? p.lowStockThreshold ?? 10;
       }
     }
   });
 
-  // Catalog Filtration & Sorting
   const filteredProducts = useMemo(() => {
-    const searchMatches = searchIndex(productSearchIndex, term);
-    const isConsolidated = selectedViewBranchId === 'consolidated' || !selectedViewBranchId;
+    let pool = branchProducts;
 
-    const filtered = searchMatches.filter(p => {
-      // 1. Branch Scope Filter
-      if (!isConsolidated && branchScopeFilter === 'branch-only') {
-        const inBranch = isProductInBranch(p, selectedViewBranchId, branchStock, branches);
-        if (!inBranch) return false;
+    // Apply pre-indexed keyword search
+    if (term.trim()) {
+      pool = searchIndex(productSearchIndex, term);
+    }
+
+    const filtered = pool.filter(p => {
+      if (p.isDeleted) return false;
+
+      // When viewing a specific store branch and scope is "branch-only", only show products associated with this branch
+      if (selectedViewBranchId !== 'consolidated' && selectedViewBranchId && branchScopeFilter === 'branch-only') {
+        const hasStock = isProductInBranch(p, selectedViewBranchId, branchStock, branches);
+        const isAssigned = (p as any).branchId === selectedViewBranchId;
+        const isCentralAssigned = (p as any).branchId === 'B1' || !(p as any).branchId;
+        if (!hasStock && !isAssigned && !isCentralAssigned) {
+          return false;
+        }
       }
 
-      // 2. Category Filter
-      const matchCategory = categoryFilter === 'All' || 
-        (p.category && p.category.trim().toLowerCase() === categoryFilter.trim().toLowerCase());
-      if (!matchCategory) return false;
+      // Category filter
+      if (categoryFilter && categoryFilter !== 'All' && p.category !== categoryFilter) {
+        return false;
+      }
 
-      // 3. Status Filter
-      if (statusFilter === 'All') return true;
-
+      // Stock status filter
       const qty = getBranchStockQuantity(p, selectedViewBranchId, branchStock, branches);
       const bsRec = getBranchStockRecord(p, selectedViewBranchId, branchStock, branches);
-      const threshold = isConsolidated
+      const threshold = selectedViewBranchId === 'consolidated'
         ? (p.minimumStock ?? p.lowStockThreshold ?? 10)
         : (bsRec?.lowStockThresholdOverride ?? bsRec?.lowStockThreshold ?? p.minimumStock ?? p.lowStockThreshold ?? 10);
 
-      const isLow = statusFilter === 'Low Stock' || statusFilter === '● Low Stock';
-      const isCritical = statusFilter === 'Critical' || statusFilter === '● Critical Stock';
-      const isOut = statusFilter === 'Out of Stock' || statusFilter === '● Out of Stock';
-      const isInStock = statusFilter === 'In Stock';
+      const isOut = statusFilter === 'Out of Stock';
+      const isIn = statusFilter === 'In Stock';
+      const isLow = statusFilter === 'Low Stock';
+      const isCritical = statusFilter === 'Critical';
 
-      if (isInStock) return qty > 0;
       if (isOut) return qty === 0;
+      if (isIn) return qty > 0;
       if (isLow) return qty > 0 && qty <= threshold;
       if (isCritical) {
         const critThreshold = Math.max(1, Math.floor(threshold * 0.5));
@@ -370,7 +374,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
   return (
     <>
       {/* Main Filter Controller Panel Card */}
-      <div className="bg-content1 p-5 rounded-2xl border border-divider shadow-xs space-y-4 font-sans">
+      <div className="bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200/70 dark:border-white/10 shadow-elevation-soft space-y-4 font-sans text-xs">
         <div className="flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between">
           {/* Search query box */}
           <div className="relative w-full xl:max-w-md shrink-0">
@@ -383,14 +387,14 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
               disabled={!(branchProducts || []).some(p => p && !p.isDeleted)}
               value={term}
               onChange={e => setTerm(e.target.value)}
-              className="w-full bg-default-100 dark:bg-content2/80 border border-divider/40 focus:border-primary px-3.5 py-2 pl-10 pr-8 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all rounded-full font-sans font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-white/5 focus:outline-none focus:ring-2 focus:ring-primary/30 px-3.5 py-2 pl-10 pr-8 text-xs text-foreground transition-all rounded-full font-sans font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             />
             {term && (
               <HeroTooltip content="Clear search">
                 <button
                   type="button"
                   onClick={() => setTerm('')}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-default-400 hover:text-rose-500 cursor-pointer text-xs font-semibold transition-colors active:scale-[0.98]"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-default-400 hover:text-rose-500 cursor-pointer text-xs font-semibold transition-colors active:scale-95"
                   aria-label="Clear search"
                 >
                   ✕
@@ -461,7 +465,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                 variant="solid"
                 size="sm"
                 radius="full"
-                className="font-semibold shadow-xs"
+                className="font-bold shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
                 startIcon={<Plus className="h-4 w-4" />}
               >
                 Register Product
@@ -473,10 +477,10 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
 
       {/* Bulk Operations Panel */}
       {!hasActiveShift && getSelectedProducts().length > 0 && (
-        <div className="bg-content1 border border-divider p-3.5 rounded-large flex flex-wrap items-center justify-between gap-3 shadow-md animate-fade-in mb-3">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-3.5 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-elevation-soft animate-fade-in mb-3">
           <div className="flex items-center gap-2">
             <div className="h-2 w-2 rounded-full bg-primary" />
-            <span className="text-xs font-black text-foreground">
+            <span className="text-xs font-bold text-foreground">
               {getSelectedProducts().length} {getSelectedProducts().length === 1 ? 'item' : 'items'} selected for bulk actions
             </span>
           </div>
@@ -484,9 +488,10 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
             <HeroButton
               onClick={() => handleBulkSimulatePrint(getSelectedProducts())}
               color="primary"
-              variant="bordered"
+              variant="flat"
               size="sm"
-              className="text-[11px] font-bold uppercase tracking-wider"
+              radius="full"
+              className="text-[11px] font-bold"
               startIcon={<Printer className="h-3.5 w-3.5" />}
             >
               Print Barcodes
@@ -509,7 +514,8 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
               color="danger"
               variant="flat"
               size="sm"
-              className="text-[11px] font-bold uppercase tracking-wider"
+              radius="full"
+              className="text-[11px] font-bold"
               startIcon={<AlertTriangle className="h-3.5 w-3.5" />}
             >
               Move to Damage Register
@@ -518,7 +524,8 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
               onClick={() => setSelectedProdIds({})}
               variant="light"
               size="sm"
-              className="text-[11px] font-bold uppercase tracking-wider text-default-500 hover:text-danger active:scale-[0.98]"
+              radius="full"
+              className="text-[11px] font-bold text-default-500 hover:text-rose-500"
             >
               Clear Selection
             </HeroButton>
@@ -543,611 +550,569 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
       />
 
       {/* Database Catalog HeroTable Ledger */}
-      <HeroTable
-        containerRef={setContainerRef}
-        onScroll={handleCatalogVirtualScroll}
-        containerClassName="min-h-[280px] scrollbar-thin scrollbar-thumb-divider overflow-auto"
-        className={isCompactColumns ? 'min-w-[700px]' : 'min-w-[1280px]'}
-        isStriped
-      >
-        <HeroTable.Header>
-          <tr className="border-b border-divider bg-content2/60 text-[10px] uppercase font-bold text-default-500 tracking-wider">
-            {/* Checkbox column header */}
-            {!hasActiveShift && (
-              <HeroTable.Column align="center" className="py-3 px-2 w-10 text-center select-none bg-content2/40 border-r border-divider">
-                <input
-                  type="checkbox"
-                  checked={paginatedProducts.length > 0 && paginatedProducts.every(p => !!selectedProdIds[p.id])}
-                  onChange={handleToggleSelectAll}
-                  className="rounded border-divider text-primary focus:ring-primary/35 cursor-pointer h-3.5 w-3.5 disabled:opacity-30 disabled:cursor-not-allowed"
-                  aria-label="Select/Deselect visible"
-                  disabled={!allowedToModify}
-                />
-              </HeroTable.Column>
-            )}
-            <HeroTable.Column align="center" className="py-3 px-2 w-10 text-center bg-content2/40 select-none"></HeroTable.Column>
-            <HeroTable.Column
-              allowsSorting
-              sortDirection={getTableSortDir('sku') !== 'none' ? getTableSortDir('sku') : (sortBy === 'sku-asc' ? 'ascending' : sortBy === 'sku-desc' ? 'descending' : 'none')}
-              sortRank={getTableSortRank('sku')}
-              onSort={(e) => handleTableSort('sku', e)}
-              className="py-3 px-4"
-            >
-              Code / SKU
-            </HeroTable.Column>
-            {!isCompactColumns && (
-              <HeroTable.Column className="py-3 px-4">
-                Identifier Codes
-              </HeroTable.Column>
-            )}
-            <HeroTable.Column
-              allowsSorting
-              sortDirection={getTableSortDir('name') !== 'none' ? getTableSortDir('name') : (sortBy === 'alpha-asc' ? 'ascending' : sortBy === 'alpha-desc' ? 'descending' : 'none')}
-              sortRank={getTableSortRank('name')}
-              onSort={(e) => handleTableSort('name', e)}
-              className="py-3 px-4"
-            >
-              Product Details
-            </HeroTable.Column>
-            {!isCompactColumns && (
+      <div className="overflow-x-auto rounded-2xl border border-zinc-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-elevation-soft">
+        <HeroTable
+          containerRef={setContainerRef}
+          onScroll={handleCatalogVirtualScroll}
+          containerClassName="min-h-[280px] scrollbar-thin scrollbar-thumb-divider overflow-auto"
+          className={isCompactColumns ? 'min-w-[700px] text-xs' : 'min-w-[1280px] text-xs'}
+          isStriped
+        >
+          <HeroTable.Header>
+            <tr className="border-b border-divider/20 bg-zinc-100/80 dark:bg-zinc-800/80 text-[10px] uppercase font-bold text-default-600 dark:text-default-400 tracking-wider">
+              {/* Checkbox column header */}
+              {!hasActiveShift && (
+                <HeroTable.Column align="center" className="py-3 px-2 w-10 text-center select-none bg-zinc-100/40 dark:bg-zinc-800/40 border-r border-divider/20">
+                  <input
+                    type="checkbox"
+                    checked={paginatedProducts.length > 0 && paginatedProducts.every(p => !!selectedProdIds[p.id])}
+                    onChange={handleToggleSelectAll}
+                    className="rounded border-zinc-300 text-primary focus:ring-primary/30 cursor-pointer h-3.5 w-3.5 disabled:opacity-30 disabled:cursor-not-allowed"
+                    aria-label="Select/Deselect visible"
+                    disabled={!allowedToModify}
+                  />
+                </HeroTable.Column>
+              )}
+              <HeroTable.Column align="center" className="py-3 px-2 w-10 text-center bg-zinc-100/40 dark:bg-zinc-800/40 select-none"></HeroTable.Column>
               <HeroTable.Column
                 allowsSorting
-                sortDirection={getTableSortDir('category')}
-                sortRank={getTableSortRank('category')}
-                onSort={(e) => handleTableSort('category', e)}
-                className="py-3 px-4"
+                sortDirection={getTableSortDir('sku') !== 'none' ? getTableSortDir('sku') : (sortBy === 'sku-asc' ? 'ascending' : sortBy === 'sku-desc' ? 'descending' : 'none')}
+                sortRank={getTableSortRank('sku')}
+                onSort={(e) => handleTableSort('sku', e)}
+                className="py-3.5 px-4 font-bold"
               >
-                Category / Brand
+                Code / SKU
               </HeroTable.Column>
-            )}
-            {!isCompactColumns && (
-              <HeroTable.Column align="center" className="py-3 px-4 text-center">
-                Packaging Dimensions
+              {!isCompactColumns && (
+                <HeroTable.Column className="py-3.5 px-4 font-bold">
+                  Identifier Codes
+                </HeroTable.Column>
+              )}
+              <HeroTable.Column
+                allowsSorting
+                sortDirection={getTableSortDir('name') !== 'none' ? getTableSortDir('name') : (sortBy === 'alpha-asc' ? 'ascending' : sortBy === 'alpha-desc' ? 'descending' : 'none')}
+                sortRank={getTableSortRank('name')}
+                onSort={(e) => handleTableSort('name', e)}
+                className="py-3.5 px-4 font-bold"
+              >
+                Product Details
               </HeroTable.Column>
-            )}
-            {!isCompactColumns && canSeeFinancialCostsAndSources && (
+              {!isCompactColumns && (
+                <HeroTable.Column
+                  allowsSorting
+                  sortDirection={getTableSortDir('category')}
+                  sortRank={getTableSortRank('category')}
+                  onSort={(e) => handleTableSort('category', e)}
+                  className="py-3.5 px-4 font-bold"
+                >
+                  Category / Brand
+                </HeroTable.Column>
+              )}
+              {!isCompactColumns && (
+                <HeroTable.Column align="center" className="py-3.5 px-4 text-center font-bold">
+                  Packaging Dimensions
+                </HeroTable.Column>
+              )}
+              {!isCompactColumns && canSeeFinancialCostsAndSources && (
+                <HeroTable.Column
+                  align="end"
+                  allowsSorting
+                  sortDirection={getTableSortDir('cost')}
+                  sortRank={getTableSortRank('cost')}
+                  onSort={(e) => handleTableSort('cost', e)}
+                  className="py-3.5 px-4 text-right font-bold"
+                >
+                  Unit Cost
+                </HeroTable.Column>
+              )}
               <HeroTable.Column
                 align="end"
                 allowsSorting
-                sortDirection={getTableSortDir('cost')}
-                sortRank={getTableSortRank('cost')}
-                onSort={(e) => handleTableSort('cost', e)}
-                className="py-3 px-4 text-right"
+                sortDirection={getTableSortDir('price') !== 'none' ? getTableSortDir('price') : (sortBy === 'price-asc' ? 'ascending' : sortBy === 'price-desc' ? 'descending' : 'none')}
+                sortRank={getTableSortRank('price')}
+                onSort={(e) => handleTableSort('price', e)}
+                className="py-3.5 px-4 text-right font-bold"
               >
-                Unit Cost
+                Sale Price
               </HeroTable.Column>
-            )}
-            <HeroTable.Column
-              align="end"
-              allowsSorting
-              sortDirection={getTableSortDir('price') !== 'none' ? getTableSortDir('price') : (sortBy === 'price-asc' ? 'ascending' : sortBy === 'price-desc' ? 'descending' : 'none')}
-              sortRank={getTableSortRank('price')}
-              onSort={(e) => handleTableSort('price', e)}
-              className="py-3 px-4 text-right"
-            >
-              Sale Price
-            </HeroTable.Column>
-            <HeroTable.Column
-              align="center"
-              allowsSorting
-              sortDirection={getTableSortDir('stock') !== 'none' ? getTableSortDir('stock') : (sortBy === 'qty-desc' ? 'descending' : sortBy === 'qty-asc' ? 'ascending' : 'none')}
-              sortRank={getTableSortRank('stock')}
-              onSort={(e) => handleTableSort('stock', e)}
-              className="py-3 px-4 text-center"
-            >
-              Stock
-            </HeroTable.Column>
-            {!isCompactColumns && (
               <HeroTable.Column
                 align="center"
                 allowsSorting
-                sortDirection={getTableSortDir('threshold')}
-                sortRank={getTableSortRank('threshold')}
-                onSort={(e) => handleTableSort('threshold', e)}
-                className="py-3 px-2 text-center"
+                sortDirection={getTableSortDir('stock') !== 'none' ? getTableSortDir('stock') : (sortBy === 'qty-desc' ? 'descending' : sortBy === 'qty-asc' ? 'ascending' : 'none')}
+                sortRank={getTableSortRank('stock')}
+                onSort={(e) => handleTableSort('stock', e)}
+                className="py-3.5 px-4 text-center font-bold"
               >
-                Threshold
+                Stock
               </HeroTable.Column>
-            )}
-            <HeroTable.Column align="center" className="py-3 px-4 text-center">
-              Status
-            </HeroTable.Column>
-            <HeroTable.Column align="center" className="py-3 px-4 text-center">
-              Controls
-            </HeroTable.Column>
-          </tr>
-        </HeroTable.Header>
-
-        <HeroTable.Body>
-          {isLoading ? (
-            <>
-              {Array.from({ length: 6 }).map((_, idx) => (
-                <HeroTable.Row key={idx} className="animate-pulse border-b border-divider bg-content2/20">
-                  {!hasActiveShift && (
-                    <HeroTable.Cell align="center" className="py-4 px-2 text-center"><div className="h-4 w-4 bg-default-200 rounded mx-auto" /></HeroTable.Cell>
-                  )}
-                  <HeroTable.Cell align="center" className="py-4 px-2 text-center"><div className="h-4 w-4 bg-default-200 rounded mx-auto" /></HeroTable.Cell>
-                  <HeroTable.Cell className="py-4 px-4"><div className="h-4 w-28 bg-default-200 rounded mb-1.5" /><div className="h-3 w-20 bg-default-100 rounded" /></HeroTable.Cell>
-                  {!isCompactColumns && <HeroTable.Cell className="py-4 px-4"><div className="h-4 w-20 bg-default-200 rounded" /></HeroTable.Cell>}
-                  <HeroTable.Cell className="py-4 px-4"><div className="h-4 w-36 bg-default-200 rounded mb-1.5" /><div className="h-3 w-16 bg-default-100 rounded" /></HeroTable.Cell>
-                  {!isCompactColumns && <HeroTable.Cell className="py-4 px-4"><div className="h-5 w-24 bg-default-200 rounded-full" /></HeroTable.Cell>}
-                  {!isCompactColumns && <HeroTable.Cell align="center" className="py-4 px-4"><div className="h-4 w-16 bg-default-200 mx-auto rounded" /></HeroTable.Cell>}
-                  {!isCompactColumns && canSeeFinancialCostsAndSources && <HeroTable.Cell align="end" className="py-4 px-4"><div className="h-4 w-14 bg-default-200 rounded ms-auto" /></HeroTable.Cell>}
-                  <HeroTable.Cell align="end" className="py-4 px-4"><div className="h-4 w-16 bg-default-200 rounded ms-auto" /></HeroTable.Cell>
-                  <HeroTable.Cell align="center" className="py-4 px-4"><div className="h-6 w-20 bg-default-200 rounded-medium mx-auto" /></HeroTable.Cell>
-                  {!isCompactColumns && <HeroTable.Cell align="center" className="py-4 px-2"><div className="h-4 w-8 bg-default-200 rounded mx-auto" /></HeroTable.Cell>}
-                  <HeroTable.Cell align="center" className="py-4 px-4"><div className="h-5 w-20 bg-default-200 rounded-full mx-auto" /></HeroTable.Cell>
-                  <HeroTable.Cell align="center" className="py-4 px-4"><div className="h-7 w-20 bg-default-200 rounded-medium mx-auto" /></HeroTable.Cell>
-                </HeroTable.Row>
-              ))}
-            </>
-          ) : paginatedProducts.length === 0 ? (
-            <HeroTable.Row isHoverable={false}>
-              <HeroTable.Cell colSpan={totalColumnsCount} className="py-12 text-center text-sm font-medium text-default-400">
-                No products found matching the search criteria or selected branch filter.
-              </HeroTable.Cell>
-            </HeroTable.Row>
-          ) : (
-            <>
-              {catalogPaddingTop > 0 && (
-                <tr style={{ height: catalogPaddingTop }}>
-                  <td colSpan={totalColumnsCount} className="p-0 border-0" />
-                </tr>
+              {!isCompactColumns && (
+                <HeroTable.Column
+                  align="center"
+                  allowsSorting
+                  sortDirection={getTableSortDir('threshold')}
+                  sortRank={getTableSortRank('threshold')}
+                  onSort={(e) => handleTableSort('threshold', e)}
+                  className="py-3.5 px-2 text-center font-bold"
+                >
+                  Threshold
+                </HeroTable.Column>
               )}
-              {visibleCatalogIndices.map((idx) => {
-                const p = paginatedProducts[idx];
-                if (!p) return null;
+              <HeroTable.Column align="center" className="py-3.5 px-4 text-center font-bold">
+                Status
+              </HeroTable.Column>
+              <HeroTable.Column align="center" className="py-3.5 px-4 text-center font-bold">
+                Controls
+              </HeroTable.Column>
+            </tr>
+          </HeroTable.Header>
 
-                // Determine status indicators based on selected branch scope or consolidated HQ view
-                const qty = getBranchStockQuantity(p, selectedViewBranchId, branchStock, branches);
+          <HeroTable.Body>
+            {isLoading ? (
+              <>
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <HeroTable.Row key={idx} className="animate-pulse border-b border-divider/20 bg-zinc-100/20 dark:bg-zinc-800/20">
+                    {!hasActiveShift && (
+                      <HeroTable.Cell align="center" className="py-4 px-2 text-center"><div className="h-4 w-4 bg-default-200 rounded mx-auto" /></HeroTable.Cell>
+                    )}
+                    <HeroTable.Cell align="center" className="py-4 px-2 text-center"><div className="h-4 w-4 bg-default-200 rounded mx-auto" /></HeroTable.Cell>
+                    <HeroTable.Cell className="py-4 px-4"><div className="h-4 w-28 bg-default-200 rounded mb-1.5" /><div className="h-3 w-20 bg-default-100 rounded" /></HeroTable.Cell>
+                    {!isCompactColumns && <HeroTable.Cell className="py-4 px-4"><div className="h-4 w-20 bg-default-200 rounded" /></HeroTable.Cell>}
+                    <HeroTable.Cell className="py-4 px-4"><div className="h-4 w-36 bg-default-200 rounded mb-1.5" /><div className="h-3 w-16 bg-default-100 rounded" /></HeroTable.Cell>
+                    {!isCompactColumns && <HeroTable.Cell className="py-4 px-4"><div className="h-5 w-24 bg-default-200 rounded-full" /></HeroTable.Cell>}
+                    {!isCompactColumns && <HeroTable.Cell align="center" className="py-4 px-4"><div className="h-4 w-16 bg-default-200 mx-auto rounded" /></HeroTable.Cell>}
+                    {!isCompactColumns && canSeeFinancialCostsAndSources && <HeroTable.Cell align="end" className="py-4 px-4"><div className="h-4 w-14 bg-default-200 rounded ms-auto" /></HeroTable.Cell>}
+                    <HeroTable.Cell align="end" className="py-4 px-4"><div className="h-4 w-16 bg-default-200 rounded ms-auto" /></HeroTable.Cell>
+                    <HeroTable.Cell align="center" className="py-4 px-4"><div className="h-6 w-20 bg-default-200 rounded-medium mx-auto" /></HeroTable.Cell>
+                    {!isCompactColumns && <HeroTable.Cell align="center" className="py-4 px-2"><div className="h-4 w-8 bg-default-200 rounded mx-auto" /></HeroTable.Cell>}
+                    <HeroTable.Cell align="center" className="py-4 px-4"><div className="h-5 w-20 bg-default-200 rounded-full mx-auto" /></HeroTable.Cell>
+                    <HeroTable.Cell align="center" className="py-4 px-4"><div className="h-7 w-20 bg-default-200 rounded-medium mx-auto" /></HeroTable.Cell>
+                  </HeroTable.Row>
+                ))}
+              </>
+            ) : paginatedProducts.length === 0 ? (
+              <HeroTable.Row isHoverable={false}>
+                <HeroTable.Cell colSpan={totalColumnsCount} className="py-12 text-center text-sm font-medium text-default-400">
+                  No products found matching the search criteria or selected branch filter.
+                </HeroTable.Cell>
+              </HeroTable.Row>
+            ) : (
+              <>
+                {catalogPaddingTop > 0 && (
+                  <tr style={{ height: catalogPaddingTop }}>
+                    <td colSpan={totalColumnsCount} className="p-0 border-0" />
+                  </tr>
+                )}
+                {visibleCatalogIndices.map((idx) => {
+                  const p = paginatedProducts[idx];
+                  if (!p) return null;
 
-                const bsRec = getBranchStockRecord(p, selectedViewBranchId, branchStock, branches);
-                const threshold = selectedViewBranchId === 'consolidated'
-                  ? (p.minimumStock ?? p.lowStockThreshold ?? 10)
-                  : (bsRec?.lowStockThresholdOverride ?? bsRec?.lowStockThreshold ?? p.minimumStock ?? p.lowStockThreshold ?? 10);
+                  // Determine status indicators based on selected branch scope or consolidated HQ view
+                  const qty = getBranchStockQuantity(p, selectedViewBranchId, branchStock, branches);
 
-                let statusLabel = 'In Stock';
-                let statusChipColor: 'success' | 'warning' | 'danger' | 'default' = 'success';
+                  const bsRec = getBranchStockRecord(p, selectedViewBranchId, branchStock, branches);
+                  const threshold = selectedViewBranchId === 'consolidated'
+                    ? (p.minimumStock ?? p.lowStockThreshold ?? 10)
+                    : (bsRec?.lowStockThresholdOverride ?? bsRec?.lowStockThreshold ?? p.minimumStock ?? p.lowStockThreshold ?? 10);
 
-                if (qty === 0) {
-                  statusLabel = 'Out of Stock';
-                  statusChipColor = 'default';
-                } else if (qty <= threshold * 0.5) {
-                  statusLabel = 'Critical';
-                  statusChipColor = 'danger';
-                } else if (qty <= threshold) {
-                  statusLabel = 'Low Stock';
-                  statusChipColor = 'warning';
-                }
+                  let statusLabel = 'In Stock';
+                  let statusChipColor: 'success' | 'warning' | 'danger' | 'default' = 'success';
 
-                const isExpanded = !!expandedProductIds[p.id];
-                const isSelected = !!selectedProdIds[p.id];
+                  if (qty === 0) {
+                    statusLabel = 'Out of Stock';
+                    statusChipColor = 'default';
+                  } else if (qty <= threshold * 0.5) {
+                    statusLabel = 'Critical';
+                    statusChipColor = 'danger';
+                  } else if (qty <= threshold) {
+                    statusLabel = 'Low Stock';
+                    statusChipColor = 'warning';
+                  }
 
-                return (
-                  <React.Fragment key={p.id}>
-                    <HeroTable.Row
-                      isSelected={isSelected}
-                      className={`${
-                        p.id === highlightedProductId
-                          ? 'ring-2 ring-danger/80 bg-danger/5'
-                          : ''
-                      } ${isExpanded ? 'bg-primary/5 hover:bg-primary/10' : ''}`}
-                      onClick={() => toggleProductExpand(p.id)}
-                    >
-                      {/* Checkbox Selection column */}
-                      {!hasActiveShift && (
+                  const isExpanded = !!expandedProductIds[p.id];
+                  const isSelected = !!selectedProdIds[p.id];
+
+                  return (
+                    <React.Fragment key={p.id}>
+                      <HeroTable.Row
+                        isSelected={isSelected}
+                        className={`${
+                          p.id === highlightedProductId
+                            ? 'ring-2 ring-danger/80 bg-danger/5'
+                            : ''
+                        } ${isExpanded ? 'bg-primary/5 hover:bg-primary/10' : ''}`}
+                        onClick={() => toggleProductExpand(p.id)}
+                      >
+                        {/* Checkbox Selection column */}
+                        {!hasActiveShift && (
+                          <HeroTable.Cell
+                            align="center"
+                            className="py-3.5 px-2 text-center bg-zinc-100/40 dark:bg-zinc-800/40 border-r border-divider/20"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {
+                                if (!allowedToModify) {
+                                  showToast('Access Denied: Row selection is restricted to authorized roles (Admin/Manager).');
+                                  return;
+                                }
+                                setSelectedProdIds(prev => ({
+                                  ...prev,
+                                  [p.id]: !prev[p.id]
+                                }));
+                              }}
+                              className="rounded border-zinc-300 text-primary focus:ring-primary/30 cursor-pointer h-3.5 w-3.5 disabled:opacity-30 disabled:cursor-not-allowed"
+                              disabled={!allowedToModify}
+                              aria-label={`Select ${p.productName}`}
+                            />
+                          </HeroTable.Cell>
+                        )}
+
+                        {/* Expand/Collapse Toggle Button column */}
                         <HeroTable.Cell
                           align="center"
-                          className="py-3.5 px-2 text-center bg-content2/20 border-r border-divider"
+                          className="py-3.5 px-2 text-center bg-zinc-100/30 dark:bg-zinc-800/30"
                           onClick={e => e.stopPropagation()}
                         >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => {
-                              if (!allowedToModify) {
-                                showToast('Access Denied: Row selection is restricted to authorized roles (Admin/Manager).');
-                                return;
-                              }
-                              setSelectedProdIds(prev => ({
-                                ...prev,
-                                [p.id]: !prev[p.id]
-                              }));
-                            }}
-                            className="rounded border-divider text-primary focus:ring-primary/35 cursor-pointer h-3.5 w-3.5 disabled:opacity-30 disabled:cursor-not-allowed"
-                            disabled={!allowedToModify}
-                            aria-label={`Select ${p.productName}`}
-                          />
+                          <HeroTooltip content={isExpanded ? "Collapse specifications" : "Expand specifications"}>
+                            <button
+                              type="button"
+                              onClick={() => toggleProductExpand(p.id)}
+                              className="p-1 hover:bg-primary/10 text-primary rounded-full cursor-pointer transition-colors active:scale-95"
+                              aria-label="Toggle details"
+                            >
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                            </button>
+                          </HeroTooltip>
                         </HeroTable.Cell>
-                      )}
 
-                      {/* Expand/Collapse Toggle Button column */}
-                      <HeroTable.Cell
-                        align="center"
-                        className="py-3.5 px-2 text-center bg-content2/30"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <HeroTooltip content={isExpanded ? "Collapse specifications" : "Expand specifications"}>
-                          <button
-                            type="button"
-                            onClick={() => toggleProductExpand(p.id)}
-                            className="p-1 hover:bg-primary/10 text-primary rounded-medium cursor-pointer transition-colors active:scale-95"
-                            aria-label="Toggle details"
-                          >
-                            {isExpanded ? (
-                              <ChevronUp className="h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4" />
-                            )}
-                          </button>
-                        </HeroTooltip>
-                      </HeroTable.Cell>
-
-                      {/* Code / SKU details */}
-                      <HeroTable.Cell className="py-3.5 px-4">
-                        <div className="font-extrabold text-primary">{p.productCode}</div>
-                        <div className="text-[10px] text-default-500 font-bold">{p.sku}</div>
-                      </HeroTable.Cell>
-
-                      {/* Scannable keys info */}
-                      {!isCompactColumns && (
-                        <HeroTable.Cell className="py-3.5 px-4 text-[10px] text-default-500 select-all">
-                          <div>BC: {p.barcode}</div>
-                        </HeroTable.Cell>
-                      )}
-
-                      {/* Primary specifications block */}
-                      <HeroTable.Cell className="py-3.5 px-4">
-                        <strong className="text-foreground text-xs block truncate max-w-[240px]">
-                          {p.productName}
-                        </strong>
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          {p.designName && (
-                            <span className="text-[10px] text-default-600 font-medium bg-content2 px-1.5 py-0.5 rounded border border-divider font-sans">
-                              Design: {p.designName}
-                            </span>
-                          )}
-                          {p.coveragePerBox ? (
-                            <span className="text-[10px] text-primary font-bold bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20 font-sans">
-                              Coverage: {p.coveragePerBox} m²
-                            </span>
-                          ) : null}
-                          {p.origin && canSeeFinancialCostsAndSources && (
-                            <span className="text-[10px] text-warning font-black bg-warning/10 px-1.5 py-0.5 rounded border border-warning/20 font-sans">
-                              Source: {p.origin}
-                            </span>
-                          )}
-                          {p.hasExpiration && (() => {
-                            if (p.expirationDate) {
-                              const today = new Date();
-                              const exp = new Date(p.expirationDate);
-                              const diffTime = exp.getTime() - today.getTime();
-                              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                              if (diffDays < 0) {
-                                return (
-                                  <span className="text-[10px] text-danger font-extrabold bg-danger/10 px-1.5 py-0.5 rounded border border-danger/20 font-sans flex items-center gap-1">
-                                    <Clock className="h-3 w-3 shrink-0 text-danger" /> Expired ({p.expirationDate})
-                                  </span>
-                                );
-                              } else if (diffDays <= 30) {
-                                return (
-                                  <span className="text-[10px] text-warning font-extrabold bg-warning/10 px-1.5 py-0.5 rounded border border-warning/20 font-sans flex items-center gap-1">
-                                    <Clock className="h-3 w-3 shrink-0 text-warning" /> Expiring Soon ({p.expirationDate})
-                                  </span>
-                                );
-                              } else {
-                                return (
-                                  <span className="text-[10px] text-success font-extrabold bg-success/10 px-1.5 py-0.5 rounded border border-success/20 font-sans flex items-center gap-1">
-                                    <Clock className="h-3 w-3 shrink-0 text-success" /> Expiry Tracked ({p.expirationDate})
-                                  </span>
-                                );
-                              }
-                            } else {
-                              return (
-                                <span className="text-[10px] text-warning font-extrabold bg-warning/10 px-1.5 py-0.5 rounded border border-warning/20 font-sans flex items-center gap-1">
-                                  <Clock className="h-3 w-3 shrink-0 text-warning" /> Expiry Tracked
-                                </span>
-                              );
-                            }
-                          })()}
-                        </div>
-                      </HeroTable.Cell>
-
-                      {/* Category metadata */}
-                      {!isCompactColumns && (
+                        {/* Code / SKU details */}
                         <HeroTable.Cell className="py-3.5 px-4">
-                          <span className="bg-content2 px-2.5 py-0.5 rounded-full text-foreground text-[11px] font-bold border border-divider">
-                            {p.category}
-                          </span>
-                          <div className="text-[9px] text-default-500 mt-1.5 font-bold">Brand: {p.brand}</div>
+                          <div className="font-bold text-primary font-mono">{p.productCode}</div>
+                          <div className="text-[10px] text-default-500 font-mono font-medium">{p.sku}</div>
                         </HeroTable.Cell>
-                      )}
 
-                      {/* Packaging dimensions and piece count */}
-                      {!isCompactColumns && (
-                        <HeroTable.Cell align="center" className="py-3.5 px-4 text-center font-bold">
-                          <div className="text-foreground">{p.unit}</div>
-                          {p.size && (
-                            <div className="text-[10px] text-default-500 font-medium">
-                              {p.size} {(p.boxQuantity ?? 0) > 1 && `(${p.boxQuantity} pcs)`}
-                            </div>
-                          )}
+                        {/* Scannable keys info */}
+                        {!isCompactColumns && (
+                          <HeroTable.Cell className="py-3.5 px-4 text-[10px] text-default-500 font-mono select-all">
+                            <div>BC: {p.barcode}</div>
+                          </HeroTable.Cell>
+                        )}
+
+                        {/* Primary specifications block */}
+                        <HeroTable.Cell className="py-3.5 px-4">
+                          <div className="font-bold text-foreground leading-tight hover:text-primary transition-colors cursor-pointer">
+                            {p.productName}
+                          </div>
+                          <div className="text-[10px] text-default-500 flex items-center gap-2 mt-0.5 font-medium">
+                            {p.designName && <span>Design: <strong className="text-foreground">{p.designName}</strong></span>}
+                            {p.hasExpiration && (
+                              <span className="text-amber-500 flex items-center gap-0.5 font-bold">
+                                <Clock className="h-3 w-3" /> Expiry Tracked
+                              </span>
+                            )}
+                          </div>
                         </HeroTable.Cell>
-                      )}
 
-                      {/* Financial unit cost */}
-                      {!isCompactColumns && canSeeFinancialCostsAndSources && (
-                        <HeroTable.Cell align="end" className="py-3.5 px-4 text-right font-bold text-foreground">
-                          {formatCurrency(p.costPrice)}
+                        {/* Category metadata */}
+                        {!isCompactColumns && (
+                          <HeroTable.Cell className="py-3.5 px-4">
+                            <span className="bg-zinc-100 dark:bg-zinc-800 px-2.5 py-0.5 rounded-full text-foreground text-[11px] font-medium border border-zinc-200/50 dark:border-white/5">
+                              {p.category}
+                            </span>
+                            <div className="text-[10px] text-default-500 mt-1 font-medium">Brand: {p.brand}</div>
+                          </HeroTable.Cell>
+                        )}
+
+                        {/* Packaging dimensions and piece count */}
+                        {!isCompactColumns && (
+                          <HeroTable.Cell align="center" className="py-3.5 px-4 text-center font-bold">
+                            <div className="text-foreground">{p.unit}</div>
+                            {p.size && (
+                              <div className="text-[10px] text-default-500 font-medium">
+                                {p.size} {(p.boxQuantity ?? 0) > 1 && `(${p.boxQuantity} pcs)`}
+                              </div>
+                            )}
+                          </HeroTable.Cell>
+                        )}
+
+                        {/* Financial unit cost */}
+                        {!isCompactColumns && canSeeFinancialCostsAndSources && (
+                          <HeroTable.Cell align="end" className="py-3.5 px-4 text-right font-bold text-foreground font-mono">
+                            {formatCurrency(p.costPrice)}
+                          </HeroTable.Cell>
+                        )}
+
+                        {/* Retail selling price */}
+                        <HeroTable.Cell align="end" className="py-3.5 px-4 text-right font-bold text-primary font-mono">
+                          {formatCurrency(p.sellingPrice)}
                         </HeroTable.Cell>
-                      )}
 
-                      {/* Retail selling price */}
-                      <HeroTable.Cell align="end" className="py-3.5 px-4 text-right font-extrabold text-primary">
-                        {formatCurrency(p.sellingPrice)}
-                      </HeroTable.Cell>
-
-                      {/* Current physical warehouse qty */}
-                      <HeroTable.Cell align="center" className="py-3.5 px-4 text-center text-sm font-extrabold">
-                        <div className={
-                          qty === 0
-                            ? 'text-default-400'
-                            : qty <= threshold
-                            ? 'text-warning font-black tracking-wide'
-                            : 'text-foreground'
-                        }>
-                          {qty} <span className="text-[10px] text-default-500 font-normal">{p.unit || "Unit"}</span>
-                        </div>
-                      </HeroTable.Cell>
-
-                      {/* Threshold warnings trigger limit */}
-                      {!isCompactColumns && (
-                        <HeroTable.Cell align="center" className="py-3.5 px-2 text-center text-default-500 font-bold">
-                          {threshold}
+                        {/* Current physical warehouse qty */}
+                        <HeroTable.Cell align="center" className="py-3.5 px-4 text-center text-sm font-bold font-mono">
+                          <div className={
+                            qty === 0
+                              ? 'text-default-400'
+                              : qty <= threshold
+                              ? 'text-amber-500 font-extrabold tracking-wide'
+                              : 'text-foreground'
+                          }>
+                            {qty} <span className="text-[10px] text-default-500 font-normal font-sans">{p.unit || "Unit"}</span>
+                          </div>
                         </HeroTable.Cell>
-                      )}
 
-                      {/* Visual Status badge with HeroChip */}
-                      <HeroTable.Cell align="center" className="py-3.5 px-4 text-center select-none">
-                        <HeroChip
-                          size="sm"
-                          variant="flat"
-                          color={statusChipColor}
-                          className={`font-black text-[9px] uppercase tracking-wider ${
-                            statusChipColor === 'danger' ? '' : ''
-                          }`}
+                        {/* Threshold warnings trigger limit */}
+                        {!isCompactColumns && (
+                          <HeroTable.Cell align="center" className="py-3.5 px-2 text-center text-default-500 font-bold font-mono">
+                            {threshold}
+                          </HeroTable.Cell>
+                        )}
+
+                        {/* Visual Status badge with HeroChip */}
+                        <HeroTable.Cell align="center" className="py-3.5 px-4 text-center select-none">
+                          <HeroChip
+                            size="sm"
+                            variant="flat"
+                            color={statusChipColor}
+                            className="font-bold text-[9px] uppercase tracking-wider"
+                          >
+                            {statusLabel}
+                          </HeroChip>
+                        </HeroTable.Cell>
+
+                        {/* CRUD + Action buttons with HeroTooltip */}
+                        <HeroTable.Cell
+                          align="center"
+                          className="py-3.5 px-4 text-center select-none"
+                          onClick={e => e.stopPropagation()}
                         >
-                          {statusLabel}
-                        </HeroChip>
-                      </HeroTable.Cell>
+                          <div className="flex gap-1 justify-center">
+                            <HeroTooltip content="View / Print Barcode Label">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenCodesModal(p)}
+                                className="p-1.5 text-default-400 hover:text-primary hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors rounded-full cursor-pointer shrink-0 active:scale-95"
+                                aria-label="View or print barcode"
+                              >
+                                <Barcode className="h-4 w-4" />
+                              </button>
+                            </HeroTooltip>
 
-                      {/* CRUD + Action buttons with HeroTooltip */}
-                      <HeroTable.Cell
-                        align="center"
-                        className="py-3.5 px-4 text-center select-none"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <div className="flex gap-1 justify-center">
-                          <HeroTooltip content="View / Print Barcode Label">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenCodesModal(p)}
-                              className="p-1.5 text-default-400 hover:text-primary hover:bg-default-100 transition-colors rounded-medium cursor-pointer shrink-0 active:scale-95"
-                              aria-label="View or print barcode"
-                            >
-                              <Barcode className="h-4 w-4" />
-                            </button>
-                          </HeroTooltip>
+                            <HeroTooltip content="Queue Restock in Sourcing Desk (+50 Units)">
+                              <button
+                                type="button"
+                                onClick={() => handleQueueRestock(p.id)}
+                                className="p-1.5 text-default-400 hover:text-amber-500 hover:bg-amber-500/10 transition-colors rounded-full cursor-pointer shrink-0 active:scale-95"
+                                aria-label="Queue restock"
+                              >
+                                <Truck className="h-4 w-4" />
+                              </button>
+                            </HeroTooltip>
 
-                          <HeroTooltip content="Queue Restock in Sourcing Desk (+50 Units)">
-                            <button
-                              type="button"
-                              onClick={() => handleQueueRestock(p.id)}
-                              className="p-1.5 text-default-400 hover:text-warning hover:bg-warning/10 transition-colors rounded-medium cursor-pointer shrink-0 active:scale-95"
-                              aria-label="Queue restock"
-                            >
-                              <Truck className="h-4 w-4" />
-                            </button>
-                          </HeroTooltip>
-
-                          {allowedToModify && (
-                            <>
-                              <HeroTooltip content="Quick Stock Adjustment Intake/outtake">
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenAdjust(p)}
-                                  className="p-1.5 text-default-400 hover:text-success hover:bg-default-100 transition-colors rounded-medium cursor-pointer shrink-0 active:scale-95"
-                                  aria-label="Adjust stock"
-                                >
-                                  <Sliders className="h-4 w-4" />
-                                </button>
-                              </HeroTooltip>
-                              <HeroTooltip content="Edit product specs">
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenEdit(p)}
-                                  className="p-1.5 text-default-400 hover:text-primary hover:bg-default-100 transition-colors rounded-medium cursor-pointer shrink-0 active:scale-95"
-                                  aria-label="Edit specs"
-                                >
-                                  <Edit2 className="h-4 w-4" />
-                                </button>
-                              </HeroTooltip>
-                              {!hasActiveShift && (
-                                <HeroTooltip content="Soft-delete listings" color="danger">
+                            {allowedToModify && (
+                              <>
+                                <HeroTooltip content="Quick Stock Adjustment Intake/outtake">
                                   <button
                                     type="button"
-                                    onClick={() => handleDeleteTrigger(p.id, p.productName)}
-                                    className="p-1.5 text-default-400 hover:text-danger hover:bg-danger/10 transition-colors rounded-medium cursor-pointer shrink-0 active:scale-95"
-                                    aria-label="Delete product"
+                                    onClick={() => handleOpenAdjust(p)}
+                                    className="p-1.5 text-default-400 hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors rounded-full cursor-pointer shrink-0 active:scale-95"
+                                    aria-label="Adjust stock"
                                   >
-                                    <Trash2 className="h-4 w-4" />
+                                    <Sliders className="h-4 w-4" />
                                   </button>
                                 </HeroTooltip>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </HeroTable.Cell>
-                    </HeroTable.Row>
+                                <HeroTooltip content="Edit product specs">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenEdit(p)}
+                                    className="p-1.5 text-default-400 hover:text-primary hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors rounded-full cursor-pointer shrink-0 active:scale-95"
+                                    aria-label="Edit specs"
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                  </button>
+                                </HeroTooltip>
+                                {!hasActiveShift && (
+                                  <HeroTooltip content="Soft-delete listings" color="danger">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteTrigger(p.id, p.productName)}
+                                      className="p-1.5 text-default-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors rounded-full cursor-pointer shrink-0 active:scale-95"
+                                      aria-label="Delete product"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </HeroTooltip>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </HeroTable.Cell>
+                      </HeroTable.Row>
 
-                    {/* Expanded Sub-Row with Detailed Layout Card */}
-                    <AnimatePresence initial={false}>
-                      {isExpanded && (
-                        <HeroTable.Row isHoverable={false} key={`${p.id}-expanded-details`}>
-                          <HeroTable.Cell colSpan={totalColumnsCount} className="p-4 bg-content2/30 border-b border-divider">
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                              className="overflow-hidden"
-                            >
-                              <div className={`bg-content1 p-5 rounded-large border border-divider grid grid-cols-1 ${currentUser?.role === UserRole.ADMIN ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6 shadow-inner text-left`}>
+                      {/* Expanded Sub-Row with Detailed Layout Card */}
+                      <AnimatePresence initial={false}>
+                        {isExpanded && (
+                          <HeroTable.Row isHoverable={false} key={`${p.id}-expanded-details`}>
+                            <HeroTable.Cell colSpan={totalColumnsCount} className="p-4 bg-zinc-50/50 dark:bg-zinc-800/30 border-b border-divider/20">
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                                className="overflow-hidden"
+                              >
+                                <div className={`bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200/70 dark:border-white/10 grid grid-cols-1 ${currentUser?.role === UserRole.ADMIN ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6 shadow-elevation-soft text-left font-sans`}>
 
-                                {/* Left specs: Branding & Thumbnail */}
-                                <div className="space-y-4 border-b md:border-b-0 md:border-r border-divider pb-4 md:pb-0 md:pr-6">
-                                  <div className="flex gap-4 items-start">
-                                    <div className="space-y-1">
-                                      <span className="text-[10px] font-black uppercase text-primary tracking-widest block">Primary SKU Details</span>
-                                      <strong className="text-sm text-foreground block leading-tight">{p.productName}</strong>
-                                      <span className="text-[10px] text-default-500 block">ID Key: {p.id}</span>
+                                  {/* Left specs: Branding & Thumbnail */}
+                                  <div className="space-y-4 border-b md:border-b-0 md:border-r border-divider/20 pb-4 md:pb-0 md:pr-6">
+                                    <div className="flex gap-4 items-start">
+                                      <div className="space-y-1">
+                                        <span className="text-[10px] font-bold uppercase text-primary tracking-wider block">Primary SKU Details</span>
+                                        <strong className="text-sm text-foreground block leading-tight">{p.productName}</strong>
+                                        <span className="text-[10px] text-default-500 block font-mono">ID Key: {p.id}</span>
+                                      </div>
+                                    </div>
+
+                                    <div className="pt-2">
+                                      <StyledBarcode code={p.barcode} />
+                                      <span className="text-[9px] font-bold text-default-500 block mt-1.5 text-center font-mono">SCAN BARCODE: {p.barcode}</span>
                                     </div>
                                   </div>
 
-                                  <div className="pt-2">
-                                    <StyledBarcode code={p.barcode} />
-                                    <span className="text-[9px] font-bold text-default-500 block mt-1.5 text-center">SCAN BARCODE: {p.barcode}</span>
-                                  </div>
-                                </div>
-
-                                {/* Center specs: Dimensions, quantities and price indices */}
-                                <div className={`space-y-3 ${currentUser?.role === UserRole.ADMIN ? 'md:border-r border-divider md:pr-6' : ''}`}>
-                                  <span className="text-[10px] font-black uppercase text-primary tracking-widest block">Dimensional Specifications</span>
-                                  <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
-                                    <div>
-                                      <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Brand Name</span>
-                                      <span className="text-foreground">{p.brand || 'No registered brand'}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Catalog Category</span>
-                                      <span className="text-foreground">{p.category}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Dimensions / Size</span>
-                                      <span className="text-foreground">{p.size || 'Unspecified'}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Box Coverage</span>
-                                      <span className="text-primary">{p.coveragePerBox ? `${p.coveragePerBox} m²` : '0.00 m²'}</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Pcs / Package</span>
-                                      <span className="text-foreground">{p.boxQuantity} pieces</span>
-                                    </div>
-                                    <div>
-                                      <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Safety Threshold</span>
-                                      <span className="text-warning font-bold">{p.minimumStock} {p.unit}</span>
-                                    </div>
-                                    <div className="border-t border-divider pt-2 col-span-2 grid grid-cols-2 gap-2">
-                                      {canSeeFinancialCostsAndSources && (
+                                  {/* Center specs: Dimensions, quantities and price indices */}
+                                  <div className={`space-y-3 ${currentUser?.role === UserRole.ADMIN ? 'md:border-r border-divider/20 md:pr-6' : ''}`}>
+                                    <span className="text-[10px] font-bold uppercase text-primary tracking-wider block">Dimensional Specifications</span>
+                                    <div className="grid grid-cols-2 gap-3 text-xs font-semibold">
+                                      <div>
+                                        <span className="text-[9px] text-default-500 font-bold uppercase block leading-none mb-1">Brand Name</span>
+                                        <span className="text-foreground">{p.brand || 'No registered brand'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] text-default-500 font-bold uppercase block leading-none mb-1">Catalog Category</span>
+                                        <span className="text-foreground">{p.category}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] text-default-500 font-bold uppercase block leading-none mb-1">Dimensions / Size</span>
+                                        <span className="text-foreground">{p.size || 'Unspecified'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] text-default-500 font-bold uppercase block leading-none mb-1">Box Coverage</span>
+                                        <span className="text-primary font-mono">{p.coveragePerBox ? `${p.coveragePerBox} m²` : '0.00 m²'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] text-default-500 font-bold uppercase block leading-none mb-1">Pcs / Package</span>
+                                        <span className="text-foreground">{p.boxQuantity} pieces</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-[9px] text-default-500 font-bold uppercase block leading-none mb-1">Safety Threshold</span>
+                                        <span className="text-amber-500 font-bold font-mono">{p.minimumStock} {p.unit}</span>
+                                      </div>
+                                      <div className="border-t border-divider/20 pt-2 col-span-2 grid grid-cols-2 gap-2">
+                                        {canSeeFinancialCostsAndSources && (
+                                          <div>
+                                            <span className="text-[9px] text-default-500 font-bold uppercase block leading-none mb-1">Unit Cost</span>
+                                            <span className="text-default-500 text-xs font-mono">{formatCurrency(p.costPrice)}</span>
+                                          </div>
+                                        )}
                                         <div>
-                                          <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Unit Cost</span>
-                                          <span className="text-default-500 text-xs">{formatCurrency(p.costPrice)}</span>
+                                          <span className="text-[9px] text-default-500 font-bold uppercase block leading-none mb-1">Selling Retail</span>
+                                          <span className="text-primary text-xs font-bold font-mono">{formatCurrency(p.sellingPrice)}</span>
                                         </div>
-                                      )}
-                                      <div>
-                                        <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Selling Retail</span>
-                                        <span className="text-primary text-xs font-extrabold">{formatCurrency(p.sellingPrice)}</span>
-                                      </div>
-                                      <div>
-                                        <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Markup %</span>
-                                        <span className="text-success text-xs font-bold">
-                                          {p.markupPercent !== undefined ? `${p.markupPercent}%` : (p.costPrice > 0 ? `${Math.round(((p.sellingPrice - p.costPrice) / p.costPrice) * 100 * 10) / 10}%` : '50%')}
-                                        </span>
-                                      </div>
-                                      <div>
-                                        <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Tax Type</span>
-                                        <span className="text-teal-500 font-sans text-xs font-bold">
-                                          {p.taxType || '12% VAT'}
-                                        </span>
-                                      </div>
-                                      {p.origin && canSeeFinancialCostsAndSources && (
-                                        <div className="col-span-2 pt-2 border-t border-divider">
-                                          <span className="text-[9px] text-default-500 font-black uppercase block leading-none mb-1">Acquired From / Origin</span>
-                                          <span className="text-warning font-bold text-[11px] block">{p.origin}</span>
+                                        <div>
+                                          <span className="text-[9px] text-default-500 font-bold uppercase block leading-none mb-1">Markup %</span>
+                                          <span className="text-emerald-500 text-xs font-bold font-mono">
+                                            {p.markupPercent !== undefined ? `${p.markupPercent}%` : (p.costPrice > 0 ? `${Math.round(((p.sellingPrice - p.costPrice) / p.costPrice) * 100 * 10) / 10}%` : '50%')}
+                                          </span>
                                         </div>
-                                      )}
+                                        <div>
+                                          <span className="text-[9px] text-default-500 font-bold uppercase block leading-none mb-1">Tax Type</span>
+                                          <span className="text-teal-500 font-sans text-xs font-bold">
+                                            {p.taxType || '12% VAT'}
+                                          </span>
+                                        </div>
+                                        {p.origin && canSeeFinancialCostsAndSources && (
+                                          <div className="col-span-2 pt-2 border-t border-divider/20">
+                                            <span className="text-[9px] text-default-500 font-bold uppercase block leading-none mb-1">Acquired From / Origin</span>
+                                            <span className="text-amber-500 font-bold text-[11px] block">{p.origin}</span>
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
 
-                                {/* Right specs: Regional Branch distributions */}
-                                {currentUser?.role === UserRole.ADMIN && (
-                                  <div className="space-y-3">
-                                    <span className="text-[10px] font-black uppercase text-primary tracking-widest block">Live Multi-Branch Stock balance</span>
-                                    <div className="space-y-2">
-                                      {branches.filter(b => !b.isDeleted).map((b) => {
-                                        const branchRecord = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id);
-                                        const qty = branchRecord?.quantity || 0;
-                                        const overrideLimit = branchRecord?.lowStockThresholdOverride !== undefined
-                                          ? branchRecord.lowStockThresholdOverride
-                                          : (p.minimumStock ?? 0);
+                                  {/* Right specs: Regional Branch distributions */}
+                                  {currentUser?.role === UserRole.ADMIN && (
+                                    <div className="space-y-3">
+                                      <span className="text-[10px] font-bold uppercase text-primary tracking-wider block">Live Multi-Branch Stock Balance</span>
+                                      <div className="space-y-2">
+                                        {branches.filter(b => !b.isDeleted).map((b) => {
+                                          const branchRecord = branchStock.find(bs => bs.productId === p.id && bs.branchId === b.id);
+                                          const qty = branchRecord?.quantity || 0;
+                                          const overrideLimit = branchRecord?.lowStockThresholdOverride !== undefined
+                                            ? branchRecord.lowStockThresholdOverride
+                                            : (p.minimumStock ?? 0);
 
-                                        let statusBg = 'bg-success/10 text-success border-success/20';
-                                        if (qty === 0) statusBg = 'bg-danger/10 text-danger border-danger/20';
-                                        else if (qty <= overrideLimit) statusBg = 'bg-warning/10 text-warning border-warning/20';
+                                          let statusBg = 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
+                                          if (qty === 0) statusBg = 'bg-rose-500/10 text-rose-500 border-rose-500/20';
+                                          else if (qty <= overrideLimit) statusBg = 'bg-amber-500/10 text-amber-500 border-amber-500/20';
 
-                                        return (
-                                          <div key={b.id} className="flex flex-col md:flex-row justify-between md:items-center gap-2 text-xs p-3 rounded-medium bg-content2 border border-divider shadow-xs">
-                                            <div className="flex flex-col">
-                                              <span className="font-extrabold text-[10px] text-foreground uppercase">{b.name}</span>
-                                              <span className="text-[8px] text-default-500 uppercase">Current Balance: <strong className="text-foreground">{qty} {p.unit || 'Unit'}</strong></span>
-                                            </div>
-
-                                            <div className="flex items-center gap-2">
-                                              {/* Alert limit settings for each branch */}
-                                              <div className="flex items-center gap-1 bg-content1 px-2 py-1 rounded-medium border border-divider">
-                                                <span className="text-[9px] text-default-500 font-bold uppercase tracking-wider">Alert Threshold:</span>
-                                                <input
-                                                  type="number"
-                                                  className="w-12 bg-content2 text-xs font-bold text-center border-b border-divider text-foreground py-0.5"
-                                                  value={overrideLimit ?? ''}
-                                                  onChange={(e) => {
-                                                    const val = parseInt(e.target.value);
-                                                    updateBranchLowStockThreshold(p.id, b.id, isNaN(val) ? (p.minimumStock ?? 0) : val);
-                                                  }}
-                                                  min={0}
-                                                />
+                                          return (
+                                            <div key={b.id} className="flex flex-col md:flex-row justify-between md:items-center gap-2 text-xs p-3 rounded-2xl bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/50 dark:border-white/5 shadow-2xs">
+                                              <div className="flex flex-col">
+                                                <span className="font-bold text-[10px] text-foreground uppercase">{b.name}</span>
+                                                <span className="text-[9px] text-default-500 uppercase font-medium">Current Balance: <strong className="text-foreground font-mono">{qty} {p.unit || 'Unit'}</strong></span>
                                               </div>
 
-                                              <span className={`font-black text-xs px-2.5 py-1 rounded-medium border ${statusBg}`}>
-                                                {qty} {p.unit || 'Unit'}
-                                              </span>
+                                              <div className="flex items-center gap-2">
+                                                {/* Alert limit settings for each branch */}
+                                                <div className="flex items-center gap-1 bg-white dark:bg-zinc-900 px-2 py-1 rounded-xl border border-zinc-200/60 dark:border-white/10">
+                                                  <span className="text-[9px] text-default-500 font-bold uppercase tracking-wider">Alert:</span>
+                                                  <input
+                                                    type="number"
+                                                    className="w-12 bg-transparent text-xs font-bold text-center text-foreground py-0.5 outline-none font-mono"
+                                                    value={overrideLimit ?? ''}
+                                                    onChange={(e) => {
+                                                      const val = parseInt(e.target.value);
+                                                      updateBranchLowStockThreshold(p.id, b.id, isNaN(val) ? (p.minimumStock ?? 0) : val);
+                                                    }}
+                                                    min={0}
+                                                  />
+                                                </div>
+
+                                                <span className={`font-bold text-xs px-2.5 py-1 rounded-full border font-mono ${statusBg}`}>
+                                                  {qty} {p.unit || 'Unit'}
+                                                </span>
+                                              </div>
                                             </div>
-                                          </div>
-                                        );
-                                      })}
+                                          );
+                                        })}
+                                      </div>
                                     </div>
-                                  </div>
-                                )}
-                              </div>
-                            </motion.div>
-                          </HeroTable.Cell>
-                        </HeroTable.Row>
-                      )}
-                    </AnimatePresence>
-                  </React.Fragment>
-                );
-              })}
-              {catalogPaddingBottom > 0 && (
-                <tr style={{ height: catalogPaddingBottom }}>
-                  <td colSpan={totalColumnsCount} className="p-0 border-0" />
-                </tr>
-              )}
-            </>
-          )}
-        </HeroTable.Body>
-      </HeroTable>
+                                  )}
+                                </div>
+                              </motion.div>
+                            </HeroTable.Cell>
+                          </HeroTable.Row>
+                        )}
+                      </AnimatePresence>
+                    </React.Fragment>
+                  );
+                })}
+                {catalogPaddingBottom > 0 && (
+                  <tr style={{ height: catalogPaddingBottom }}>
+                    <td colSpan={totalColumnsCount} className="p-0 border-0" />
+                  </tr>
+                )}
+              </>
+            )}
+          </HeroTable.Body>
+        </HeroTable>
+      </div>
 
       {/* Table Pagination */}
       <TablePagination
@@ -1160,4 +1125,3 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
     </>
   );
 };
-

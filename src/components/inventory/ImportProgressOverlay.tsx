@@ -25,19 +25,19 @@ export const ImportProgressOverlay: React.FC<ImportProgressOverlayProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md pointer-events-auto select-none font-sans"
+      className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md pointer-events-auto select-none font-sans"
       onKeyDown={(e) => e.preventDefault()}
     >
-      <div className="bg-content1 border border-divider/30 rounded-2xl p-8 shadow-2xl w-full max-w-md text-center space-y-6 animate-scale-up border-t-4 border-t-zinc-700 dark:border-t-zinc-300">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-default-100 border border-divider/30 text-default-800 dark:text-default-200 shadow-inner">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-3xl p-8 shadow-elevation-soft w-full max-w-md text-center space-y-6 animate-scale-up">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 border border-primary/20 text-primary shadow-2xs">
           <RefreshCw className="h-8 w-8 animate-spin text-primary" />
         </div>
 
         <div className="space-y-2">
-          <span className="text-[10px] font-black uppercase text-primary tracking-widest bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
-            HIGH-PRIORITY INVENTORY IMPORT
+          <span className="text-[10px] font-bold uppercase text-primary tracking-wider bg-primary/10 px-3 py-1 rounded-full border border-primary/20 font-mono">
+            High-Priority Inventory Import
           </span>
-          <h3 className="text-base font-extrabold text-foreground">
+          <h3 className="text-base font-bold text-foreground tracking-tight">
             {importProgressStatus || 'Migrating CSV Data Records...'}
           </h3>
           <p className="text-xs text-default-500 font-medium leading-relaxed">
@@ -47,23 +47,23 @@ export const ImportProgressOverlay: React.FC<ImportProgressOverlayProps> = ({
 
         {/* Progress Bar Container */}
         <div className="space-y-2 px-1">
-          <div className="flex justify-between items-center text-xs font-extrabold">
+          <div className="flex justify-between items-center text-xs font-bold">
             <span className="text-default-500 uppercase tracking-wider text-[11px]">CSV Migration Status</span>
-            <span className="text-default-800 dark:text-default-200 text-sm font-black">{Math.min(100, Math.max(0, importProgressPercent))}%</span>
+            <span className="text-foreground text-sm font-mono">{Math.min(100, Math.max(0, importProgressPercent))}%</span>
           </div>
 
-          <div className="h-4 w-full bg-default-100/40 rounded-full overflow-hidden p-[2px] border border-divider/25 shadow-inner">
+          <div className="h-3 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden p-[2px] border border-zinc-200/50 dark:border-white/5">
             <div
-              className="h-full rounded-full bg-content2 dark:bg-content2 transition-all duration-300 shadow-sm"
+              className="h-full rounded-full bg-primary transition-all duration-300 shadow-sm"
               style={{ width: `${Math.min(100, Math.max(0, importProgressPercent))}%` }}
             />
           </div>
 
-          <div className="flex justify-between items-center text-[10px] text-default-500/80 pt-1">
+          <div className="flex justify-between items-center text-[10px] text-default-500 pt-1 font-medium font-mono">
             <span>{importTotalRecords > 0 ? `${importTotalRecords.toLocaleString()} Total Items` : 'Stream Processing'}</span>
-            <span className="text-rose-500 dark:text-rose-400 font-black uppercase tracking-wider flex items-center gap-1">
+            <span className="text-rose-500 font-bold uppercase tracking-wider flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-              LOCKED UNTIL FINISHED
+              Locked Until Finished
             </span>
           </div>
         </div>

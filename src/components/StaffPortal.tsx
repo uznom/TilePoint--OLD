@@ -475,49 +475,45 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
       <div className="flex-1 p-3 space-y-4">
         {/* LARGE BARCODE / SKU LOOKUP BOX WITH CAMERA TOGGLE */}
         {!products.some(p => !p.isDeleted) ? (
-          <HeroCard variant="flat" className="bg-warning-50/10 border border-warning/20 p-4 rounded-2xl text-left space-y-2">
-            <div className="flex items-center gap-2 text-warning font-black text-xs uppercase tracking-wider">
+          <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl text-left space-y-2">
+            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-bold text-xs uppercase tracking-wider font-mono">
               <AlertTriangle className="h-4 w-4" /> Scanner Offline / Catalog Empty
             </div>
             <p className="text-xs text-default-600 font-medium leading-relaxed">
               No inventory or tile catalog records exist. The barcode scanner and manual item SKU inputs are locked until catalog products are added via the Inventory module.
             </p>
-          </HeroCard>
+          </div>
         ) : (
-          <HeroCard variant="bordered" className="bg-content1/80 border border-divider/25 rounded-2xl p-4 shadow-sm space-y-3.5 text-left">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl p-4 shadow-elevation-soft space-y-3.5 text-left">
             <div className="flex justify-between items-center">
-              <label className="text-[10px] font-black tracking-wider uppercase text-primary block">
+              <label className="text-[10px] font-bold tracking-wider uppercase text-default-500 block font-mono">
                 Scan or Type Product SKU / Barcode
               </label>
-              <HeroChip size="sm" variant="dot" color="primary" className="text-[9px]">
+              <HeroChip size="sm" variant="flat" color="primary" className="text-[9px] font-mono font-bold">
                 {staffBranchProducts.length} in Branch Catalog
               </HeroChip>
             </div>
 
             <div className="relative flex items-center gap-2">
               <div className="relative flex-1">
-                <HeroInput
+                <Search className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-default-400" />
+                <input
                   id="staff-search-input-unified"
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Search SKU, brand, or name..."
-                  size="md"
-                  variant="bordered"
-                  className="w-full text-xs font-semibold"
-                  startContent={<Search className="h-4 w-4 text-default-400" />}
-                  endContent={
-                    searchQuery ? (
-                      <button
-                        type="button"
-                        onClick={() => setSearchQuery('')}
-                        className="text-default-400 hover:text-foreground cursor-pointer p-0.5 rounded-full"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    ) : undefined
-                  }
+                  className="w-full pl-9 pr-8 py-2 text-xs bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-white/5 rounded-full text-foreground placeholder:text-default-400 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all font-medium"
                 />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-default-400 hover:text-foreground text-xs font-bold cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
 
               {!isCameraActive ? (
@@ -526,12 +522,13 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
                   size="md"
                   color="primary"
                   variant="flat"
-                  className="rounded-xl shrink-0"
+                  radius="full"
+                  className="shrink-0"
                   onClick={startCameraStream}
                   id="btn-trigger-camera-unified"
                   title="Launch Camera Viewfinder"
                 >
-                  <Camera className="h-5 w-5" />
+                  <Camera className="h-4.5 w-4.5" />
                 </HeroButton>
               ) : (
                 <HeroButton
@@ -539,20 +536,21 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
                   size="md"
                   color="danger"
                   variant="flat"
-                  className="rounded-xl shrink-0"
+                  radius="full"
+                  className="shrink-0"
                   onClick={stopCameraStream}
                   id="btn-close-camera-unified"
                   title="Close Camera Viewfinder"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-4.5 w-4.5" />
                 </HeroButton>
               )}
             </div>
 
             {/* DYNAMIC AUTO-SUGGEST LIST */}
             {searchQuery.trim() !== '' && (
-              <div className="bg-content1 border border-divider rounded-2xl overflow-hidden shadow-xl max-h-52 overflow-y-auto z-20 relative animate-fade-in">
-                <div className="p-2 border-b border-divider/10 text-[9px] uppercase font-black text-primary tracking-wide bg-content2/50 flex justify-between items-center">
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl overflow-hidden shadow-xl max-h-52 overflow-y-auto z-20 relative animate-fade-in">
+                <div className="p-2.5 border-b border-divider/10 text-[9px] uppercase font-bold text-default-500 tracking-wider bg-zinc-100/50 dark:bg-zinc-800/50 flex justify-between items-center font-mono">
                   <span>Matching Catalog</span>
                   <span>{filteredProducts.length} results</span>
                 </div>
@@ -563,24 +561,24 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
                     <button
                       key={p.id || idx}
                       onClick={() => handleSelectProduct(p)}
-                      className={`w-full text-left p-3 hover:bg-primary/5 transition-all flex items-center justify-between border-b border-divider/5 last:border-0 font-medium ${
-                        isNoStock ? 'bg-danger/5' : ''
+                      className={`w-full text-left p-3 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition-all flex items-center justify-between border-b border-divider/5 last:border-0 font-medium ${
+                        isNoStock ? 'bg-rose-500/5' : ''
                       }`}
                     >
                       <div className="min-w-0 flex-1 pr-2">
                         <div className="text-xs text-foreground font-bold truncate flex items-center gap-1.5 flex-wrap">
                           <span className="truncate">{p.productName}</span>
                           {isNoStock ? (
-                            <HeroChip size="sm" variant="flat" color="danger" className="text-[8px] h-4">
+                            <HeroChip size="sm" variant="flat" color="danger" className="text-[8px] h-4 font-mono font-bold">
                               OUT OF STOCK
                             </HeroChip>
                           ) : (
-                            <HeroChip size="sm" variant="flat" color="primary" className="text-[8px] h-4">
+                            <HeroChip size="sm" variant="flat" color="primary" className="text-[8px] h-4 font-mono font-bold">
                               {stockQty} {p.unit || 'pcs'}
                             </HeroChip>
                           )}
                         </div>
-                        <div className="text-[10px] text-default-500 font-medium mt-0.5">
+                        <div className="text-[10px] text-default-500 font-medium mt-0.5 font-mono">
                           SKU: {p.sku} • {formatCurrency(p.sellingPrice)}
                         </div>
                       </div>
@@ -595,7 +593,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
                 )}
               </div>
             )}
-          </HeroCard>
+          </div>
         )}
 
         {/* 3A. PHYSICAL WEBCAM VIEWFINDER / CAMERA STREAM BOX */}
@@ -675,15 +673,15 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
 
         {/* LIVE ITEM DETAIL CARD */}
         {scannedProduct ? (
-          <HeroCard variant="bordered" className="bg-content1 border border-divider/35 rounded-2xl p-5 shadow-sm space-y-4 animate-fade-in relative overflow-hidden text-left" id="spec-display-box-unified">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl p-5 shadow-elevation-soft space-y-4 animate-fade-in relative overflow-hidden text-left" id="spec-display-box-unified">
             {/* Corner status label */}
-            <div className="absolute top-3.5 right-3.5">
+            <div className="absolute top-4 right-4">
               {getStockQty(scannedProduct) <= 0 ? (
-                <HeroChip size="sm" variant="flat" color="danger" className="text-[9px] font-black uppercase">
+                <HeroChip size="sm" variant="flat" color="danger" className="text-[9px] font-bold font-mono uppercase">
                   NO STOCKS
                 </HeroChip>
               ) : (
-                <HeroChip size="sm" variant="flat" color="primary" className="text-[9px] font-black uppercase">
+                <HeroChip size="sm" variant="flat" color="primary" className="text-[9px] font-bold font-mono uppercase">
                   SCANNED
                 </HeroChip>
               )}
@@ -691,46 +689,48 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
 
             <div className="border-b border-divider/10 pb-3 text-left">
               <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                <HeroChip size="sm" variant="flat" color="primary" className="text-[9px] font-black uppercase">
+                <HeroChip size="sm" variant="flat" color="primary" className="text-[9px] font-bold font-mono uppercase">
                   {scannedProduct.category}
                 </HeroChip>
                 {isTileProduct(scannedProduct) ? (
-                  <HeroChip size="sm" variant="bordered" color="primary" className="text-[9px] font-bold">
+                  <HeroChip size="sm" variant="flat" color="secondary" className="text-[9px] font-bold">
                     Tile Item • Estimator Ready
                   </HeroChip>
                 ) : (
-                  <HeroChip size="sm" variant="bordered" color="warning" className="text-[9px] font-bold">
+                  <HeroChip size="sm" variant="flat" color="warning" className="text-[9px] font-bold">
                     Non-Tile Supply
                   </HeroChip>
                 )}
               </div>
-              <h3 className="text-sm font-black text-foreground leading-snug">
+              <h3 className="text-sm font-bold text-foreground leading-snug">
                 {scannedProduct.productName}
               </h3>
-              <div className="text-[10px] text-default-500 font-bold tracking-wide mt-1 uppercase">
-                SKU: <span className="text-primary font-black">{scannedProduct.sku}</span> • Barcode: {scannedProduct.barcode || 'N/A'}
+              <div className="text-[10px] text-default-500 font-medium tracking-wide mt-1 uppercase font-mono">
+                SKU: <span className="text-primary font-bold">{scannedProduct.sku}</span> • Barcode: {scannedProduct.barcode || 'N/A'}
               </div>
             </div>
 
             {/* RETAIL PRICE & CORE INVENTORY GRID */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-content2/50 border border-divider/20 rounded-xl p-3 text-center space-y-1">
-                <span className="text-[9px] font-black uppercase tracking-widest text-default-500 block">Unit Price</span>
-                <div className="text-lg font-black text-primary">
+              <div className="bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-white/5 rounded-2xl p-3.5 text-center space-y-1">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-default-500 block font-mono">Unit Price</span>
+                <div className="text-xl font-bold text-primary font-mono">
                   {formatCurrency(scannedProduct.sellingPrice)}
                 </div>
-                <span className="text-[10px] text-default-500 font-semibold">per {scannedProduct.unit}</span>
+                <span className="text-[10px] text-default-500 font-medium">per {scannedProduct.unit}</span>
               </div>
 
               {(() => {
                 const stats = getBranchStockInfo(scannedProduct);
                 return (
-                  <div className={`border rounded-xl p-3 text-center space-y-1 transition-all ${stats.stockClass}`}>
-                    <span className="text-[9px] font-black uppercase tracking-widest text-default-500 block">Available Stock</span>
-                    <div className="text-lg font-black">
+                  <div className={`border border-zinc-200/50 dark:border-white/5 bg-zinc-100 dark:bg-zinc-800 rounded-2xl p-3.5 text-center space-y-1 transition-all`}>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-default-500 block font-mono">Available Stock</span>
+                    <div className="text-xl font-bold font-mono">
                       {stats.qty} {scannedProduct.unit}s
                     </div>
-                    <span className="text-[9px] block font-black uppercase tracking-wider">
+                    <span className={`text-[9px] block font-bold uppercase tracking-wider font-mono ${
+                      stats.isOutOfStock ? 'text-rose-500' : stats.isCritical ? 'text-amber-500' : 'text-emerald-500'
+                    }`}>
                       {stats.isOutOfStock ? 'NO STOCKS' : stats.isCritical ? 'Low Stock' : 'In Stock'}
                     </span>
                   </div>
@@ -740,19 +740,19 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
 
             {/* SPEC SHEET DETAILS */}
             <div className="space-y-2 border-t border-divider/15 pt-3 text-xs leading-relaxed font-medium text-default-500">
-              <div className="flex justify-between items-center font-semibold text-[11px] border-b border-divider/5 pb-1.5">
+              <div className="flex justify-between items-center text-[11px] border-b border-divider/5 pb-1.5">
                 <span>Design Finish:</span>
                 <span className="text-foreground font-bold">{scannedProduct.designName || 'Standard Plain'}</span>
               </div>
-              <div className="flex justify-between items-center font-semibold text-[11px] border-b border-divider/5 pb-1.5">
+              <div className="flex justify-between items-center text-[11px] border-b border-divider/5 pb-1.5 font-mono">
                 <span>Dimensions / Size:</span>
                 <span className="text-foreground font-bold">{scannedProduct.size || 'N/A'}</span>
               </div>
-              <div className="flex justify-between items-center font-semibold text-[11px] border-b border-divider/5 pb-1.5">
+              <div className="flex justify-between items-center text-[11px] border-b border-divider/5 pb-1.5">
                 <span>Brand Manufacturer:</span>
                 <span className="text-foreground font-bold uppercase">{scannedProduct.brand || 'Standard'}</span>
               </div>
-              <div className="flex justify-between items-center font-semibold text-[11px] pb-1">
+              <div className="flex justify-between items-center text-[11px] pb-1 font-mono">
                 <span>Packing Factor:</span>
                 <span className="text-foreground font-bold">
                   {scannedProduct.category?.toLowerCase().includes('tile')
@@ -767,8 +767,9 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
               <HeroButton
                 color="primary"
                 variant="solid"
-                size="lg"
-                className="w-full font-black uppercase tracking-wider text-xs rounded-xl shadow-md gap-2"
+                size="md"
+                radius="full"
+                className="w-full font-bold uppercase tracking-wider text-xs shadow-[0_2px_8px_rgba(0,111,238,0.25)] gap-2"
                 onClick={() => handleAddToStaffCart(scannedProduct)}
                 disabled={getStockQty(scannedProduct) <= 0}
               >
@@ -786,22 +787,24 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
                     size="sm"
                     color="primary"
                     variant="flat"
-                    className="font-bold text-[10px] uppercase rounded-xl gap-1.5"
+                    radius="full"
+                    className="font-bold text-[10px] uppercase gap-1.5"
                     onClick={() => handleCopyToCalc(scannedProduct)}
                   >
                     <Plus className="h-3.5 w-3.5" />
                     <span>Send to Estimator</span>
                   </HeroButton>
                 ) : (
-                  <div className="py-2 px-2 bg-content2/40 border border-divider/20 text-default-400 rounded-xl text-[9px] font-bold uppercase tracking-wider flex items-center justify-center text-center select-none">
+                  <div className="py-2 px-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-white/5 text-default-400 rounded-full text-[9px] font-bold uppercase tracking-wider flex items-center justify-center text-center select-none font-mono">
                     Non-Tile Supply
                   </div>
                 )}
 
                 <HeroButton
                   size="sm"
-                  variant="bordered"
-                  className="font-bold text-[10px] uppercase rounded-xl"
+                  variant="flat"
+                  radius="full"
+                  className="font-bold text-[10px] uppercase"
                   onClick={() => {
                     setScannedProduct(null);
                     showToast('Cleared specifications lookup.');
@@ -811,9 +814,9 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
                 </HeroButton>
               </div>
             </div>
-          </HeroCard>
+          </div>
         ) : (
-          <HeroCard variant="flat" className="bg-content1/60 border border-divider/20 rounded-2xl p-8 text-center text-default-500 border-dashed space-y-3">
+          <div className="bg-white dark:bg-zinc-900 border border-dashed border-zinc-200/70 dark:border-white/10 rounded-2xl p-8 text-center text-default-500 space-y-3">
             <QrCode className="h-10 w-10 text-primary/40 mx-auto" />
             <div>
               <h4 className="text-xs font-bold text-foreground">No Product Selected</h4>
@@ -821,7 +824,7 @@ export const StaffPortal: React.FC<StaffPortalProps> = ({ darkMode: _darkMode, s
                 Type details above or tap any item in the floor catalog below to pull stock data.
               </p>
             </div>
-          </HeroCard>
+          </div>
         )}
 
         {/* EXPANDABLE QUICK CALCULATOR */}

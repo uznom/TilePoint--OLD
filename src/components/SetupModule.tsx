@@ -390,19 +390,19 @@ export const SetupModule: React.FC = () => {
       <div className="absolute -bottom-32 left-1/2 -translate-x-1/2 w-[550px] h-[300px] bg-secondary/10 dark:bg-secondary/15 rounded-full blur-[90px] pointer-events-none" />
 
       {/* Main Setup Card */}
-      <div className="w-full max-w-2xl bg-content1 rounded-2xl border border-divider/30 shadow-[0_20px_50px_rgba(0,0,0,0.08)] dark:shadow-[0_25px_60px_rgba(0,0,0,0.6)] overflow-hidden relative z-10">
+      <div className="w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200/70 dark:border-white/10 shadow-elevation-card overflow-hidden relative z-10 text-left">
         
         {/* Card Header with System Title & Dark Mode Toggle */}
-        <div className="bg-content2/80 dark:bg-content2/50 border-b border-divider/20 px-6 py-4.5 flex flex-wrap items-center justify-between gap-3 backdrop-blur-sm">
+        <div className="bg-zinc-100/60 dark:bg-zinc-800/40 border-b border-zinc-200/60 dark:border-white/5 px-6 py-4.5 flex flex-wrap items-center justify-between gap-3 backdrop-blur-sm">
           <div className="flex items-center gap-3.5">
-            <div className="p-2.5 bg-primary/10 dark:bg-primary/20 rounded-2xl border border-primary/20 text-primary shadow-sm">
+            <div className="p-2.5 bg-primary/10 dark:bg-primary/20 rounded-2xl border border-primary/20 text-primary shadow-xs">
               <Cpu className="h-5 w-5" />
             </div>
             <div>
               <h1 className="text-sm font-bold uppercase tracking-wider text-foreground">
                 TilePoint Setup
               </h1>
-              <p className="text-[10px] text-default-500 tracking-wide mt-0.5">
+              <p className="text-[10px] text-default-500 tracking-wider mt-0.5 font-mono uppercase">
                 SYSTEM INITIALIZATION WIZARD
               </p>
             </div>
@@ -414,15 +414,15 @@ export const SetupModule: React.FC = () => {
               type="button"
               onClick={() => setIsDarkMode(!isDarkMode)}
               title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-              className="p-2 rounded-xl bg-content2/60 dark:bg-content3/40 hover:bg-primary/10 border border-divider/30 text-default-500 hover:text-primary transition-all cursor-pointer shadow-xs"
+              className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-primary/10 border border-zinc-200/50 dark:border-white/5 text-default-500 hover:text-primary transition-all cursor-pointer shadow-xs"
               aria-label="Toggle theme"
             >
               {isDarkMode ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
             </button>
 
             {/* Step Counter Badge */}
-            <div className="px-2.5 py-1 bg-content2 rounded-full border border-divider/30 flex items-center gap-1.5 shrink-0">
-              <span className="text-[10px] text-primary font-bold uppercase tracking-wider">
+            <div className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-full border border-zinc-200/50 dark:border-white/5 flex items-center gap-1.5 shrink-0">
+              <span className="text-[10px] text-primary font-bold uppercase tracking-wider font-mono">
                 Step {step} of 3
               </span>
             </div>
@@ -431,33 +431,35 @@ export const SetupModule: React.FC = () => {
 
         {/* Step Indicator Tabs */}
         {!isDeploying && (
-          <div className="grid grid-cols-3 text-center border-b border-divider/20 bg-content1/50">
-            <div
-              className={`py-3 text-[10px] uppercase font-bold tracking-wider transition-all duration-200 border-b-2 flex items-center justify-center ${
-                step === 1
-                  ? "border-primary text-primary bg-primary/5"
-                  : "border-transparent text-default-500/70 hover:text-foreground"
-              }`}
-            >
-              <span>1. Admin Account</span>
-            </div>
-            <div
-              className={`py-3 text-[10px] uppercase font-bold tracking-wider transition-all duration-200 border-b-2 flex items-center justify-center ${
-                step === 2
-                  ? "border-primary text-primary bg-primary/5"
-                  : "border-transparent text-default-500/70 hover:text-foreground"
-              }`}
-            >
-              <span>2. Establish Branch</span>
-            </div>
-            <div
-              className={`py-3 text-[10px] uppercase font-bold tracking-wider transition-all duration-200 border-b-2 flex items-center justify-center ${
-                step === 3
-                  ? "border-primary text-primary bg-primary/5"
-                  : "border-transparent text-default-500/70 hover:text-foreground"
-              }`}
-            >
-              <span>3. Verification</span>
+          <div className="p-3 border-b border-zinc-200/60 dark:border-white/5 bg-zinc-50/50 dark:bg-zinc-900/50">
+            <div className="grid grid-cols-3 gap-1 bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-full border border-zinc-200/50 dark:border-white/5 text-center">
+              <div
+                className={`py-2 text-[10px] uppercase font-bold tracking-wider rounded-full transition-all duration-200 flex items-center justify-center font-mono ${
+                  step === 1
+                    ? "bg-white dark:bg-zinc-900 text-primary shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                }`}
+              >
+                <span>1. Admin Account</span>
+              </div>
+              <div
+                className={`py-2 text-[10px] uppercase font-bold tracking-wider rounded-full transition-all duration-200 flex items-center justify-center font-mono ${
+                  step === 2
+                    ? "bg-white dark:bg-zinc-900 text-primary shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                }`}
+              >
+                <span>2. Establish Branch</span>
+              </div>
+              <div
+                className={`py-2 text-[10px] uppercase font-bold tracking-wider rounded-full transition-all duration-200 flex items-center justify-center font-mono ${
+                  step === 3
+                    ? "bg-white dark:bg-zinc-900 text-primary shadow-[0_2px_8px_rgba(0,0,0,0.08)]"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                }`}
+              >
+                <span>3. Verification</span>
+              </div>
             </div>
           </div>
         )}

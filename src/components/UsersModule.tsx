@@ -500,51 +500,53 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
       </div>
 
       {/* Navigation Sub-Tabs & View Mode Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-divider/20 pb-0.5">
-        <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-divider/15 pb-2 text-left">
+        <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-full border border-zinc-200/50 dark:border-white/5">
           <button
             type="button"
             onClick={() => setSubTab('employees')}
-            className={`pb-2.5 text-xs font-bold transition-all duration-200 border-b-2 flex items-center gap-2 cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-2 cursor-pointer ${
               subTab === 'employees'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-default-500 hover:text-foreground'
+                ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
             }`}
           >
             <Users className="h-4 w-4" />
             <span>Employees Directory</span>
-            <span className="px-2 py-0.5 rounded-full bg-default-100 text-[10px] font-black text-default-600">
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
+              subTab === 'employees' ? 'bg-primary/10 text-primary' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
+            }`}>
               {filteredUsers.length}
             </span>
           </button>
           <button
             type="button"
             onClick={() => setSubTab('active_sessions')}
-            className={`pb-2.5 text-xs font-bold transition-all duration-200 border-b-2 flex items-center gap-2 cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-2 cursor-pointer ${
               subTab === 'active_sessions'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-default-500 hover:text-foreground'
+                ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
             }`}
           >
-            <div className="relative flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              <span>Active Terminals</span>
-            </div>
-            <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black">
+            <Activity className="h-4 w-4" />
+            <span>Active Terminals</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold font-mono ${
+              subTab === 'active_sessions' ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
+            }`}>
               {allowedActiveSessions.length}
             </span>
           </button>
         </div>
 
         {/* View Mode Toggle (Cards / Table) */}
-        <div className="flex items-center gap-1 bg-content2/60 p-1 rounded-xl border border-divider/20 self-start sm:self-auto mb-1.5">
+        <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-full border border-zinc-200/50 dark:border-white/5 self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setViewMode('cards')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               viewMode === 'cards'
-                ? 'bg-content1 text-primary shadow-sm border border-divider/30'
-                : 'text-default-500 hover:text-foreground'
+                ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
             }`}
             title="Card Grid View"
           >
@@ -554,10 +556,10 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
           <button
             type="button"
             onClick={() => setViewMode('table')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               viewMode === 'table'
-                ? 'bg-content1 text-primary shadow-sm border border-divider/30'
-                : 'text-default-500 hover:text-foreground'
+                ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
             }`}
             title="Table List View"
           >
@@ -570,7 +572,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
       {subTab === 'employees' ? (
         <div className="space-y-4">
           {/* Filter and Search Bar */}
-          <div className="p-3.5 sm:p-4 rounded-2xl bg-content1 border border-divider/25 shadow-sm space-y-3">
+          <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 shadow-elevation-soft space-y-3 text-left">
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
               {/* Search Box */}
               <div className="sm:col-span-6 lg:col-span-5 relative">
@@ -580,15 +582,15 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by name, @username, email, or ID..."
-                  className="w-full pl-9 pr-8 py-2 text-xs bg-background border border-divider/40 rounded-xl text-foreground placeholder:text-default-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all font-medium active:scale-[0.98]"
+                  className="w-full pl-9 pr-8 py-2 text-xs bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-white/5 rounded-full text-foreground placeholder:text-default-400 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all font-medium"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-default-400 hover:text-foreground rounded-full hover:bg-default-100 cursor-pointer active:scale-95"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-default-400 hover:text-foreground text-xs font-bold cursor-pointer"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    ✕
                   </button>
                 )}
               </div>

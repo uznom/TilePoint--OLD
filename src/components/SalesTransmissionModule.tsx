@@ -1242,154 +1242,154 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  </div>
  )}
 
-  <div className="bg-content1 border border-divider/30 rounded-2xl p-6 space-y-5 text-left shadow-sm">
-  <div className="border-b border-divider/20 pb-3 flex items-center justify-between">
-  <div>
-  <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-1.5">
-  <FileText className="h-4 w-4 text-emerald-400" />
-  Headquarters Sales Audit Registry
-  </h3>
-  </div>
-  </div>
+   <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl p-6 space-y-5 text-left shadow-elevation-soft">
+    <div className="border-b border-divider/20 pb-3 flex items-center justify-between">
+      <div>
+        <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5 font-mono">
+          <FileText className="h-4 w-4 text-emerald-500" />
+          Headquarters Sales Audit Registry
+        </h3>
+      </div>
+    </div>
 
-  {/* SEARCH AND FILTERS */}
-  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 bg-content2/60 p-4 rounded-2xl border border-divider/15">
-  <div className="sm:col-span-6 space-y-1">
-  <label className="text-[10px] font-bold uppercase tracking-wider text-default-500 pl-0.5">Search</label>
-  <div className="relative">
-  <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-default-500">
-  <Search className="h-3.5 w-3.5" />
-  </span>
-  <input
-  type="text"
-  value={adminSearchQuery ?? ''}
-  onChange={(e) => setAdminSearchQuery(e.target.value)}
-  placeholder="Search branch, date, or report ID..."
-  className="w-full bg-content1 border border-divider/40 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:border-primary text-foreground"
-  />
-  </div>
-  </div>
+    {/* SEARCH AND FILTERS */}
+    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5 bg-zinc-100 dark:bg-zinc-800/80 p-4 rounded-2xl border border-zinc-200/50 dark:border-white/5">
+      <div className="sm:col-span-6 space-y-1">
+        <label className="text-[10px] font-bold uppercase tracking-wider text-default-500 pl-0.5 font-mono">Search</label>
+        <div className="relative">
+          <span className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none text-default-400">
+            <Search className="h-3.5 w-3.5" />
+          </span>
+          <input
+            type="text"
+            value={adminSearchQuery ?? ''}
+            onChange={(e) => setAdminSearchQuery(e.target.value)}
+            placeholder="Search branch, date, or report ID..."
+            className="w-full bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-white/5 rounded-full pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30 text-foreground transition-all"
+          />
+        </div>
+      </div>
 
-  <div className="sm:col-span-3 space-y-1">
-  <label className="text-[10px] font-bold uppercase tracking-wider text-default-500 pl-0.5">Branch</label>
-  {currentUser?.role === UserRole.ADMIN ? (
-    <HeroDropdownSelect
-      items={[
-        { key: 'ALL', label: 'All Branches' },
-        ...branches.map((b) => ({
-          key: b.id,
-          label: getBranchOptionLabel(b),
-        })),
-      ]}
-      selectedKey={adminBranchFilter ?? 'ALL'}
-      onSelectionChange={(val) => setAdminBranchFilter(val)}
-      size="sm"
-      variant="pill"
-      className="w-full"
-    />
-  ) : (
-  <div className="w-full bg-content2/60 border border-divider/20 rounded-xl px-3 py-2 text-xs font-bold text-foreground">
-  {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
-  </div>
-  )}
-  </div>
+      <div className="sm:col-span-3 space-y-1">
+        <label className="text-[10px] font-bold uppercase tracking-wider text-default-500 pl-0.5 font-mono">Branch</label>
+        {currentUser?.role === UserRole.ADMIN ? (
+          <HeroDropdownSelect
+            items={[
+              { key: 'ALL', label: 'All Branches' },
+              ...branches.map((b) => ({
+                key: b.id,
+                label: getBranchOptionLabel(b),
+              })),
+            ]}
+            selectedKey={adminBranchFilter ?? 'ALL'}
+            onSelectionChange={(val) => setAdminBranchFilter(val)}
+            size="sm"
+            variant="pill"
+            className="w-full"
+          />
+        ) : (
+          <div className="w-full bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-white/5 rounded-full px-4 py-2 text-xs font-bold text-foreground">
+            {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
+          </div>
+        )}
+      </div>
 
-  <div className="sm:col-span-3 space-y-1">
-  <label className="text-[10px] font-bold uppercase tracking-wider text-default-500 pl-0.5">Status</label>
-  <HeroDropdownSelect
-    items={[
-      { key: 'ALL', label: 'All States' },
-      { key: 'Pending Audit', label: 'Pending Audit' },
-      { key: 'Verified', label: 'Verified' },
-    ]}
-    selectedKey={adminStatusFilter ?? 'ALL'}
-    onSelectionChange={(val) => setAdminStatusFilter(val)}
-    size="sm"
-    variant="pill"
-    className="w-full"
-  />
-  </div>
-  </div>
+      <div className="sm:col-span-3 space-y-1">
+        <label className="text-[10px] font-bold uppercase tracking-wider text-default-500 pl-0.5 font-mono">Status</label>
+        <HeroDropdownSelect
+          items={[
+            { key: 'ALL', label: 'All States' },
+            { key: 'Pending Audit', label: 'Pending Audit' },
+            { key: 'Verified', label: 'Verified' },
+          ]}
+          selectedKey={adminStatusFilter ?? 'ALL'}
+          onSelectionChange={(val) => setAdminStatusFilter(val)}
+          size="sm"
+          variant="pill"
+          className="w-full"
+        />
+      </div>
+    </div>
 
-  {/* CENTRAL REGISTRY TABLE */}
-  <div className="border border-divider/20 rounded-2xl overflow-hidden bg-background">
-  <table className="w-full border-collapse text-left text-xs">
-  <thead className="bg-content1 text-[10px] uppercase tracking-wider font-bold text-default-500 border-b border-divider/15">
-  <tr>
-  <th className="py-3 px-4">Report ID</th>
-  <th className="py-3 px-3">Branch</th>
-  <th className="py-3 px-3">Date</th>
-  <th className="py-3 px-3 text-center">Receipts</th>
- <th className="py-3 px-3 text-right">TOTAL grand</th>
- <th className="py-3 px-3 text-center">LINK CHANNEL</th>
- <th className="py-3 px-4 text-center">STATUS</th>
- </tr>
- </thead>
- <tbody className="divide-y divide-divider/10 font-sans">
- {filteredReports.map((report) => {
- const isSelected = selectedReport?.id === report.id;
- return (
- <tr
- key={report.id}
- onClick={() => {
- setSelectedReport(report);
- setAuditNotes(report.notes || '');
- }}
- className={`hover:bg-primary/5 transition-all cursor-pointer ${
- isSelected ? 'bg-primary/10 font-medium' : ''
- }`}
- >
- <td className="py-3.5 px-4 text-[10.5px] text-foreground font-bold">
- {report.id}
- </td>
- <td className="py-3.5 px-3 font-semibold text-foreground">
- {report.branchName}
- </td>
- <td className="py-3.5 px-3 text-[11px] text-default-600 dark:text-foreground">
- {report.reportingDate}
- </td>
- <td className="py-3.5 px-3 text-center font-bold text-foreground">
- {report.totalSalesCount}
- </td>
- <td className="py-3.5 px-3 text-right font-bold text-emerald-600 dark:text-emerald-400 ">
- ₱{report.totalSalesAmount.toLocaleString()}
- </td>
- <td className="py-3.5 px-3 text-center">
- <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
- report.transmissionType === 'Online'
- ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
- : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
- }`}>
- {report.transmissionType}
- </span>
- </td>
- <td className="py-3.5 px-4 text-center">
- <span className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
- report.status === 'Verified'
- ? 'bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
- : 'bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20'
- }`}>
- {report.status}
- </span>
- </td>
- </tr>
- );
- })}
+    {/* CENTRAL REGISTRY TABLE */}
+    <div className="border border-zinc-200/70 dark:border-white/10 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900">
+      <table className="w-full border-collapse text-left text-xs">
+        <thead className="bg-zinc-100/50 dark:bg-zinc-800/50 text-[10px] uppercase tracking-wider font-bold text-default-500 border-b border-divider/15 font-mono">
+          <tr>
+            <th className="py-3 px-4">Report ID</th>
+            <th className="py-3 px-3">Branch</th>
+            <th className="py-3 px-3">Date</th>
+            <th className="py-3 px-3 text-center">Receipts</th>
+            <th className="py-3 px-3 text-right">Total Grand</th>
+            <th className="py-3 px-3 text-center">Link Channel</th>
+            <th className="py-3 px-4 text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-divider/10">
+          {filteredReports.map((report) => {
+            const isSelected = selectedReport?.id === report.id;
+            return (
+              <tr
+                key={report.id}
+                onClick={() => {
+                  setSelectedReport(report);
+                  setAuditNotes(report.notes || '');
+                }}
+                className={`hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition-all cursor-pointer font-medium ${
+                  isSelected ? 'bg-primary/10 font-bold' : ''
+                }`}
+              >
+                <td className="py-3.5 px-4 text-[11px] text-primary font-bold font-mono">
+                  {report.id}
+                </td>
+                <td className="py-3.5 px-3 font-semibold text-foreground">
+                  {report.branchName}
+                </td>
+                <td className="py-3.5 px-3 text-[11px] text-default-600 dark:text-foreground font-mono">
+                  {report.reportingDate}
+                </td>
+                <td className="py-3.5 px-3 text-center font-bold font-mono text-foreground">
+                  {report.totalSalesCount}
+                </td>
+                <td className="py-3.5 px-3 text-right font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                  ₱{report.totalSalesAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+                <td className="py-3.5 px-3 text-center">
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono border ${
+                    report.transmissionType === 'Online'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                      : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                  }`}>
+                    {report.transmissionType}
+                  </span>
+                </td>
+                <td className="py-3.5 px-4 text-center">
+                  <span className={`inline-block px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider font-mono border ${
+                    report.status === 'Verified'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                      : 'bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-500/20'
+                  }`}>
+                    {report.status}
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
 
- {filteredReports.length === 0 && (
- <tr>
- <td colSpan={7} className="py-12 text-center text-default-500 font-medium leading-relaxed font-sans">
- <div className="flex flex-col items-center justify-center space-y-2">
- <FolderOpen className="h-8 w-8 text-default-600" />
- <span>No secure branch sales reports matching current criteria found.</span>
- </div>
- </td>
- </tr>
- )}
-</tbody>
- </table>
- </div>
- </div>
+          {filteredReports.length === 0 && (
+            <tr>
+              <td colSpan={7} className="py-12 text-center text-default-500 font-medium leading-relaxed">
+                <div className="flex flex-col items-center justify-center space-y-2">
+                  <FolderOpen className="h-8 w-8 text-default-400" />
+                  <span>No secure branch sales reports matching current criteria found.</span>
+                </div>
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
 
  {currentUser?.role === UserRole.ADMIN && (
  <div className="bg-content1 border border-divider/30 rounded-2xl p-6 space-y-4 text-left shadow-sm">

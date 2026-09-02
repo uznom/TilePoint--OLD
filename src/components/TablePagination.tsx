@@ -141,20 +141,21 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
   };
 
   return (
-    <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 pb-6 mb-8 border-t border-divider/15 text-[11px] font-medium text-default-500 ${className}`}>
+    <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 pb-6 mb-8 border-t border-divider/20 text-xs font-medium text-default-500 font-sans ${className}`}>
       <div>
-        Showing <span className="text-primary font-bold">{startItem}</span> to{" "}
-        <span className="text-primary font-bold">{endItem}</span> of{" "}
-        <span className="text-primary font-bold">{totalItems}</span> {itemName}
+        Showing <span className="text-primary font-bold font-mono">{startItem}</span> to{" "}
+        <span className="text-primary font-bold font-mono">{endItem}</span> of{" "}
+        <span className="text-primary font-bold font-mono">{totalItems}</span> {itemName}
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-full border border-zinc-200/50 dark:border-white/5">
         <HeroButton
           variant="flat"
           size="sm"
           isIconOnly
+          radius="full"
           onClick={() => onPageChange(safePage - 1)}
           disabled={safePage === 1}
-          className="min-w-8 h-8 rounded-lg"
+          className="min-w-8 h-8 rounded-full"
           title="Previous Page"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -162,16 +163,19 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
 
         {getPageNumbers().map((p, idx, arr) => {
           const isGap = idx > 0 && p - arr[idx - 1] > 1;
+          const isActive = safePage === p;
           return (
             <React.Fragment key={p}>
-              {isGap && <span className="px-1 text-default-500/40">...</span>}
+              {isGap && <span className="px-1 text-default-400 font-mono">...</span>}
               <HeroButton
-                variant={safePage === p ? "primary" : "flat"}
+                color={isActive ? "primary" : "default"}
+                variant={isActive ? "solid" : "light"}
                 size="sm"
                 isIconOnly
+                radius="full"
                 onClick={() => onPageChange(p)}
-                className={`min-w-8 h-8 rounded-lg text-center font-bold ${
-                  safePage === p ? "shadow-sm scale-105" : ""
+                className={`min-w-8 h-8 rounded-full text-center font-bold text-xs ${
+                  isActive ? "shadow-[0_2px_8px_rgba(0,111,238,0.25)]" : "text-zinc-600 dark:text-zinc-300"
                 }`}
               >
                 {p}
@@ -184,9 +188,10 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
           variant="flat"
           size="sm"
           isIconOnly
+          radius="full"
           onClick={() => onPageChange(safePage + 1)}
           disabled={safePage === totalPages}
-          className="min-w-8 h-8 rounded-lg"
+          className="min-w-8 h-8 rounded-full"
           title="Next Page"
         >
           <ChevronRight className="h-4 w-4" />

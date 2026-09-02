@@ -1225,124 +1225,124 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
     }
   />
 
- {/* Main Ledger grid */}
- <div className="bg-content1 border border-divider rounded-large shadow-small text-foreground shadow-sm overflow-x-auto p-0">
- <table className="w-full text-xs text-left border-collapse table-auto min-w-[900px]">
- <thead>
- <tr className="border-b border-divider/20 bg-background/30 text-[10px] uppercase font-bold text-default-500 tracking-wider">
- <th className="py-3 px-4">Tracking Slip Ref</th>
- <th className="py-3 px-4 text-center">Document Category</th>
- <th className="py-3 px-4 text-center">Dispatch Branch</th>
- <th className="py-3 px-4 text-center">Target Destination</th>
- <th className="py-3 px-4 text-center">Status</th>
- <th className="py-3 px-4 text-right">Submitted Date</th>
- <th className="py-3 px-4 text-center">Command Operations</th>
- </tr>
- </thead>
- <tbody className="divide-y divide-divider/10 text-foreground/90">
- {transmittals
- .slice((transPage - 1) * transPageSize, transPage * transPageSize)
- .map((t, idx) => {
- let badgeStyle = "bg-default-100 text-foreground";
- if (t.status === "Submitted")
- badgeStyle =
- "bg-primary-50 text-primary-700 border-primary/25";
- if (t.status === "Approved")
- badgeStyle =
- "bg-secondary-50 text-secondary-700 border-secondary/25";
- if (t.status === "Archived")
- badgeStyle =
- "bg-default-100 text-default-500/70 border-transparent";
+      {/* Main Ledger grid */}
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl shadow-elevation-soft text-foreground overflow-hidden p-5 sm:p-6 space-y-4 text-left">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs text-left border-collapse table-auto min-w-[900px]">
+            <thead>
+              <tr className="border-b border-divider/20 text-[10px] uppercase font-bold text-default-500 tracking-wider font-mono">
+                <th className="py-3 px-4">Tracking Slip Ref</th>
+                <th className="py-3 px-4 text-center">Document Category</th>
+                <th className="py-3 px-4 text-center">Dispatch Branch</th>
+                <th className="py-3 px-4 text-center">Target Destination</th>
+                <th className="py-3 px-4 text-center">Status</th>
+                <th className="py-3 px-4 text-right">Submitted Date</th>
+                <th className="py-3 px-4 text-center">Command Operations</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-divider/10 text-foreground">
+              {transmittals
+                .slice((transPage - 1) * transPageSize, transPage * transPageSize)
+                .map((t, idx) => {
+                  let badgeStyle = "bg-zinc-100 dark:bg-zinc-800 text-default-500 border-zinc-200/50 dark:border-white/5";
+                  if (t.status === "Submitted")
+                    badgeStyle = "bg-primary/10 text-primary border-primary/25";
+                  if (t.status === "Approved")
+                    badgeStyle = "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25";
+                  if (t.status === "Archived")
+                    badgeStyle = "bg-zinc-100 dark:bg-zinc-800 text-default-400 border-transparent";
 
- return (
- <tr
- key={idx}
- className="hover:bg-content1/50 transition-colors active:scale-[0.98]"
- >
- <td className="py-3.5 px-4">
- <div className="font-extrabold text-primary text-xs">
- {t.id}
- </div>
- <div className="text-[10px] text-default-500">
- Signed: {t.submittedBy}
- </div>
- </td>
+                  return (
+                    <tr
+                      key={idx}
+                      className="hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition font-medium"
+                    >
+                      <td className="py-3.5 px-4">
+                        <div className="font-bold text-primary font-mono text-xs">
+                          {t.id}
+                        </div>
+                        <div className="text-[10px] text-default-500">
+                          Signed: {t.submittedBy}
+                        </div>
+                      </td>
 
- <td className="py-3.5 px-4 text-center font-bold">
- <span className="bg-default-100 px-2.5 py-0.5 rounded-full text-foreground">
- {t.documentType}
- </span>
- </td>
+                      <td className="py-3.5 px-4 text-center font-bold">
+                        <span className="bg-zinc-100 dark:bg-zinc-800 px-2.5 py-0.5 rounded-full text-foreground border border-zinc-200/50 dark:border-white/5 text-[11px]">
+                          {t.documentType}
+                        </span>
+                      </td>
 
- <td className="py-3.5 px-4 text-center font-bold text-foreground">
- {getBranchName(t.fromBranchId)}
- </td>
+                      <td className="py-3.5 px-4 text-center font-bold text-foreground">
+                        {getBranchName(t.fromBranchId)}
+                      </td>
 
- <td className="py-3.5 px-4 text-center font-bold text-foreground">
- {getBranchName(t.toBranchId)}
- </td>
+                      <td className="py-3.5 px-4 text-center font-bold text-foreground">
+                        {getBranchName(t.toBranchId)}
+                      </td>
 
- <td className="py-3.5 px-4 text-center">
- <span
- className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase border ${badgeStyle}`}
- >
- {t.status}
- </span>
- </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wider uppercase border font-mono ${badgeStyle}`}
+                        >
+                          {t.status}
+                        </span>
+                      </td>
 
- <td className="py-3.5 px-4 text-right text-default-500 ">
- {t.submittedAt && !isNaN(new Date(t.submittedAt).getTime()) ? new Date(t.submittedAt).toLocaleDateString() : 'N/A'}
- </td>
+                      <td className="py-3.5 px-4 text-right text-default-500 font-mono">
+                        {t.submittedAt && !isNaN(new Date(t.submittedAt).getTime()) ? new Date(t.submittedAt).toLocaleDateString() : 'N/A'}
+                      </td>
 
- <td className="py-3.5 px-4 text-center">
- <div className="flex gap-1.5 justify-center">
- <button
- onClick={() => {
- setInspectTab("itemized");
- setActiveTrans(t);
- }}
- className="py-1 px-3 text-[10px] rounded-full border border-primary/35 text-primary bg-primary/5 hover:bg-primary/10 cursor-pointer font-bold transition-colors flex items-center gap-1 active:scale-95"
- >
- <Printer className="h-3 w-3 text-primary" /> Inspect
- &amp; Print
- </button>
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="flex gap-1.5 justify-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setInspectTab("itemized");
+                              setActiveTrans(t);
+                            }}
+                            className="py-1 px-3 text-[10px] rounded-full border border-primary/35 text-primary bg-primary/5 hover:bg-primary/10 cursor-pointer font-bold transition-colors flex items-center gap-1 active:scale-95"
+                          >
+                            <Printer className="h-3 w-3 text-primary" /> Inspect &amp; Print
+                          </button>
 
- <button
- onClick={() => handleExportTransmittal(t)}
- className="p-1 px-1.5 text-secondary hover:scale-105 rounded-full border border-secondary/20 bg-secondary/5 cursor-pointer transition-colors active:scale-95"
- title="Download raw packet data"
- >
- <Download className="h-3.5 w-3.5" />
- </button>
- </div>
- </td>
- </tr>
- );
- })}
+                          <button
+                            type="button"
+                            onClick={() => handleExportTransmittal(t)}
+                            className="p-1 px-1.5 text-primary hover:scale-105 rounded-full border border-primary/20 bg-primary/5 cursor-pointer transition-colors active:scale-95"
+                            title="Download raw packet data"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
 
- {transmittals.length === 0 && (
- <tr>
- <td
- colSpan={7}
- className="py-8 text-center text-default-500"
- >
- No inter-branch transmittal ledgers currently recorded.
- </td>
- </tr>
- )}
-</tbody>
- </table>
- </div>
+              {transmittals.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="py-8 text-center text-default-500 font-medium"
+                  >
+                    No inter-branch transmittal ledgers currently recorded.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
 
- <div className="mt-3">
- <TablePagination
- currentPage={transPage}
- totalItems={transmittals.length}
- pageSize={transPageSize}
- onPageChange={setTransPage}
- itemName="transmittals"
- />
- </div>
+        <div className="mt-3">
+          <TablePagination
+            currentPage={transPage}
+            totalItems={transmittals.length}
+            pageSize={transPageSize}
+            onPageChange={setTransPage}
+            itemName="transmittals"
+          />
+        </div>
+      </div>
 
  {/* MODAL 1: Create dispatch document form */}
   <HeroModal isOpen={showModal} onClose={() => setShowModal(false)} size="sm" className="p-6 border border-divider/30 space-y-4 text-left">

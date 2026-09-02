@@ -238,21 +238,21 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
       zIndex={99999}
       className="max-h-[85vh]"
     >
-      <HeroModal.Header className="flex flex-col gap-3 p-4 bg-content1/80 border-b border-divider/20">
+      <HeroModal.Header className="flex flex-col gap-3 p-4 bg-white dark:bg-zinc-900 border-b border-divider/20 font-sans">
         <div className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2 text-primary font-black text-xs uppercase tracking-wider">
+          <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
             <Command className="h-4 w-4" />
             <span>TilePoint Quick Module Switcher</span>
           </div>
 
-          <div className="flex items-center gap-1 bg-content2 p-1 rounded-xl border border-divider/20 text-[10px] font-bold">
+          <div className="flex bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-full border border-zinc-200/50 dark:border-white/5 text-[10px] font-bold">
             <button
               type="button"
               onClick={() => setActiveTabMode("switcher")}
-              className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+              className={`px-3 py-1 rounded-full transition-all cursor-pointer font-sans ${
                 activeTabMode === "switcher"
-                  ? "bg-primary text-primary-foreground font-extrabold shadow-sm"
-                  : "text-default-500 hover:text-foreground"
+                  ? "bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
               }`}
             >
               Modules
@@ -260,10 +260,10 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
             <button
               type="button"
               onClick={() => setActiveTabMode("hotkeys")}
-              className={`px-3 py-1 rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
+              className={`px-3 py-1 rounded-full transition-all cursor-pointer flex items-center gap-1.5 font-sans ${
                 activeTabMode === "hotkeys"
-                  ? "bg-primary text-primary-foreground font-extrabold shadow-sm"
-                  : "text-default-500 hover:text-foreground"
+                  ? "bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold"
+                  : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
               }`}
             >
               <Keyboard className="h-3 w-3" />
@@ -284,17 +284,17 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
                 setSelectedIndex(0);
               }}
               placeholder="Type to filter modules or shortcut key (e.g. 'pos', 'inventory', 'Ctrl+2')..."
-              className="w-full pl-10 pr-4 py-2 bg-background rounded-xl border border-divider/40 text-xs font-semibold placeholder:text-default-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-foreground"
+              className="w-full pl-10 pr-4 py-2 bg-zinc-100 dark:bg-zinc-800 rounded-full border border-zinc-200/50 dark:border-white/5 text-xs font-semibold placeholder:text-default-400 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all text-foreground"
             />
           </div>
         )}
       </HeroModal.Header>
 
-      <HeroModal.Body className="p-3 overflow-y-auto divide-y divide-divider/10 scrollbar-thin">
+      <HeroModal.Body className="p-3 overflow-y-auto divide-y divide-divider/10 scrollbar-thin font-sans text-xs">
         {activeTabMode === "switcher" ? (
           filteredModules.length === 0 ? (
             <div className="p-8 text-center text-default-500 text-xs font-medium space-y-2">
-              <ShieldAlert className="h-8 w-8 mx-auto text-warning opacity-80" />
+              <ShieldAlert className="h-8 w-8 mx-auto text-amber-500 opacity-80" />
               <p>No matching modules found for "{searchQuery}".</p>
               <p className="text-[10px] text-default-400">
                 Try searching for "POS", "Inventory", "Dashboard", or "Calculator".
@@ -318,42 +318,42 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
                     onMouseEnter={() => setSelectedIndex(idx)}
                     className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer text-left border ${
                       isSelected
-                        ? "bg-primary/10 border-primary/40 text-primary shadow-sm"
-                        : "bg-transparent border-transparent hover:bg-content2 text-foreground"
+                        ? "bg-primary/10 border-primary/30 text-primary shadow-2xs"
+                        : "bg-transparent border-transparent hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 text-foreground"
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
                       <div
-                        className={`p-2 rounded-xl shrink-0 ${
+                        className={`p-2.5 rounded-xl shrink-0 ${
                           isSelected
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-content2 text-default-500"
+                            ? "bg-primary text-primary-foreground shadow-2xs"
+                            : "bg-zinc-100 dark:bg-zinc-800 text-default-500"
                         }`}
                       >
                         <ItemIcon className="h-4 w-4" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-black truncate">
+                          <span className="text-xs font-bold truncate">
                             {item.name}
                           </span>
                           {isActive && (
-                            <HeroChip variant="primary" size="sm" startContent={<Check className="h-2.5 w-2.5" />}>
+                            <HeroChip color="primary" variant="flat" size="sm" startContent={<Check className="h-2.5 w-2.5" />}>
                               Active
                             </HeroChip>
                           )}
                         </div>
-                        <p className="text-[10.5px] text-default-500 truncate mt-0.5 font-medium">
+                        <p className="text-[11px] text-default-500 truncate mt-0.5 font-medium">
                           {item.description}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      <HeroChip variant="neutral" size="sm">
+                      <HeroChip color="default" variant="flat" size="sm">
                         {item.category}
                       </HeroChip>
-                      <HeroChip variant="primary" size="sm" className="font-mono shadow-xs">
+                      <HeroChip color="primary" variant="flat" size="sm" className="font-mono font-bold shadow-2xs">
                         {item.shortcut}
                       </HeroChip>
                     </div>
@@ -364,12 +364,12 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
           )
         ) : (
           <div className="p-2 space-y-3">
-            <div className="p-3 rounded-2xl bg-primary/10 border border-primary/20 text-xs space-y-1">
-              <div className="font-black text-primary flex items-center gap-2">
+            <div className="p-3.5 rounded-2xl bg-primary/10 border border-primary/20 text-xs space-y-1">
+              <div className="font-bold text-primary flex items-center gap-2">
                 <Sparkles className="h-4 w-4" />
                 <span>Global Cashier Keyboard Efficiency Guide</span>
               </div>
-              <p className="text-[11px] text-default-500 leading-relaxed">
+              <p className="text-[11px] text-default-500 leading-relaxed font-medium">
                 Use these direct keyboard shortcuts anywhere in the TilePoint ERP system to switch modules instantly without touching the mouse!
               </p>
             </div>
@@ -378,12 +378,12 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
               {POS_HOTKEYS.map((hk, i) => (
                 <div
                   key={i}
-                  className="p-2.5 rounded-xl bg-content2/60 border border-divider/20 flex items-center justify-between text-xs"
+                  className="p-3 rounded-2xl bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/50 dark:border-white/5 flex items-center justify-between text-xs shadow-2xs"
                 >
-                  <span className="text-[11px] text-foreground font-semibold">
+                  <span className="text-[11px] text-foreground font-medium">
                     {hk.description}
                   </span>
-                  <kbd className="px-2 py-0.5 rounded-lg bg-content3 font-black text-[10px] text-primary border border-divider/40 shadow-xs shrink-0 ml-2">
+                  <kbd className="px-2 py-0.5 rounded-lg bg-white dark:bg-zinc-900 font-bold text-[10px] text-primary border border-zinc-200/70 dark:border-white/10 font-mono shadow-2xs shrink-0 ml-2">
                     {hk.key}
                   </kbd>
                 </div>
@@ -393,25 +393,25 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
         )}
       </HeroModal.Body>
 
-      <HeroModal.Footer className="p-3 border-t border-divider/15 justify-between text-[10px] font-medium text-default-500">
+      <HeroModal.Footer className="p-3 border-t border-divider/15 justify-between text-[10px] font-medium text-default-500 font-sans">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 rounded bg-background border border-divider/30 font-bold">
+            <kbd className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-white/5 font-bold font-mono">
               ↑
             </kbd>
-            <kbd className="px-1.5 py-0.5 rounded bg-background border border-divider/30 font-bold">
+            <kbd className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-white/5 font-bold font-mono">
               ↓
             </kbd>
             <span>Navigate</span>
           </span>
           <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 rounded bg-background border border-divider/30 font-bold">
+            <kbd className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-white/5 font-bold font-mono">
               Enter
             </kbd>
             <span>Select Module</span>
           </span>
           <span className="flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 rounded bg-background border border-divider/30 font-bold">
+            <kbd className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-white/5 font-bold font-mono">
               Esc
             </kbd>
             <span>Close</span>
@@ -419,7 +419,7 @@ export const QuickModuleSwitcherModal: React.FC<QuickModuleSwitcherModalProps> =
         </div>
 
         <div className="hidden sm:block text-primary font-bold">
-          Press <kbd className="px-1.5 py-0.5 rounded bg-primary/15 border border-primary/30">Ctrl + 1..0</kbd> to jump directly
+          Press <kbd className="px-1.5 py-0.5 rounded bg-primary/10 border border-primary/20 font-mono">Ctrl + 1..0</kbd> to jump directly
         </div>
       </HeroModal.Footer>
     </HeroModal>
