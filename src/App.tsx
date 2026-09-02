@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { AnimatePresence, MotionConfig, motion } from "motion/react";
+import { MotionConfig } from "motion/react";
 import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { LoginModule } from "./components/LoginModule";
 import { SetupModule } from "./components/SetupModule";
@@ -43,17 +43,14 @@ import { PageLoadingFallback } from "./components/PageLoadingFallback";
 import { ConfirmationModal } from "./components/ConfirmationModal";
 import { DesktopKeyboardShortcutsModal } from "./components/DesktopKeyboardShortcutsModal";
 import { TransactionOutboxModal } from "./components/TransactionOutboxModal";
-import { HeaderNavTabs } from "./components/HeaderNavTabs";
 import { IdleScreen } from "./components/IdleScreen";
-import { MobileBottomNav } from "./components/MobileBottomNav";
 import { OnboardingSetupWizard } from "./components/OnboardingSetupWizard";
 import { PrivacyAccessibilityHub } from "./components/PrivacyAccessibilityHub";
 import { PwaInstallPrompt } from "./components/PwaInstallPrompt";
 import { QuickModuleSwitcherModal } from "./components/QuickModuleSwitcherModal";
-import { Sidebar } from "./components/Sidebar";
 import { SystemLoadingOverlay } from "./components/SystemLoadingOverlay";
 import { ToastNotification } from "./components/ToastNotification";
-import { AppAlertBanners } from "./components/layout/AppAlertBanners";
+import { AppShell } from "./components/layout/AppShell";
 import { LogoutConfirmModal } from "./components/modals/LogoutConfirmModal";
 import { UnsavedCartModal } from "./components/modals/UnsavedCartModal";
 import { UserProfileModal } from "./components/modals/UserProfileModal";
@@ -77,7 +74,6 @@ import {
 
 import {
   Building2,
-  ChevronRight,
   DollarSign,
   FileText,
   Layers,
@@ -949,11 +945,6 @@ function AppContent() {
     return found.name;
   };
 
-  const activeCategory = sidebarCategoryTree.find(
-    (cat) => cat.subItems.some((sub) => sub.id === activeTab) || cat.id === activeTab,
-  );
-  const isInventorySection = activeCategory?.id === "inventory";
-
   return (
     <MotionConfig
       reducedMotion={disableAnimations || lowPerformanceMode ? "always" : "never"}
@@ -973,81 +964,48 @@ function AppContent() {
       >
         <SystemLoadingOverlay />
 
-        <AppAlertBanners
-          serverDegradedState={serverDegradedState}
-          refreshServerStatus={refreshServerStatus}
-          apiErrorState={apiErrorState}
-          clearServerErrorState={clearServerErrorState}
-          syncFromSharedServer={syncFromSharedServer}
-          percentProgress={percentProgress}
-        />
-
-        <div className="flex-1 flex overflow-hidden min-h-0 relative">
-          {isSidebarHidden && (
-            <button
-              onClick={() => setIsSidebarHidden(false)}
-              className="fixed left-0 top-1/2 -translate-y-1/2 z-[45] p-2 bg-primary text-primary-foreground rounded-r-2xl border-y border-r border-divider/35 shadow-2xl hover:bg-primary/95 hover:scale-110 active:scale-95 transition-all cursor-pointer flex items-center justify-center group"
-              title="Restore Navigation Sidebar"
-            >
-              <ChevronRight className="h-5 w-5 group-hover:translate-x-0.5 transition-transform" />
-            </button>
-          )}
-
-          <Sidebar
-            isSidebarExpanded={isSidebarExpanded}
-            setIsSidebarExpanded={setIsSidebarExpanded}
-            isSidebarHidden={isSidebarHidden}
-            activeTab={activeTab}
-            changeTab={handleChangeTab}
-            currentUser={currentUser}
-            branches={branches}
-            darkMode={darkMode}
-            handleToggleDarkMode={handleToggleDarkMode}
-            setShowAccountSettingsModal={setShowAccountSettingsModal}
-            setShowSystemSettingsModal={setShowSystemSettingsModal}
-            setShowLogoutConfirmModal={setShowLogoutConfirmModal}
-            parkedSales={parkedSales}
-            deliveries={deliveries}
-            stockTransfers={stockTransfers}
-            getBranchName={getBranchName}
-            categories={sidebarCategoryTree}
-            isMobileOpen={isMobileMenuOpen}
-            onCloseMobile={() => setIsMobileMenuOpen(false)}
-          />
-
-          <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden relative">
-            <div className="px-2.5 sm:px-4 md:px-6 pt-3 pb-0 shrink-0">
-              <HeaderNavTabs
-                activeTab={activeTab}
-                onChangeTab={handleChangeTab}
-                currentUser={currentUser}
-                parkedSalesCount={parkedSales.length}
-                pendingDeliveriesCount={deliveries.filter(
-                  (d) => d.status === "Scheduled" || d.status === "Packed" || d.status === "Out For Delivery"
-                ).length}
-                pendingTransfersCount={stockTransfers.filter((t) => t.status === "Pending").length}
-                categories={sidebarCategoryTree}
-              />
-            </div>
-
-            <main
-              className={`flex-1 relative flex flex-col text-foreground transition-all duration-300 overflow-x-hidden min-h-0 ${
-                activeTab === "pos" || activeTab === "ledger"
-                  ? "p-2 sm:p-4 md:p-5 pb-20 md:pb-5 overflow-y-auto lg:overflow-hidden h-full max-h-full"
-                  : "p-2.5 sm:p-4 md:p-6 pb-20 md:pb-6 overflow-y-auto scroll-smooth mobile-scroll-container"
-              } ${isCompact || !isInventorySection ? "compact-fit" : ""}`}
-            >
-              <div className="flex-1 min-h-0">
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.div
-                    key={activeTab}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 10 }}
-                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                    style={{ willChange: "transform, opacity" }}
-                    className="h-full flex flex-col min-h-0"
-                  >
+        <AppShell
+          activeTab={activeTab}
+          onChangeTab={handleChangeTab}
+          currentUser={currentUser}
+          branches={branches}
+          selectedBranchId={selectedBranchId}
+          onSelectBranch={setSelectedBranchId}
+          getBranchName={getBranchName}
+          categories={sidebarCategoryTree}
+          darkMode={darkMode}
+          onToggleDarkMode={handleToggleDarkMode}
+          onOpenQuickSwitcher={() => setIsQuickSwitcherOpen(true)}
+          onOpenKeyboardShortcuts={() => setIsShortcutsModalOpen(true)}
+          onOpenAccountSettings={() => setShowAccountSettingsModal(true)}
+          onOpenSystemSettings={() => setShowSystemSettingsModal(true)}
+          onOpenLogoutConfirm={() => setShowLogoutConfirmModal(true)}
+          isSidebarExpanded={isSidebarExpanded}
+          setIsSidebarExpanded={setIsSidebarExpanded}
+          isSidebarHidden={isSidebarHidden}
+          setIsSidebarHidden={setIsSidebarHidden}
+          isMobileMenuOpen={isMobileMenuOpen}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
+          alertBannersProps={{
+            serverDegradedState,
+            refreshServerStatus,
+            apiErrorState,
+            clearServerErrorState,
+            syncFromSharedServer,
+            percentProgress,
+          }}
+          parkedSalesCount={parkedSales.length}
+          pendingDeliveriesCount={deliveries.filter(
+            (d) => d.status === "Scheduled" || d.status === "Packed" || d.status === "Out For Delivery"
+          ).length}
+          pendingTransfersCount={stockTransfers.filter((t) => t.status === "Pending").length}
+          parkedSales={parkedSales}
+          deliveries={deliveries}
+          stockTransfers={stockTransfers}
+          hasInventoryAlert={showInventoryRedDot}
+          hasSaleAlert={showSaleRedDot}
+          hasTotalAlerts={showSaleRedDot || showDeliveriesRedDot || showInventoryRedDot}
+        >
                     <Suspense fallback={<PageLoadingFallback activeTab={activeTab} />}>
                       {activeTab === "tutorials" &&
                         (currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.MANAGER ? (
@@ -1238,21 +1196,7 @@ function AppContent() {
                         />
                       )}
                     </Suspense>
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            </main>
-          </div>
-        </div>
-
-        <MobileBottomNav
-          activeTab={activeTab}
-          changeTab={handleChangeTab}
-          onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
-          hasInventoryAlert={showInventoryRedDot}
-          hasSaleAlert={showSaleRedDot}
-          hasTotalAlerts={showSaleRedDot || showDeliveriesRedDot || showInventoryRedDot}
-        />
+        </AppShell>
 
         {/* LOGOUT CONFIRMATION MODAL */}
         <LogoutConfirmModal

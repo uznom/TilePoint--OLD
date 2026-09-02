@@ -15,6 +15,7 @@ import { HeroButton } from '../common/ui/HeroButton';
 import { HeroDropdownSelect } from '../common/ui/HeroDropdown';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { Product, Sale, SaleItem } from '../../types/db';
+import { formatCurrency } from '../../utils/formatters';
 
 export interface TopAndSlowSellingModalProps {
   isOpen: boolean;
@@ -379,12 +380,12 @@ export const TopAndSlowSellingModal: React.FC<TopAndSlowSellingModalProps> = ({
                       {/* Financial Value */}
                       <td className="py-3 px-3 text-right font-black text-xs">
                         {activeTab === 'top20' ? (
-                          <span className="text-emerald-600 dark:text-emerald-400">
-                            ₱{item.revenue.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                           <span className="text-emerald-600 dark:text-emerald-400">
+                            {formatCurrency(item.revenue)}
                           </span>
                         ) : (
                           <span className="text-amber-600 dark:text-amber-400">
-                            ₱{item.tiedUpCapital.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {formatCurrency(item.tiedUpCapital)}
                           </span>
                         )}
                       </td>

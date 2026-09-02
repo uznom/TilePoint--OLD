@@ -31,6 +31,7 @@ import { Sale } from '../types/db';
 import { isSameBranch } from '../lib/branchUtils';
 import { useMultiSort } from '../hooks/useMultiSort';
 import { MultiSortBadgeBar } from './common/ui/MultiSortBadgeBar';
+import { formatCurrency } from '../utils/formatters';
 const LazyTopAndSlowSellingModal = React.lazy(() =>
   import('./dashboard/TopAndSlowSellingModal').then((m) => ({ default: m.TopAndSlowSellingModal }))
 );
@@ -264,7 +265,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       return {
         labels,
         values: displayVals,
-        displayRevenue: `₱${todayTotal.toLocaleString('en-PH', { maximumFractionDigits: 2 })}`,
+        displayRevenue: formatCurrency(todayTotal),
         change: todayTotal > 0 ? '+Today Active' : '0.0% Today'
       };
     }
@@ -297,7 +298,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       return {
         labels,
         values,
-        displayRevenue: `₱${totalWeek.toLocaleString('en-PH', { maximumFractionDigits: 2 })}`,
+        displayRevenue: formatCurrency(totalWeek),
         change: totalWeek > 0 ? '+7D Active' : '0.0% 7D'
       };
     }
@@ -329,7 +330,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       return {
         labels: ['Day 5', 'Day 10', 'Day 15', 'Day 20', 'Day 25', 'Day 30'],
         values: values.some(v => v > 0) ? values : [0, 0, 0, 0, 0, totalMonth || totalRevenue],
-        displayRevenue: `₱${(totalMonth || totalRevenue).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`,
+        displayRevenue: formatCurrency(totalMonth || totalRevenue),
         change: momGrowth >= 0 ? `+${momGrowth.toFixed(1)}% 1M` : `${momGrowth.toFixed(1)}% 1M`
       };
     }
@@ -361,7 +362,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       return {
         labels,
         values: values.some(v => v > 0) ? values : [0, 0, total3M || totalRevenue],
-        displayRevenue: `₱${(total3M || totalRevenue).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`,
+        displayRevenue: formatCurrency(total3M || totalRevenue),
         change: '+3M Trajectory'
       };
     }
@@ -386,7 +387,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       return {
         labels,
         values: values.some(v => v > 0) ? values : [0, 0, 0, totalYear || totalRevenue],
-        displayRevenue: `₱${(totalYear || totalRevenue).toLocaleString('en-PH', { maximumFractionDigits: 2 })}`,
+        displayRevenue: formatCurrency(totalYear || totalRevenue),
         change: '+Annual Total'
       };
     }
@@ -403,7 +404,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     return {
       labels,
       values: values.some(v => v > 0) ? values : [0, 0, 0, totalRevenue],
-      displayRevenue: `₱${totalRevenue.toLocaleString('en-PH', { maximumFractionDigits: 2 })}`,
+      displayRevenue: formatCurrency(totalRevenue),
       change: '+All-Time Record'
     };
   }, [timeRange, totalRevenue, sales, momGrowth]);
@@ -669,7 +670,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground tabular-nums">
-              ₱{totalRevenue.toLocaleString('en-PH', { maximumFractionDigits: 2 })}
+              {formatCurrency(totalRevenue)}
             </div>
             <div className="text-xs text-default-400 mt-1 flex items-center gap-1.5 font-normal">
               <Receipt className="h-3.5 w-3.5 text-primary" />
@@ -694,7 +695,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </div>
           <div className="mt-3">
             <div className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground tabular-nums">
-              ₱{totalInventoryValuation.toLocaleString('en-PH', { maximumFractionDigits: 0 })}
+              {formatCurrency(totalInventoryValuation)}
             </div>
             <div className="text-xs text-default-400 mt-1 flex items-center gap-1.5 font-normal">
               <Package className="h-3.5 w-3.5 text-sky-500" />
@@ -731,7 +732,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             <div className="text-xs text-default-400 mt-1 flex items-center justify-between font-normal">
               <span>{topProduct.qty} Units Sold</span>
               <span className="text-emerald-500 font-semibold tabular-nums">
-                ₱{topProduct.revenue.toLocaleString('en-PH')}
+                {formatCurrency(topProduct.revenue)}
               </span>
             </div>
           </div>
@@ -879,7 +880,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                           textAnchor="middle"
                           className="fill-foreground text-[10px] font-black"
                         >
-                          ₱{pt.val.toLocaleString('en-PH', { maximumFractionDigits: 0 })}
+                          {formatCurrency(pt.val)}
                         </text>
                         <text
                           x={Math.max(10, Math.min(pt.x - 55, 690)) + 55}
@@ -1068,7 +1069,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                       </HeroTable.Cell>
                       <HeroTable.Cell align="end">
                         <span className="font-bold text-foreground tabular-nums">
-                          ₱{(sale.grandTotal || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                          {formatCurrency(sale.grandTotal || 0)}
                         </span>
                       </HeroTable.Cell>
                       <HeroTable.Cell align="center">
@@ -1182,7 +1183,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                       />
                     </div>
                     <div className="flex justify-between text-[10px] text-default-400">
-                      <span>₱{cat.value.toLocaleString('en-PH')}</span>
+                      <span>{formatCurrency(cat.value)}</span>
                       <span>{percent}% Share</span>
                     </div>
                   </div>
@@ -1339,9 +1340,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                           <tr key={item.id}>
                             <td className="py-2 px-3 font-semibold text-foreground">{item.productName}</td>
                             <td className="py-2 px-3 text-center">{item.quantity}</td>
-                            <td className="py-2 px-3 text-right">₱{(item.unitPrice || 0).toLocaleString('en-PH')}</td>
+                            <td className="py-2 px-3 text-right">{formatCurrency(item.unitPrice || 0)}</td>
                             <td className="py-2 px-3 text-right font-bold text-foreground">
-                              ₱{(item.total || 0).toLocaleString('en-PH')}
+                              {formatCurrency(item.total || 0)}
                             </td>
                           </tr>
                         ))}
@@ -1354,22 +1355,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               <div className="p-3 rounded-xl bg-default-100/40 space-y-1.5 text-right font-medium">
                 <div className="flex justify-between text-default-500">
                   <span>Subtotal:</span>
-                  <span>₱{(selectedSale.subtotal || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                  <span>{formatCurrency(selectedSale.subtotal || 0)}</span>
                 </div>
                 <div className="flex justify-between text-default-500">
                   <span>12% Output VAT:</span>
-                  <span>₱{(selectedSale.vat || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                  <span>{formatCurrency(selectedSale.vat || 0)}</span>
                 </div>
                 {selectedSale.discount > 0 && (
                   <div className="flex justify-between text-emerald-500">
                     <span>Discount:</span>
-                    <span>-₱{(selectedSale.discount || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                    <span>-{formatCurrency(selectedSale.discount || 0)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm font-black text-foreground pt-1.5 border-t border-divider/20">
                   <span>Grand Total:</span>
                   <span className="text-primary font-black">
-                    ₱{(selectedSale.grandTotal || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                    {formatCurrency(selectedSale.grandTotal || 0)}
                   </span>
                 </div>
               </div>
@@ -1419,7 +1420,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 </div>
                 <div className="text-right">
                   <div className="font-black text-primary text-sm">
-                    ₱{(prod.sellingPrice || 0).toLocaleString('en-PH')}
+                    {formatCurrency(prod.sellingPrice || 0)}
                   </div>
                   <div className="text-[10px] font-bold text-emerald-500">
                     {prod.stockQuantity || 0} {prod.unit || 'Boxes'} in Stock
