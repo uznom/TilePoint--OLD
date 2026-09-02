@@ -75,8 +75,9 @@ export const HeroCard: React.FC<HeroCardProps> & {
   return (
     <div
       id={id}
+      data-slot="card"
       onClick={onPress || props.onClick}
-      className={`${getRadiusStyles()} overflow-hidden ${getVariantStyles()} ${hoverStyle} ${pressStyle} ${className}`}
+      className={`card ${getRadiusStyles()} overflow-hidden ${getVariantStyles()} ${hoverStyle} ${pressStyle} ${className}`}
       {...props}
     >
       {children}
@@ -86,7 +87,8 @@ export const HeroCard: React.FC<HeroCardProps> & {
 
 HeroCard.Header = ({ children, className = '', ...props }) => (
   <div
-    className={`p-4 sm:p-5 border-b border-divider flex items-center justify-between gap-3 ${className}`}
+    data-slot="card-header"
+    className={`card__header p-4 sm:p-5 border-b border-divider flex items-center justify-between gap-3 ${className}`}
     {...props}
   >
     {children}
@@ -95,7 +97,8 @@ HeroCard.Header = ({ children, className = '', ...props }) => (
 
 HeroCard.Title = ({ children, className = '', ...props }) => (
   <h3
-    className={`text-sm font-semibold tracking-tight text-foreground ${className}`}
+    data-slot="card-title"
+    className={`card__title text-sm font-semibold tracking-tight text-foreground ${className}`}
     {...props}
   >
     {children}
@@ -103,13 +106,13 @@ HeroCard.Title = ({ children, className = '', ...props }) => (
 );
 
 HeroCard.Description = ({ children, className = '', ...props }) => (
-  <p className={`text-xs text-default-500 mt-0.5 font-normal ${className}`} {...props}>
+  <p data-slot="card-description" className={`card__description text-xs text-default-500 mt-0.5 font-normal ${className}`} {...props}>
     {children}
   </p>
 );
 
 HeroCard.Body = ({ children, className = '', ...props }) => (
-  <div className={`p-4 sm:p-5 ${className}`} {...props}>
+  <div data-slot="card-body" className={`card__body p-4 sm:p-5 ${className}`} {...props}>
     {children}
   </div>
 );
@@ -118,7 +121,8 @@ HeroCard.Content = HeroCard.Body;
 
 HeroCard.Footer = ({ children, className = '', ...props }) => (
   <div
-    className={`p-3.5 sm:p-4 border-t border-divider bg-content2/40 flex items-center justify-between gap-3 ${className}`}
+    data-slot="card-footer"
+    className={`card__footer p-3.5 sm:p-4 border-t border-divider bg-content2/40 flex items-center justify-between gap-3 ${className}`}
     {...props}
   >
     {children}

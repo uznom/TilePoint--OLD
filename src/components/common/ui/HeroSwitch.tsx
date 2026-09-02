@@ -161,13 +161,15 @@ export const HeroSwitch = React.forwardRef<HTMLInputElement, HeroSwitchProps>(
           />
           {/* HeroUI v3 Switch Track */}
           <div
-            className={`relative flex items-center justify-start rounded-full transition-all duration-250 ease-out box-border
+            data-slot="track"
+            className={`switch__track relative flex items-center justify-start rounded-full transition-all duration-250 ease-out box-border
               ${sizeCls.track} ${trackColorCls}
               peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background peer-focus-visible:ring-primary`}
           >
             {/* Start Content / End Content inside HeroUI track */}
             {startContent && (
               <span
+                data-slot="start-content"
                 className={`absolute ${sizeCls.startPos} flex items-center justify-center transition-all duration-200 z-0 ${sizeCls.iconSize} ${
                   currentChecked ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'
                 }`}
@@ -177,6 +179,7 @@ export const HeroSwitch = React.forwardRef<HTMLInputElement, HeroSwitchProps>(
             )}
             {endContent && (
               <span
+                data-slot="end-content"
                 className={`absolute ${sizeCls.endPos} flex items-center justify-center transition-all duration-200 z-0 ${sizeCls.iconSize} ${
                   currentChecked ? 'opacity-0 scale-75 pointer-events-none' : 'opacity-100 scale-100 text-default-500'
                 }`}
@@ -187,7 +190,8 @@ export const HeroSwitch = React.forwardRef<HTMLInputElement, HeroSwitchProps>(
 
             {/* HeroUI v3 Switch Thumb */}
             <div
-              className={`relative z-10 rounded-full bg-white dark:bg-foreground text-background shadow-md transition-all duration-250 ease-out flex items-center justify-center origin-center
+              data-slot="thumb"
+              className={`switch__thumb relative z-10 rounded-full bg-white dark:bg-foreground text-background shadow-md transition-all duration-250 ease-out flex items-center justify-center origin-center
                 ${sizeCls.thumb} ${sizeCls.thumbTranslate}`}
             >
               {thumbIcon &&
@@ -200,14 +204,14 @@ export const HeroSwitch = React.forwardRef<HTMLInputElement, HeroSwitchProps>(
         </div>
 
         {(displayLabel || description) && (
-          <div className="flex flex-col min-w-0">
+          <div data-slot="label-wrapper" className="flex flex-col min-w-0">
             {displayLabel && (
-              <span className={`font-medium text-foreground transition-colors group-hover:text-primary ${sizeCls.label}`}>
+              <span data-slot="label" className={`switch__label font-medium text-foreground transition-colors group-hover:text-primary ${sizeCls.label}`}>
                 {displayLabel}
               </span>
             )}
             {description && (
-              <span className={`text-default-500 leading-normal ${sizeCls.desc}`}>
+              <span data-slot="description" className={`text-default-500 leading-normal ${sizeCls.desc}`}>
                 {description}
               </span>
             )}

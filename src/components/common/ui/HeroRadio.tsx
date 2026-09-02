@@ -74,13 +74,14 @@ export const HeroRadioGroup: React.FC<HeroRadioGroupProps> = ({
         isDisabled,
       }}
     >
-      <fieldset id={id} className={`flex flex-col gap-2 ${className}`}>
+      <fieldset id={id} data-slot="radio-group" className={`flex flex-col gap-2 ${className}`}>
         {label && (
-          <legend className="text-xs font-bold text-default-700 dark:text-default-300 mb-1">
+          <legend data-slot="label" className="text-xs font-bold text-default-700 dark:text-default-300 mb-1">
             {label}
           </legend>
         )}
         <div
+          data-slot="group-wrapper"
           className={`flex gap-3 ${
             orientation === 'horizontal' ? 'flex-row flex-wrap items-center' : 'flex-col'
           }`}
@@ -88,9 +89,9 @@ export const HeroRadioGroup: React.FC<HeroRadioGroupProps> = ({
           {children}
         </div>
         {errorMessage && isInvalid ? (
-          <p className="text-[11px] font-medium text-danger animate-fade-in">{errorMessage}</p>
+          <p data-slot="error-message" className="text-[11px] font-medium text-danger animate-fade-in">{errorMessage}</p>
         ) : description ? (
-          <p className="text-[11px] text-default-400">{description}</p>
+          <p data-slot="description" className="text-[11px] text-default-400">{description}</p>
         ) : null}
       </fieldset>
     </RadioGroupContext.Provider>
@@ -171,7 +172,10 @@ export const HeroRadio: React.FC<HeroRadioProps> = ({
   return (
     <label
       id={id}
-      className={`group relative inline-flex items-start gap-2.5 cursor-pointer select-none transition-opacity ${
+      data-slot="radio"
+      data-selected={isSelected ? 'true' : undefined}
+      data-disabled={effectiveDisabled ? 'true' : undefined}
+      className={`radio group relative inline-flex items-start gap-2.5 cursor-pointer select-none transition-opacity ${
         effectiveDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
       } ${className}`}
     >
@@ -186,21 +190,22 @@ export const HeroRadio: React.FC<HeroRadioProps> = ({
         {...props}
       />
       <div
-        className={`relative flex items-center justify-center rounded-full border-2 transition-all duration-150 ease-out mt-0.5 shrink-0 ${sizeClass.outer} ${getColorClasses()}`}
+        data-slot="control"
+        className={`radio__control relative flex items-center justify-center rounded-full border-2 transition-all duration-150 ease-out mt-0.5 shrink-0 ${sizeClass.outer} ${getColorClasses()}`}
       >
         {isSelected && (
           <span className={`rounded-full bg-white transition-transform transform scale-100 ${sizeClass.inner}`} />
         )}
       </div>
       {(children || description) && (
-        <div className="flex flex-col">
+        <div data-slot="label-wrapper" className="flex flex-col">
           {children && (
-            <span className={`font-semibold text-foreground leading-tight ${sizeClass.text}`}>
+            <span data-slot="label" className={`radio__label font-semibold text-foreground leading-tight ${sizeClass.text}`}>
               {children}
             </span>
           )}
           {description && (
-            <span className="text-[11px] text-default-400 leading-normal mt-0.5">
+            <span data-slot="description" className="text-[11px] text-default-400 leading-normal mt-0.5">
               {description}
             </span>
           )}
@@ -209,3 +214,8 @@ export const HeroRadio: React.FC<HeroRadioProps> = ({
     </label>
   );
 };
+
+export const RadioGroup = HeroRadioGroup;
+export const Radio = HeroRadio;
+
+export default HeroRadio;

@@ -194,12 +194,13 @@ export const HeroTabs: React.FC<HeroTabsProps> = ({
   };
 
   return (
-    <div className={`flex flex-col gap-3 ${fullWidth ? 'w-full' : ''}`}>
+    <div data-slot="tabs" className={`tabs flex flex-col gap-3 ${fullWidth ? 'w-full' : ''}`}>
       <div
         id={id}
         role="tablist"
         aria-label={ariaLabel}
-        className={`inline-flex items-center ${fullWidth ? 'w-full flex' : ''} ${getRadiusClasses()} ${getContainerStyles()} ${className}`}
+        data-slot="tab-list"
+        className={`tabs__list inline-flex items-center ${fullWidth ? 'w-full flex' : ''} ${getRadiusClasses()} ${getContainerStyles()} ${className}`}
       >
         {tabItems.map((tab) => {
           const isSelected = String(tab.id) === String(currentKey);
@@ -208,15 +209,17 @@ export const HeroTabs: React.FC<HeroTabsProps> = ({
               key={tab.id}
               role="tab"
               aria-selected={isSelected}
+              data-slot="tab"
+              data-selected={isSelected ? 'true' : undefined}
               disabled={tab.isDisabled}
               onClick={() => handleSelect(tab.id)}
-              className={`relative inline-flex items-center justify-center font-sans tracking-tight transition-all duration-200 cursor-pointer select-none outline-none ${fullWidth ? 'flex-1' : ''} ${getInnerRadiusClasses()} ${getItemSize()} ${
+              className={`tabs__tab relative inline-flex items-center justify-center font-sans tracking-tight transition-all duration-200 cursor-pointer select-none outline-none ${fullWidth ? 'flex-1' : ''} ${getInnerRadiusClasses()} ${getItemSize()} ${
                 isSelected ? getSelectedStyles() : getUnselectedStyles()
               } ${tab.isDisabled ? 'opacity-40 cursor-not-allowed pointer-events-none' : 'active:scale-95'}`}
             >
-              {tab.icon && <span className="shrink-0">{tab.icon}</span>}
-              <span className="truncate">{tab.title}</span>
-              {tab.badge && <span className="shrink-0 ml-1">{tab.badge}</span>}
+              {tab.icon && <span data-slot="tab-icon" className="shrink-0">{tab.icon}</span>}
+              <span data-slot="tab-title" className="truncate">{tab.title}</span>
+              {tab.badge && <span data-slot="tab-badge" className="shrink-0 ml-1">{tab.badge}</span>}
             </button>
           );
         })}
@@ -224,7 +227,7 @@ export const HeroTabs: React.FC<HeroTabsProps> = ({
 
       {/* If children contains Tab content, display the active tab's children */}
       {children && (
-        <div className="w-full">
+        <div data-slot="tab-panel" className="tabs__panel w-full">
           {React.Children.map(children, (child) => {
             if (React.isValidElement(child)) {
               const key = child.key ? String(child.key).replace(/^\.\$/, '') : (child.props as any).id || (child.props as any).key;

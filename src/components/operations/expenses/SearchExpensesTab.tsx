@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Download, Receipt, Trash2 } from "lucide-react";
 import { Expense } from "../../../types/db";
 import { formatCurrency } from "../../../utils/formatters";
-import { HeroButton, HeroDropdownSelect, HeroDatePicker } from "../../common/ui";
+import { HeroButton, HeroDropdownSelect, HeroDatePicker, HeroTable } from "../../common/ui";
 import { saveFileToBackup } from "../../../lib/fileBackupHelper";
 
 export interface SearchExpensesTabProps {
@@ -170,47 +170,45 @@ export const SearchExpensesTab: React.FC<SearchExpensesTabProps> = ({
           </div>
         </div>
 
-        <table className="w-full text-left font-sans text-xs">
-          <thead className="bg-zinc-100/50 dark:bg-zinc-800/50 font-bold border-b border-divider/20 text-default-600 dark:text-default-400">
-            <tr>
-              <th className="p-3.5">Track Info / Date</th>
-              <th className="p-3.5">Category</th>
-              <th className="p-3.5">Disbursed By</th>
-              <th className="p-3.5">Branch</th>
-              <th className="p-3.5 text-right">Amount</th>
-              <th className="p-3.5 text-center">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-divider/10">
+        <HeroTable isStriped className="min-w-full">
+          <HeroTable.Header>
+            <HeroTable.Column>Track Info / Date</HeroTable.Column>
+            <HeroTable.Column>Category</HeroTable.Column>
+            <HeroTable.Column>Disbursed By</HeroTable.Column>
+            <HeroTable.Column>Branch</HeroTable.Column>
+            <HeroTable.Column align="end">Amount</HeroTable.Column>
+            <HeroTable.Column align="center">Action</HeroTable.Column>
+          </HeroTable.Header>
+          <HeroTable.Body>
             {filteredExpenses.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="p-8 text-center text-default-500">
+              <HeroTable.Row isHoverable={false}>
+                <HeroTable.Cell colSpan={6} className="p-8 text-center text-default-500">
                   <Receipt className="h-8 w-8 mx-auto mb-2 opacity-30" />
                   No matching disbursements found for current search filters.
-                </td>
-              </tr>
+                </HeroTable.Cell>
+              </HeroTable.Row>
             ) : (
               filteredExpenses.map((ex) => (
-                <tr key={ex.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                  <td className="p-3.5 font-semibold text-foreground">
-                    <div>{ex.notes}</div>
+                <HeroTable.Row key={ex.id}>
+                  <HeroTable.Cell>
+                    <div className="font-semibold text-foreground">{ex.notes}</div>
                     <div className="text-[10px] text-default-400 mt-0.5">
                       {ex.dateTime && !isNaN(new Date(ex.dateTime).getTime())
                         ? new Date(ex.dateTime).toLocaleString("en-US")
                         : "N/A"}
                     </div>
-                  </td>
-                  <td className="p-3.5">
+                  </HeroTable.Cell>
+                  <HeroTable.Cell>
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-foreground border border-zinc-200/50 dark:border-white/5">
                       {ex.category}
                     </span>
-                  </td>
-                  <td className="p-3.5 text-default-500 font-bold">{ex.recordedBy || "System"}</td>
-                  <td className="p-3.5 text-default-500">{ex.branchId}</td>
-                  <td className="p-3.5 text-right text-rose-500 font-bold font-mono">
+                  </HeroTable.Cell>
+                  <HeroTable.Cell className="text-default-500 font-bold">{ex.recordedBy || "System"}</HeroTable.Cell>
+                  <HeroTable.Cell className="text-default-500">{ex.branchId}</HeroTable.Cell>
+                  <HeroTable.Cell align="end" className="text-rose-500 font-bold font-mono">
                     -{formatCurrency(ex.amount)}
-                  </td>
-                  <td className="p-3.5 text-center">
+                  </HeroTable.Cell>
+                  <HeroTable.Cell align="center">
                     <button
                       type="button"
                       onClick={() => onDeleteExpense(ex.id)}
@@ -219,12 +217,12 @@ export const SearchExpensesTab: React.FC<SearchExpensesTabProps> = ({
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
-                  </td>
-                </tr>
+                  </HeroTable.Cell>
+                </HeroTable.Row>
               ))
             )}
-          </tbody>
-        </table>
+          </HeroTable.Body>
+        </HeroTable>
       </div>
     </div>
   );

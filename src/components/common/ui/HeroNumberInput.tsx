@@ -68,10 +68,11 @@ export const HeroNumberInput = React.forwardRef<HTMLInputElement, HeroNumberInpu
     };
 
     const stepperControls = showStepper && !isReadOnly && !isDisabled && (
-      <div className="flex flex-col gap-0.5 -mr-1">
+      <div data-slot="steppers" className="flex flex-col gap-0.5 -mr-1">
         <button
           type="button"
           tabIndex={-1}
+          data-slot="stepper-up"
           onClick={() => handleStep('up')}
           className="h-3 w-4 flex items-center justify-center text-default-400 hover:text-default-700 dark:hover:text-default-200 hover:bg-default-200 rounded transition-colors"
         >
@@ -82,6 +83,7 @@ export const HeroNumberInput = React.forwardRef<HTMLInputElement, HeroNumberInpu
         <button
           type="button"
           tabIndex={-1}
+          data-slot="stepper-down"
           onClick={() => handleStep('down')}
           className="h-3 w-4 flex items-center justify-center text-default-400 hover:text-default-700 dark:hover:text-default-200 hover:bg-default-200 rounded transition-colors"
         >
@@ -103,6 +105,8 @@ export const HeroNumberInput = React.forwardRef<HTMLInputElement, HeroNumberInpu
         onValueChange={handleChange}
         isDisabled={isDisabled}
         isReadOnly={isReadOnly}
+        className="number-field"
+        data-slot="number-field"
         endContent={
           <div className="flex items-center gap-1">
             {endContent}
@@ -118,6 +122,7 @@ export const HeroNumberInput = React.forwardRef<HTMLInputElement, HeroNumberInpu
 HeroNumberInput.displayName = 'HeroNumberInput';
 
 export const NumberField = HeroNumberInput;
+export const NumberInput = HeroNumberInput;
 
 export default HeroNumberInput;
 

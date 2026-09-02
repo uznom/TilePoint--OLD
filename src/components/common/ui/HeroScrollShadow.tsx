@@ -68,10 +68,11 @@ export const HeroScrollShadow = React.forwardRef<HTMLDivElement, HeroScrollShado
     }, [handleScroll, containerRef]);
 
     return (
-      <div className="relative overflow-hidden">
+      <div data-slot="scroll-shadow" className="scroll-shadow relative overflow-hidden">
         {/* Scroll Container */}
         <div
           ref={containerRef}
+          data-slot="container"
           className={`${
             orientation === 'vertical' ? 'overflow-y-auto overflow-x-hidden' : 'overflow-x-auto overflow-y-hidden'
           } ${hideScrollBar ? 'scrollbar-none' : ''} ${className}`}
@@ -83,6 +84,7 @@ export const HeroScrollShadow = React.forwardRef<HTMLDivElement, HeroScrollShado
         {/* Top Shadow */}
         {orientation === 'vertical' && (
           <div
+            data-slot="top-shadow"
             className={`pointer-events-none absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-background to-transparent transition-opacity duration-200 z-10 ${
               hasTopShadow ? 'opacity-100' : 'opacity-0'
             }`}
@@ -92,6 +94,7 @@ export const HeroScrollShadow = React.forwardRef<HTMLDivElement, HeroScrollShado
         {/* Bottom Shadow */}
         {orientation === 'vertical' && (
           <div
+            data-slot="bottom-shadow"
             className={`pointer-events-none absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-background to-transparent transition-opacity duration-200 z-10 ${
               hasBottomShadow ? 'opacity-100' : 'opacity-0'
             }`}
@@ -101,6 +104,7 @@ export const HeroScrollShadow = React.forwardRef<HTMLDivElement, HeroScrollShado
         {/* Left Shadow */}
         {orientation === 'horizontal' && (
           <div
+            data-slot="left-shadow"
             className={`pointer-events-none absolute top-0 bottom-0 left-0 w-6 bg-gradient-to-r from-background to-transparent transition-opacity duration-200 z-10 ${
               hasLeftShadow ? 'opacity-100' : 'opacity-0'
             }`}
@@ -110,6 +114,7 @@ export const HeroScrollShadow = React.forwardRef<HTMLDivElement, HeroScrollShado
         {/* Right Shadow */}
         {orientation === 'horizontal' && (
           <div
+            data-slot="right-shadow"
             className={`pointer-events-none absolute top-0 bottom-0 right-0 w-6 bg-gradient-to-l from-background to-transparent transition-opacity duration-200 z-10 ${
               hasRightShadow ? 'opacity-100' : 'opacity-0'
             }`}
@@ -121,3 +126,7 @@ export const HeroScrollShadow = React.forwardRef<HTMLDivElement, HeroScrollShado
 );
 
 HeroScrollShadow.displayName = 'HeroScrollShadow';
+
+export const ScrollShadow = HeroScrollShadow;
+
+export default HeroScrollShadow;

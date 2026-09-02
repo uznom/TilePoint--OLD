@@ -147,10 +147,13 @@ export const HeroCheckbox = React.forwardRef<HTMLInputElement, HeroCheckboxProps
     const displayLabel = children ?? label;
 
     return (
-      <div className={`inline-flex flex-col ${className}`}>
+      <div data-slot="checkbox-group" className={`inline-flex flex-col ${className}`}>
         <label
           htmlFor={checkboxId}
-          className={`group relative inline-flex items-start ${sizeCls.gap} cursor-pointer select-none ${
+          data-slot="checkbox"
+          data-selected={currentChecked ? 'true' : undefined}
+          data-disabled={effectiveDisabled ? 'true' : undefined}
+          className={`checkbox group relative inline-flex items-start ${sizeCls.gap} cursor-pointer select-none ${
             effectiveDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
           }`}
         >
@@ -167,7 +170,8 @@ export const HeroCheckbox = React.forwardRef<HTMLInputElement, HeroCheckboxProps
             />
             {/* Custom Checkbox Frame */}
             <div
-              className={`flex items-center justify-center transition-all duration-200 border-2 ${sizeCls.box} ${radiusCls} 
+              data-slot="wrapper"
+              className={`checkbox__box flex items-center justify-center transition-all duration-200 border-2 ${sizeCls.box} ${radiusCls} 
                 ${
                   currentChecked || isIndeterminate
                     ? getCheckedColorClasses()
@@ -178,18 +182,19 @@ export const HeroCheckbox = React.forwardRef<HTMLInputElement, HeroCheckboxProps
                 peer-focus-visible:ring-2 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background peer-focus-visible:ring-primary`}
             >
               {isIndeterminate ? (
-                <Minus className={`${sizeCls.icon} stroke-[3.5]`} />
+                <Minus data-slot="icon" className={`checkbox__icon ${sizeCls.icon} stroke-[3.5]`} />
               ) : currentChecked ? (
-                <Check className={`${sizeCls.icon} stroke-[3.5] animate-in zoom-in-75 duration-150`} />
+                <Check data-slot="icon" className={`checkbox__icon ${sizeCls.icon} stroke-[3.5] animate-in zoom-in-75 duration-150`} />
               ) : null}
             </div>
           </div>
 
           {(displayLabel || description) && (
-            <div className="flex flex-col min-w-0">
+            <div data-slot="label-wrapper" className="flex flex-col min-w-0">
               {displayLabel && (
                 <span
-                  className={`font-semibold text-foreground transition-colors group-hover:text-primary ${sizeCls.label} ${
+                  data-slot="label"
+                  className={`checkbox__label font-semibold text-foreground transition-colors group-hover:text-primary ${sizeCls.label} ${
                     isInvalid ? 'text-rose-500' : ''
                   }`}
                 >
@@ -197,7 +202,7 @@ export const HeroCheckbox = React.forwardRef<HTMLInputElement, HeroCheckboxProps
                 </span>
               )}
               {description && (
-                <span className={`text-default-500/70 leading-normal ${sizeCls.desc}`}>
+                <span data-slot="description" className={`text-default-500/70 leading-normal ${sizeCls.desc}`}>
                   {description}
                 </span>
               )}
@@ -206,7 +211,7 @@ export const HeroCheckbox = React.forwardRef<HTMLInputElement, HeroCheckboxProps
         </label>
 
         {isInvalid && errorMessage && (
-          <span className="text-[10.5px] font-semibold text-rose-500 mt-1 pl-7">
+          <span data-slot="error-message" className="text-[10.5px] font-semibold text-rose-500 mt-1 pl-7">
             {errorMessage}
           </span>
         )}
@@ -216,5 +221,7 @@ export const HeroCheckbox = React.forwardRef<HTMLInputElement, HeroCheckboxProps
 );
 
 HeroCheckbox.displayName = 'HeroCheckbox';
+
+export const Checkbox = HeroCheckbox;
 
 export default HeroCheckbox;

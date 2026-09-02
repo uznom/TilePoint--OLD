@@ -23,6 +23,7 @@ import { HeaderBar } from './common/HeaderBar';
 import { HeroButton } from './common/ui/HeroButton';
 import { HeroSelect } from './common/ui/HeroSelect';
 import { HeroDropdownSelect } from './common/ui/HeroDropdown';
+import { HeroTable } from './common/ui/HeroTable';
 import { formatCurrency } from '../utils/formatters';
 
 interface DamageRegisterModuleProps {
@@ -594,101 +595,97 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left min-w-[760px]">
-                <thead>
-                  <tr className="bg-zinc-50 dark:bg-zinc-800/40 border-b border-divider/20 text-[10px] font-bold uppercase text-default-500 tracking-wider">
-                    <th className="py-3 px-4">Incident ID</th>
-                    <th className="py-3 px-4">Timestamp</th>
-                    <th className="py-3 px-4">Product SKU / Code</th>
-                    <th className="py-3 px-4">Showroom Branch</th>
-                    <th className="py-3 px-4 text-right">Quantity</th>
-                    <th className="py-3 px-4">Breakage Reason</th>
-                    <th className="py-3 px-4">Action / Treatment</th>
-                    <th className="py-3 px-4 text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-divider/10 text-xs">
-                  {filteredLogs
-                    .slice((damagePage - 1) * damagePageSize, damagePage * damagePageSize)
-                    .map(log => {
-                      let catColorAndLabel = 'bg-zinc-100 dark:bg-zinc-800 text-default-500 border-zinc-200/50 dark:border-white/5';
-                      if (log.category === 'BOA') catColorAndLabel = 'bg-rose-500/10 text-rose-500 border-rose-500/20';
-                      if (log.category === 'Warehouse Breakage') catColorAndLabel = 'bg-amber-500/10 text-amber-500 border-amber-500/20';
-                      if (log.category === 'Delivery Transit') catColorAndLabel = 'bg-primary/10 text-primary border-primary/20';
-                      if (log.category === 'Showroom Casualty') catColorAndLabel = 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20';
+            <HeroTable isStriped className="min-w-full">
+              <HeroTable.Header>
+                <HeroTable.Column>Incident ID</HeroTable.Column>
+                <HeroTable.Column>Timestamp</HeroTable.Column>
+                <HeroTable.Column>Product SKU / Code</HeroTable.Column>
+                <HeroTable.Column>Showroom Branch</HeroTable.Column>
+                <HeroTable.Column align="end">Quantity</HeroTable.Column>
+                <HeroTable.Column>Breakage Reason</HeroTable.Column>
+                <HeroTable.Column>Action / Treatment</HeroTable.Column>
+                <HeroTable.Column align="center">Actions</HeroTable.Column>
+              </HeroTable.Header>
+              <HeroTable.Body>
+                {filteredLogs
+                  .slice((damagePage - 1) * damagePageSize, damagePage * damagePageSize)
+                  .map(log => {
+                    let catColorAndLabel = 'bg-zinc-100 dark:bg-zinc-800 text-default-500 border-zinc-200/50 dark:border-white/5';
+                    if (log.category === 'BOA') catColorAndLabel = 'bg-rose-500/10 text-rose-500 border-rose-500/20';
+                    if (log.category === 'Warehouse Breakage') catColorAndLabel = 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+                    if (log.category === 'Delivery Transit') catColorAndLabel = 'bg-primary/10 text-primary border-primary/20';
+                    if (log.category === 'Showroom Casualty') catColorAndLabel = 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20';
 
-                      let actionLabelColor = 'text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800';
-                      if (log.actionTaken === 'Saved for Mosaic') actionLabelColor = 'text-amber-700 dark:text-amber-300 bg-amber-500/15';
-                      if (log.actionTaken === 'Returned for Credit') actionLabelColor = 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15';
-                      if (log.actionTaken === 'Claimed from Supplier / Insurance Code') actionLabelColor = 'text-rose-700 dark:text-rose-300 bg-rose-500/15';
+                    let actionLabelColor = 'text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800';
+                    if (log.actionTaken === 'Saved for Mosaic') actionLabelColor = 'text-amber-700 dark:text-amber-300 bg-amber-500/15';
+                    if (log.actionTaken === 'Returned for Credit') actionLabelColor = 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/15';
+                    if (log.actionTaken === 'Claimed from Supplier / Insurance Code') actionLabelColor = 'text-rose-700 dark:text-rose-300 bg-rose-500/15';
 
-                      return (
-                        <tr key={log.id} className="hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition font-medium">
-                          <td className="py-3.5 px-4 font-bold text-default-400 font-mono text-[11px]">
-                            {log.id.slice(0, 12)}
-                          </td>
-                          <td className="py-3.5 px-4 text-default-500 whitespace-nowrap font-mono text-[11px]">
-                            {new Date(log.reportedAt || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour12: true, hour: 'numeric', minute: 'numeric' })}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <span className="block font-bold text-foreground max-w-[220px] truncate">{log.productName}</span>
-                            <span className="text-[10px] text-default-500 uppercase block mt-0.5 font-mono">{log.productSku}</span>
-                          </td>
-                          <td className="py-3.5 px-4 whitespace-nowrap text-foreground font-medium">
-                            {log.branchName}
-                          </td>
-                          <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono font-bold">
-                            <span className="text-rose-500 text-sm">-{Math.abs(Number(log.quantity) || 0)}</span>
-                            <span className="text-[9px] uppercase block tracking-wider text-default-400 mt-0.5 font-sans">{log.unitType}s</span>
-                          </td>
-                          <td className="py-3.5 px-4 whitespace-nowrap">
-                            <span className={`px-2.5 py-0.5 text-[9.5px] font-bold uppercase border rounded-full inline-block font-mono ${catColorAndLabel}`}>
-                              {log.category === 'BOA' ? 'BOA Supplier' : log.category}
+                    return (
+                      <HeroTable.Row key={log.id}>
+                        <HeroTable.Cell className="font-bold text-default-400 font-mono text-[11px]">
+                          {log.id.slice(0, 12)}
+                        </HeroTable.Cell>
+                        <HeroTable.Cell className="text-default-500 whitespace-nowrap font-mono text-[11px]">
+                          {new Date(log.reportedAt || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour12: true, hour: 'numeric', minute: 'numeric' })}
+                        </HeroTable.Cell>
+                        <HeroTable.Cell>
+                          <span className="block font-bold text-foreground max-w-[220px] truncate">{log.productName}</span>
+                          <span className="text-[10px] text-default-500 uppercase block mt-0.5 font-mono">{log.productSku}</span>
+                        </HeroTable.Cell>
+                        <HeroTable.Cell className="whitespace-nowrap text-foreground font-medium">
+                          {log.branchName}
+                        </HeroTable.Cell>
+                        <HeroTable.Cell align="end" className="whitespace-nowrap font-mono font-bold">
+                          <span className="text-rose-500 text-sm">-{Math.abs(Number(log.quantity) || 0)}</span>
+                          <span className="text-[9px] uppercase block tracking-wider text-default-400 mt-0.5 font-sans">{log.unitType}s</span>
+                        </HeroTable.Cell>
+                        <HeroTable.Cell className="whitespace-nowrap">
+                          <span className={`px-2.5 py-0.5 text-[9.5px] font-bold uppercase border rounded-full inline-block font-mono ${catColorAndLabel}`}>
+                            {log.category === 'BOA' ? 'BOA Supplier' : log.category}
+                          </span>
+                        </HeroTable.Cell>
+                        <HeroTable.Cell className="min-w-[140px]">
+                          <span className={`px-2.5 py-0.5 text-[9.5px] font-bold rounded-full block text-center truncate max-w-[180px] font-mono ${actionLabelColor}`}>
+                            {log.actionTaken}
+                          </span>
+                          {log.notes && (
+                            <span className="text-[10px] text-default-500 block truncate max-w-[200px] italic mt-1" title={log.notes}>
+                              "{log.notes}"
                             </span>
-                          </td>
-                          <td className="py-3.5 px-4 min-w-[140px]">
-                            <span className={`px-2.5 py-0.5 text-[9.5px] font-bold rounded-full block text-center truncate max-w-[180px] font-mono ${actionLabelColor}`}>
-                              {log.actionTaken}
-                            </span>
-                            {log.notes && (
-                              <span className="text-[10px] text-default-500 block truncate max-w-[200px] italic mt-1" title={log.notes}>
-                                "{log.notes}"
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4 text-center">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (isRowClearingBlocked()) {
-                                  setAlertMessage(`Action Restricted: Cannot delete damage log records because the register is currently holding: ${getRowClearingBlockedReason()}`);
-                                  return;
-                                }
-                                setConfirmTargetId(log.id);
-                              }}
-                              className="p-1.5 hover:bg-rose-500/10 text-default-400 hover:text-rose-500 rounded-full transition border-0 cursor-pointer bg-transparent disabled:opacity-40 active:scale-95"
-                              title={isRowClearingBlocked() ? `Deactivated: register is holding ${getRowClearingBlockedReason()}` : "Soft-delete damage log"}
-                              disabled={isRowClearingBlocked()}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                          )}
+                        </HeroTable.Cell>
+                        <HeroTable.Cell align="center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isRowClearingBlocked()) {
+                                setAlertMessage(`Action Restricted: Cannot delete damage log records because the register is currently holding: ${getRowClearingBlockedReason()}`);
+                                return;
+                              }
+                              setConfirmTargetId(log.id);
+                            }}
+                            className="p-1.5 hover:bg-rose-500/10 text-default-400 hover:text-rose-500 rounded-full transition border-0 cursor-pointer bg-transparent disabled:opacity-40 active:scale-95"
+                            title={isRowClearingBlocked() ? `Deactivated: register is holding ${getRowClearingBlockedReason()}` : "Soft-delete damage log"}
+                            disabled={isRowClearingBlocked()}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </HeroTable.Cell>
+                      </HeroTable.Row>
+                    );
+                  })}
 
-                  {filteredLogs.length === 0 && (
-                    <tr>
-                      <td colSpan={8} className="text-center py-12 text-default-400 italic bg-white dark:bg-zinc-900">
-                        <Archive className="h-8 w-8 mx-auto stroke-[1.5] text-default-300 mb-2" />
-                        No breakage incidents or BOA claims are found matching current filters.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                {filteredLogs.length === 0 && (
+                  <HeroTable.Row isHoverable={false}>
+                    <HeroTable.Cell colSpan={8} className="text-center py-12 text-default-400 italic bg-white dark:bg-zinc-900">
+                      <Archive className="h-8 w-8 mx-auto stroke-[1.5] text-default-300 mb-2" />
+                      No breakage incidents or BOA claims are found matching current filters.
+                    </HeroTable.Cell>
+                  </HeroTable.Row>
+                )}
+              </HeroTable.Body>
+            </HeroTable>
 
             <TablePagination
               currentPage={damagePage}

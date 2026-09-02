@@ -14,6 +14,7 @@ import { HeroModal } from '../common/ui/HeroModal';
 import { HeroButton } from '../common/ui/HeroButton';
 import { HeroInput } from '../common/ui/HeroInput';
 import { HeroDropdownSelect } from '../common/ui/HeroDropdown';
+import { HeroTable } from '../common/ui/HeroTable';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { Product, Sale, SaleItem } from '../../types/db';
 import { formatCurrency } from '../../utils/formatters';
@@ -321,129 +322,125 @@ export const TopAndSlowSellingModal: React.FC<TopAndSlowSellingModalProps> = ({
       {/* Main Table */}
       <div className="p-5 overflow-y-auto max-h-[58vh]">
         {activeItems.length > 0 ? (
-          <div className="overflow-x-auto rounded-xl border border-divider bg-content1">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-content2/60 border-b border-divider text-[10px] font-black uppercase text-default-500 tracking-wider">
-                  <th className="py-3 px-3 text-center w-12">Rank</th>
-                  <th className="py-3 px-4">Product & Category</th>
-                  <th className="py-3 px-3 text-center">Units Sold</th>
-                  <th className="py-3 px-3 text-right">
-                    {activeTab === 'top20' ? 'Total Revenue' : 'Tied-up Capital'}
-                  </th>
-                  <th className="py-3 px-3 text-center">Current Stock</th>
-                  <th className="py-3 px-3 text-center">Status / Velocity</th>
-                  <th className="py-3 px-3 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-divider font-sans">
-                {activeItems.map((item, idx) => {
-                  const rank = idx + 1;
-                  const isTop3 = activeTab === 'top20' && rank <= 3;
+          <HeroTable isStriped className="min-w-full">
+            <HeroTable.Header>
+              <HeroTable.Column align="center" className="w-12">Rank</HeroTable.Column>
+              <HeroTable.Column>Product & Category</HeroTable.Column>
+              <HeroTable.Column align="center">Units Sold</HeroTable.Column>
+              <HeroTable.Column align="end">
+                {activeTab === 'top20' ? 'Total Revenue' : 'Tied-up Capital'}
+              </HeroTable.Column>
+              <HeroTable.Column align="center">Current Stock</HeroTable.Column>
+              <HeroTable.Column align="center">Status / Velocity</HeroTable.Column>
+              <HeroTable.Column align="end">Action</HeroTable.Column>
+            </HeroTable.Header>
+            <HeroTable.Body>
+              {activeItems.map((item, idx) => {
+                const rank = idx + 1;
+                const isTop3 = activeTab === 'top20' && rank <= 3;
 
-                  return (
-                    <tr key={item.product.id} className="hover:bg-content2/40 transition-colors">
-                      {/* Rank */}
-                      <td className="py-3 px-3 text-center">
-                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full font-black text-xs ${
-                          isTop3 
-                            ? rank === 1 ? 'bg-amber-500 text-white font-extrabold shadow-sm' : rank === 2 ? 'bg-slate-400 text-white' : 'bg-amber-700 text-white'
-                            : 'bg-default-200 text-default-700'
-                        }`}>
-                          {rank}
-                        </span>
-                      </td>
+                return (
+                  <HeroTable.Row key={item.product.id}>
+                    {/* Rank */}
+                    <HeroTable.Cell align="center">
+                      <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full font-black text-xs ${
+                        isTop3 
+                          ? rank === 1 ? 'bg-amber-500 text-white font-extrabold shadow-sm' : rank === 2 ? 'bg-slate-400 text-white' : 'bg-amber-700 text-white'
+                          : 'bg-default-200 text-default-700'
+                      }`}>
+                        {rank}
+                      </span>
+                    </HeroTable.Cell>
 
-                      {/* Product */}
-                      <td className="py-3 px-4">
-                        <div className="font-extrabold text-foreground text-xs leading-tight">
-                          {item.product.productName}
-                        </div>
-                        <div className="text-[10px] text-default-400 mt-0.5 flex items-center gap-1.5 font-medium">
-                          <span className="font-mono text-primary font-bold">{item.product.productCode}</span>
-                          <span>•</span>
-                          <span>{item.category}</span>
-                          {item.brand && (
-                            <>
-                              <span>•</span>
-                              <span>{item.brand}</span>
-                            </>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Units Sold */}
-                      <td className="py-3 px-3 text-center font-extrabold text-xs">
-                        <span className={item.unitsSold > 0 ? 'text-foreground' : 'text-default-400'}>
-                          {item.unitsSold.toLocaleString()} {item.product.unit || 'pcs'}
-                        </span>
-                      </td>
-
-                      {/* Financial Value */}
-                      <td className="py-3 px-3 text-right font-black text-xs">
-                        {activeTab === 'top20' ? (
-                           <span className="text-emerald-600 dark:text-emerald-400">
-                            {formatCurrency(item.revenue)}
-                          </span>
-                        ) : (
-                          <span className="text-amber-600 dark:text-amber-400">
-                            {formatCurrency(item.tiedUpCapital)}
-                          </span>
+                    {/* Product */}
+                    <HeroTable.Cell>
+                      <div className="font-extrabold text-foreground text-xs leading-tight">
+                        {item.product.productName}
+                      </div>
+                      <div className="text-[10px] text-default-400 mt-0.5 flex items-center gap-1.5 font-medium">
+                        <span className="font-mono text-primary font-bold">{item.product.productCode}</span>
+                        <span>•</span>
+                        <span>{item.category}</span>
+                        {item.brand && (
+                          <>
+                            <span>•</span>
+                            <span>{item.brand}</span>
+                          </>
                         )}
-                      </td>
+                      </div>
+                    </HeroTable.Cell>
 
-                      {/* Current Stock */}
-                      <td className="py-3 px-3 text-center">
-                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${
-                          item.currentStock === 0 
-                            ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20' 
-                            : item.currentStock <= 10 
-                              ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' 
-                              : 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
-                        }`}>
-                          {item.currentStock} {item.product.unit || 'pcs'}
+                    {/* Units Sold */}
+                    <HeroTable.Cell align="center" className="font-extrabold text-xs">
+                      <span className={item.unitsSold > 0 ? 'text-foreground' : 'text-default-400'}>
+                        {item.unitsSold.toLocaleString()} {item.product.unit || 'pcs'}
+                      </span>
+                    </HeroTable.Cell>
+
+                    {/* Financial Value */}
+                    <HeroTable.Cell align="end" className="font-black text-xs">
+                      {activeTab === 'top20' ? (
+                         <span className="text-emerald-600 dark:text-emerald-400">
+                          {formatCurrency(item.revenue)}
                         </span>
-                      </td>
+                      ) : (
+                        <span className="text-amber-600 dark:text-amber-400">
+                          {formatCurrency(item.tiedUpCapital)}
+                        </span>
+                      )}
+                    </HeroTable.Cell>
 
-                      {/* Status / Velocity */}
-                      <td className="py-3 px-3 text-center">
-                        {activeTab === 'top20' ? (
-                          <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-emerald-600 dark:text-emerald-400">
-                            <ArrowUpRight className="h-3.5 w-3.5" /> High Demand
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-amber-600 dark:text-amber-400">
-                            <ArrowDownRight className="h-3.5 w-3.5" /> 
-                            {item.unitsSold === 0 ? 'Non-Moving' : 'Slow Turn'}
-                          </span>
+                    {/* Current Stock */}
+                    <HeroTable.Cell align="center">
+                      <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                        item.currentStock === 0 
+                          ? 'bg-rose-500/10 text-rose-600 border border-rose-500/20' 
+                          : item.currentStock <= 10 
+                            ? 'bg-amber-500/10 text-amber-600 border border-amber-500/20' 
+                            : 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20'
+                      }`}>
+                        {item.currentStock} {item.product.unit || 'pcs'}
+                      </span>
+                    </HeroTable.Cell>
+
+                    {/* Status / Velocity */}
+                    <HeroTable.Cell align="center">
+                      {activeTab === 'top20' ? (
+                        <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-emerald-600 dark:text-emerald-400">
+                          <ArrowUpRight className="h-3.5 w-3.5" /> High Demand
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[10.5px] font-bold text-amber-600 dark:text-amber-400">
+                          <ArrowDownRight className="h-3.5 w-3.5" /> 
+                          {item.unitsSold === 0 ? 'Non-Moving' : 'Slow Turn'}
+                        </span>
+                      )}
+                    </HeroTable.Cell>
+
+                    {/* Action */}
+                    <HeroTable.Cell align="end">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {onOpenProductAdjust && (
+                          <HeroButton
+                            onClick={() => {
+                              onOpenProductAdjust(item.product);
+                              onClose();
+                            }}
+                            variant="flat"
+                            size="sm"
+                            className="text-[10.5px] font-bold py-1 px-2 h-7"
+                            startIcon={<Sliders className="h-3 w-3" />}
+                          >
+                            Adjust
+                          </HeroButton>
                         )}
-                      </td>
-
-                      {/* Action */}
-                      <td className="py-3 px-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {onOpenProductAdjust && (
-                            <HeroButton
-                              onClick={() => {
-                                onOpenProductAdjust(item.product);
-                                onClose();
-                              }}
-                              variant="flat"
-                              size="sm"
-                              className="text-[10.5px] font-bold py-1 px-2 h-7"
-                              startIcon={<Sliders className="h-3 w-3" />}
-                            >
-                              Adjust
-                            </HeroButton>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                    </HeroTable.Cell>
+                  </HeroTable.Row>
+                );
+              })}
+            </HeroTable.Body>
+          </HeroTable>
         ) : (
           <div className="py-12 text-center rounded-xl border border-dashed border-divider bg-content2/30">
             <Package className="h-8 w-8 text-default-400 mx-auto mb-2" />

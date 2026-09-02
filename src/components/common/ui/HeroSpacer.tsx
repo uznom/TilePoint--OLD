@@ -21,7 +21,9 @@ export const HeroSpacer: React.FC<HeroSpacerProps> = ({ x, y, className = '', id
     return style;
   };
 
-  return <span id={id} aria-hidden="true" style={getStyle()} className={`inline-block shrink-0 ${className}`} />;
+  return <span id={id} data-slot="spacer" aria-hidden="true" style={getStyle()} className={`spacer inline-block shrink-0 ${className}`} />;
 };
+
+export const Spacer = HeroSpacer;
 
 export default HeroSpacer;

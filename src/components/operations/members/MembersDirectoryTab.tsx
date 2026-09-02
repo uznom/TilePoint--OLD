@@ -12,6 +12,7 @@ import { formatCurrency } from "../../../utils/formatters";
 import { HeroButton } from "../../common/ui/HeroButton";
 import { HeroInput } from "../../common/ui/HeroInput";
 import { HeroDropdownSelect } from "../../common/ui/HeroDropdown";
+import { HeroTable } from "../../common/ui/HeroTable";
 
 export interface MembersDirectoryTabProps {
   members: Member[];
@@ -152,62 +153,58 @@ export const MembersDirectoryTab: React.FC<MembersDirectoryTabProps> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl overflow-hidden shadow-elevation-soft">
-          <table className="w-full text-left border-collapse text-xs font-sans">
-            <thead className="bg-zinc-100/80 dark:bg-zinc-800/80 text-default-600 dark:text-default-400 font-bold border-b border-divider/20">
-              <tr>
-                <th className="p-3.5">Customer / ID</th>
-                <th className="p-3.5">Contact Line</th>
-                <th className="p-3.5 text-right">Credit Balance</th>
-                <th className="p-3.5 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-divider/10">
-              {filteredMembers.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="p-8 text-center text-default-500 font-sans">
-                    <Users className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                    No registered corporate customers found.
-                  </td>
-                </tr>
-              ) : (
-                filteredMembers.map((m) => (
-                  <tr key={m.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                    <td className="p-3.5">
-                      <div className="font-bold text-foreground">{m.fullName}</div>
-                      <div className="text-[10px] text-default-400 font-mono">{m.id}</div>
-                    </td>
-                    <td className="p-3.5">
-                      <div className="flex items-center gap-1.5 text-default-600 font-medium">
-                        <Phone className="h-3.5 w-3.5 text-default-400" />
-                        <span>{m.phone}</span>
-                      </div>
-                      <div className="text-[10px] text-default-400">{m.email}</div>
-                    </td>
-                    <td className="p-3.5 text-right">
-                      <div className={`font-bold font-mono ${(m.outstandingBalance || 0) > 0 ? "text-danger" : "text-success"}`}>
-                        {formatCurrency(m.outstandingBalance || 0)}
-                      </div>
-                      <div className="text-[10px] text-default-400 font-mono">
-                        Limit: {formatCurrency(m.creditLimit)}
-                      </div>
-                    </td>
-                    <td className="p-3.5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => onDeleteMember(m.id)}
-                        className="p-1.5 hover:bg-rose-500/10 text-default-400 hover:text-rose-500 rounded-lg transition-colors cursor-pointer"
-                        title="Delete Member"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <HeroTable isStriped className="min-w-full">
+          <HeroTable.Header>
+            <HeroTable.Column>Customer / ID</HeroTable.Column>
+            <HeroTable.Column>Contact Line</HeroTable.Column>
+            <HeroTable.Column align="end">Credit Balance</HeroTable.Column>
+            <HeroTable.Column align="end">Action</HeroTable.Column>
+          </HeroTable.Header>
+          <HeroTable.Body>
+            {filteredMembers.length === 0 ? (
+              <HeroTable.Row isHoverable={false}>
+                <HeroTable.Cell colSpan={4} className="p-8 text-center text-default-500 font-sans">
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  No registered corporate customers found.
+                </HeroTable.Cell>
+              </HeroTable.Row>
+            ) : (
+              filteredMembers.map((m) => (
+                <HeroTable.Row key={m.id}>
+                  <HeroTable.Cell>
+                    <div className="font-bold text-foreground">{m.fullName}</div>
+                    <div className="text-[10px] text-default-400 font-mono">{m.id}</div>
+                  </HeroTable.Cell>
+                  <HeroTable.Cell>
+                    <div className="flex items-center gap-1.5 text-default-600 font-medium">
+                      <Phone className="h-3.5 w-3.5 text-default-400" />
+                      <span>{m.phone}</span>
+                    </div>
+                    <div className="text-[10px] text-default-400">{m.email}</div>
+                  </HeroTable.Cell>
+                  <HeroTable.Cell align="end">
+                    <div className={`font-bold font-mono ${(m.outstandingBalance || 0) > 0 ? "text-danger" : "text-success"}`}>
+                      {formatCurrency(m.outstandingBalance || 0)}
+                    </div>
+                    <div className="text-[10px] text-default-400 font-mono">
+                      Limit: {formatCurrency(m.creditLimit)}
+                    </div>
+                  </HeroTable.Cell>
+                  <HeroTable.Cell align="end">
+                    <button
+                      type="button"
+                      onClick={() => onDeleteMember(m.id)}
+                      className="p-1.5 hover:bg-rose-500/10 text-default-400 hover:text-rose-500 rounded-lg transition-colors cursor-pointer"
+                      title="Delete Member"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </HeroTable.Cell>
+                </HeroTable.Row>
+              ))
+            )}
+          </HeroTable.Body>
+        </HeroTable>
       </div>
     </div>
   );

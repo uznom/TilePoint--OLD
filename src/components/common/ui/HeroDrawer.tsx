@@ -106,7 +106,7 @@ export const HeroDrawer: React.FC<HeroDrawerProps> = ({
   const drawerContent = (
     <AnimatePresence>
       {isOpen && (
-        <div id={id} className="fixed inset-0 z-[10000] flex justify-end">
+        <div id={id} data-slot="drawer" className="drawer fixed inset-0 z-[10000] flex justify-end">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -114,7 +114,8 @@ export const HeroDrawer: React.FC<HeroDrawerProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={isDismissable ? onClose : undefined}
-            className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md"
+            data-slot="backdrop"
+            className="drawer__backdrop fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md"
           />
 
           {/* Drawer Container */}
@@ -123,7 +124,8 @@ export const HeroDrawer: React.FC<HeroDrawerProps> = ({
             animate={anim.animate}
             exit={anim.exit}
             transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-            className={`fixed ${anim.position} w-full ${getSizeClasses()} bg-content1 border-divider shadow-2xl flex flex-col z-10 overflow-hidden ${
+            data-slot="dialog"
+            className={`drawer__dialog fixed ${anim.position} w-full ${getSizeClasses()} bg-content1 border-divider shadow-2xl flex flex-col z-10 overflow-hidden ${
               placement === 'left'
                 ? 'border-r'
                 : placement === 'right'
@@ -135,20 +137,21 @@ export const HeroDrawer: React.FC<HeroDrawerProps> = ({
           >
             {/* Header */}
             {(title || isDismissable) && (
-              <div className="p-4 sm:p-5 border-b border-divider flex items-center justify-between gap-3 bg-content1">
+              <div data-slot="header" className="drawer__header p-4 sm:p-5 border-b border-divider flex items-center justify-between gap-3 bg-content1">
                 <div className="flex flex-col min-w-0">
                   {title && (
-                    <h3 className="text-sm font-black uppercase tracking-wider text-foreground truncate">
+                    <h3 data-slot="title" className="text-sm font-black uppercase tracking-wider text-foreground truncate">
                       {title}
                     </h3>
                   )}
                   {description && (
-                    <p className="text-xs text-default-400 mt-0.5 truncate">{description}</p>
+                    <p data-slot="description" className="text-xs text-default-400 mt-0.5 truncate">{description}</p>
                   )}
                 </div>
                 {isDismissable && (
                   <button
                     type="button"
+                    data-slot="close-button"
                     onClick={onClose}
                     className="p-1 rounded-full text-default-400 hover:text-default-700 dark:hover:text-default-200 hover:bg-default-100 transition-colors cursor-pointer"
                     aria-label="Close drawer"
@@ -162,11 +165,11 @@ export const HeroDrawer: React.FC<HeroDrawerProps> = ({
             )}
 
             {/* Body */}
-            <div className="flex-1 p-4 sm:p-5 overflow-y-auto">{children}</div>
+            <div data-slot="body" className="drawer__body flex-1 p-4 sm:p-5 overflow-y-auto">{children}</div>
 
             {/* Footer */}
             {footer && (
-              <div className="p-4 border-t border-divider bg-content2/40 flex items-center justify-end gap-2">
+              <div data-slot="footer" className="drawer__footer p-4 border-t border-divider bg-content2/40 flex items-center justify-end gap-2">
                 {footer}
               </div>
             )}
@@ -179,5 +182,7 @@ export const HeroDrawer: React.FC<HeroDrawerProps> = ({
   if (typeof document === 'undefined') return null;
   return createPortal(drawerContent, document.body);
 };
+
+export const Drawer = HeroDrawer;
 
 export default HeroDrawer;

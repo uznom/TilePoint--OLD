@@ -109,11 +109,12 @@ export const HeroTextarea = React.forwardRef<HTMLTextAreaElement, HeroTextareaPr
     };
 
     return (
-      <div className={`flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${wrapperClassName}`}>
+      <div data-slot="input-group" className={`input-group flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${wrapperClassName}`}>
         {label && (
           <label
             htmlFor={inputId}
-            className="text-xs font-bold text-default-700 dark:text-default-300 select-none flex items-center gap-1"
+            data-slot="label"
+            className="text-xs font-bold text-default-700 dark:text-default-300 select-none flex items-center gap-1 font-sans tracking-tight"
           >
             <span>{label}</span>
             {isRequired && <span className="text-danger">*</span>}
@@ -121,6 +122,7 @@ export const HeroTextarea = React.forwardRef<HTMLTextAreaElement, HeroTextareaPr
         )}
 
         <div
+          data-slot="input-wrapper"
           className={`relative transition-all duration-150 ${getRadiusClasses()} ${getVariantClasses()} ${
             effectiveDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
           }`}
@@ -129,6 +131,7 @@ export const HeroTextarea = React.forwardRef<HTMLTextAreaElement, HeroTextareaPr
             ref={ref}
             id={inputId}
             rows={rows}
+            data-slot="input"
             value={value}
             defaultValue={defaultValue}
             onChange={handleChange}
@@ -140,9 +143,9 @@ export const HeroTextarea = React.forwardRef<HTMLTextAreaElement, HeroTextareaPr
         </div>
 
         {errorMessage && isInvalid ? (
-          <p className="text-[11px] font-medium text-danger animate-fade-in pl-1">{errorMessage}</p>
+          <p data-slot="error-message" className="text-[11px] font-medium text-danger animate-fade-in pl-1">{errorMessage}</p>
         ) : helperText ? (
-          <p className="text-[11px] text-default-400 pl-1">{helperText}</p>
+          <p data-slot="helper-text" className="text-[11px] text-default-400 pl-1">{helperText}</p>
         ) : null}
       </div>
     );
@@ -150,5 +153,7 @@ export const HeroTextarea = React.forwardRef<HTMLTextAreaElement, HeroTextareaPr
 );
 
 HeroTextarea.displayName = 'HeroTextarea';
+
+export const Textarea = HeroTextarea;
 
 export default HeroTextarea;

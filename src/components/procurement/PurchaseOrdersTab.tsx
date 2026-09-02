@@ -3,6 +3,7 @@ import { Branch, PurchaseOrder, Supplier, User } from "../../types/db";
 import { Plus, Eye, Printer, PackageCheck } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
 import { HeroButton } from "../common/ui/HeroButton";
+import { HeroTable } from "../common/ui/HeroTable";
 import { TablePagination } from "../TablePagination";
 
 export interface PurchaseOrdersTabProps {
@@ -134,108 +135,104 @@ export const PurchaseOrdersTab: React.FC<PurchaseOrdersTabProps> = ({
 
       {/* PO List Table */}
       <div className="bg-content1 rounded-3xl border border-divider/30 overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-content2/60 border-b border-divider/20 text-[9px] font-black text-default-500 uppercase tracking-wider">
-                <th className="p-4">PO Reference</th>
-                <th className="p-4">Vendor Supplier</th>
-                <th className="p-4">Destination Branch</th>
-                <th className="p-4">Valuation</th>
-                <th className="p-4">Terms / Due Date</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-divider/10">
-              {paginatedOrders.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="p-8 text-center text-default-500 font-medium">
-                    No purchase orders found in this view.
-                  </td>
-                </tr>
-              ) : (
-                paginatedOrders.map((po) => {
-                  const supplier = suppliers.find((s) => s.id === po.supplierId);
-                  const destBranch = branches.find((b) => b.id === po.branchId);
-                  return (
-                    <tr key={po.id} className="hover:bg-content2/40 transition-colors active:scale-[0.98]">
-                      <td className="p-4">
-                        <span className="font-black font-mono text-primary block">
-                          #{po.poNumber}
+        <HeroTable isStriped className="min-w-full">
+        <HeroTable.Header>
+          <HeroTable.Column>PO Reference</HeroTable.Column>
+          <HeroTable.Column>Vendor Supplier</HeroTable.Column>
+          <HeroTable.Column>Destination Branch</HeroTable.Column>
+          <HeroTable.Column>Valuation</HeroTable.Column>
+          <HeroTable.Column>Terms / Due Date</HeroTable.Column>
+          <HeroTable.Column>Status</HeroTable.Column>
+          <HeroTable.Column align="end">Actions</HeroTable.Column>
+        </HeroTable.Header>
+        <HeroTable.Body>
+          {paginatedOrders.length === 0 ? (
+            <HeroTable.Row isHoverable={false}>
+              <HeroTable.Cell colSpan={7} className="p-8 text-center text-default-500 font-medium">
+                No purchase orders found in this view.
+              </HeroTable.Cell>
+            </HeroTable.Row>
+          ) : (
+            paginatedOrders.map((po) => {
+              const supplier = suppliers.find((s) => s.id === po.supplierId);
+              const destBranch = branches.find((b) => b.id === po.branchId);
+              return (
+                <HeroTable.Row key={po.id}>
+                  <HeroTable.Cell>
+                    <span className="font-black font-mono text-primary block">
+                      #{po.poNumber}
+                    </span>
+                    <span className="text-[10px] text-default-500">
+                      {po.date ? new Date(po.date).toLocaleDateString() : "N/A"}
+                    </span>
+                  </HeroTable.Cell>
+                  <HeroTable.Cell className="font-bold text-foreground">
+                    {supplier?.name || "Verified Supplier"}
+                  </HeroTable.Cell>
+                  <HeroTable.Cell className="font-semibold text-default-500">
+                    {destBranch?.name || "Main Warehouse"}
+                  </HeroTable.Cell>
+                  <HeroTable.Cell className="font-mono font-black text-foreground">
+                    {formatCurrency(po.totalAmount || 0)}
+                  </HeroTable.Cell>
+                  <HeroTable.Cell className="text-[10px] text-default-500">
+                    {po.paymentMode === "terms" ? (
+                      <div className="space-y-0.5">
+                        <span className="font-bold text-foreground">
+                          {po.termsLength || 30} Days Net
                         </span>
-                        <span className="text-[10px] text-default-500">
-                          {po.date ? new Date(po.date).toLocaleDateString() : "N/A"}
-                        </span>
-                      </td>
-                      <td className="p-4 font-bold text-foreground">
-                        {supplier?.name || "Verified Supplier"}
-                      </td>
-                      <td className="p-4 font-semibold text-default-500">
-                        {destBranch?.name || "Main Warehouse"}
-                      </td>
-                      <td className="p-4 font-mono font-black text-foreground">
-                        {formatCurrency(po.totalAmount || 0)}
-                      </td>
-                      <td className="p-4 text-[10px] text-default-500">
-                        {po.paymentMode === "terms" ? (
-                          <div className="space-y-0.5">
-                            <span className="font-bold text-foreground">
-                              {po.termsLength || 30} Days Net
-                            </span>
-                            {po.termEndDate && (
-                              <span className="block text-[9px] font-mono text-primary">
-                                Due: {new Date(po.termEndDate).toLocaleDateString()}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="font-medium">Cash on Delivery</span>
+                        {po.termEndDate && (
+                          <span className="block text-[9px] font-mono text-primary">
+                            Due: {new Date(po.termEndDate).toLocaleDateString()}
+                          </span>
                         )}
-                      </td>
-                      <td className="p-4">
-                        <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${getStatusBadge(po.status)}`}>
-                          {po.status}
-                        </span>
-                      </td>
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => onViewPoDetails(po)}
-                            className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-primary transition-colors cursor-pointer active:scale-95"
-                            title="View Requisition Details"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onPrintPo(po)}
-                            className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer active:scale-95"
-                            title="Print PO Document"
-                          >
-                            <Printer className="h-4 w-4" />
-                          </button>
-                          {po.status !== "Completed" && po.status !== "Cancelled" && (
-                            <button
-                              type="button"
-                              onClick={() => onOpenReceiveModal(po)}
-                              className="px-2.5 py-1 bg-emerald-600/10 hover:bg-emerald-600 hover:text-white text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-black uppercase tracking-wider rounded-full transition-all cursor-pointer flex items-center gap-1 active:scale-95"
-                              title="Ingest Inbound Stock"
-                            >
-                              <PackageCheck className="h-3 w-3" />
-                              <span>Receive</span>
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                      </div>
+                    ) : (
+                      <span className="font-medium">Cash on Delivery</span>
+                    )}
+                  </HeroTable.Cell>
+                  <HeroTable.Cell>
+                    <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${getStatusBadge(po.status)}`}>
+                      {po.status}
+                    </span>
+                  </HeroTable.Cell>
+                  <HeroTable.Cell align="end">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onViewPoDetails(po)}
+                        className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-primary transition-colors cursor-pointer active:scale-95"
+                        title="View Requisition Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onPrintPo(po)}
+                        className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer active:scale-95"
+                        title="Print PO Document"
+                      >
+                        <Printer className="h-4 w-4" />
+                      </button>
+                      {po.status !== "Completed" && po.status !== "Cancelled" && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenReceiveModal(po)}
+                          className="px-2.5 py-1 bg-emerald-600/10 hover:bg-emerald-600 hover:text-white text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-black uppercase tracking-wider rounded-full transition-all cursor-pointer flex items-center gap-1 active:scale-95"
+                          title="Ingest Inbound Stock"
+                        >
+                          <PackageCheck className="h-3 w-3" />
+                          <span>Receive</span>
+                        </button>
+                      )}
+                    </div>
+                  </HeroTable.Cell>
+                </HeroTable.Row>
+              );
+            })
+          )}
+        </HeroTable.Body>
+      </HeroTable>
 
         {totalPages > 1 && (
           <div className="p-4 border-t border-divider/20 flex justify-end">

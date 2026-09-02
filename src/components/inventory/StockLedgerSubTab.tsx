@@ -2,6 +2,7 @@ import React from 'react';
 import { Plus, Sliders } from 'lucide-react';
 import { Branch, Product } from '../../types/db';
 import { HeroButton } from '../common/ui/HeroButton';
+import { HeroTable } from '../common/ui/HeroTable';
 
 interface StockLedgerSubTabProps {
   setShowManualLedgerModal: (v: boolean) => void;
@@ -115,67 +116,63 @@ export const StockLedgerSubTab: React.FC<StockLedgerSubTabProps> = ({
         <h3 className="text-xs font-bold uppercase tracking-wider text-default-500">
           Enterprise Financial &amp; Movement Ledger Log ({filteredLedgerEntries.length})
         </h3>
-        <div className="overflow-x-auto rounded-2xl border border-zinc-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-elevation-soft">
-          <table className="w-full text-left border-collapse text-xs font-sans">
-            <thead className="bg-zinc-100/80 dark:bg-zinc-800/80 border-b border-divider/20 font-bold text-default-600 dark:text-default-400">
-              <tr>
-                <th className="py-3.5 px-4">Date</th>
-                <th className="py-3.5 px-4">Branch Node</th>
-                <th className="py-3.5 px-4">Product Name</th>
-                <th className="py-3.5 px-4 text-center">Movement Type</th>
-                <th className="py-3.5 px-4 text-right">Quantity</th>
-                <th className="py-3.5 px-4">Reference No</th>
-                <th className="py-3.5 px-4">Remarks</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-divider/10 text-foreground">
-              {filteredLedgerEntries.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-default-500 italic font-medium">
-                    No ledger entries recorded for this branch scope yet.
-                  </td>
-                </tr>
-              ) : (
-                paginatedLedger.map((le) => {
-                  const br = branches.find(b => b.id === le.branchId);
-                  return (
-                    <tr key={le.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                      <td className="py-3.5 px-4 text-[11px] text-default-500 font-mono">
-                        {le.date}
-                      </td>
-                      <td className="py-3.5 px-4 font-bold text-foreground">
-                        {br?.name || le.branchId}
-                      </td>
-                      <td className="py-3.5 px-4 font-semibold text-foreground">
-                        {le.productName}
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                          le.type === 'IN' || le.type === 'PURCHASE'
-                            ? 'bg-emerald-500/10 text-emerald-500'
-                            : le.type === 'OUT' || le.type === 'SALE'
-                            ? 'bg-rose-500/10 text-rose-500'
-                            : 'bg-primary/10 text-primary'
-                        }`}>
-                          {le.type}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-bold text-foreground font-mono">
-                        {le.quantity}
-                      </td>
-                      <td className="py-3.5 px-4 text-default-500 font-mono text-[11px]">
-                        {le.referenceNo || '—'}
-                      </td>
-                      <td className="py-3.5 px-4 text-default-500 text-[11px] max-w-xs truncate font-medium" title={le.remarks}>
-                        {le.remarks || '—'}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+        <HeroTable isStriped className="min-w-full">
+          <HeroTable.Header>
+            <HeroTable.Column>Date</HeroTable.Column>
+            <HeroTable.Column>Branch Node</HeroTable.Column>
+            <HeroTable.Column>Product Name</HeroTable.Column>
+            <HeroTable.Column align="center">Movement Type</HeroTable.Column>
+            <HeroTable.Column align="end">Quantity</HeroTable.Column>
+            <HeroTable.Column>Reference No</HeroTable.Column>
+            <HeroTable.Column>Remarks</HeroTable.Column>
+          </HeroTable.Header>
+          <HeroTable.Body>
+            {filteredLedgerEntries.length === 0 ? (
+              <HeroTable.Row isHoverable={false}>
+                <HeroTable.Cell colSpan={7} className="py-12 text-center text-default-500 italic font-medium">
+                  No ledger entries recorded for this branch scope yet.
+                </HeroTable.Cell>
+              </HeroTable.Row>
+            ) : (
+              paginatedLedger.map((le) => {
+                const br = branches.find(b => b.id === le.branchId);
+                return (
+                  <HeroTable.Row key={le.id}>
+                    <HeroTable.Cell className="text-[11px] text-default-500 font-mono">
+                      {le.date}
+                    </HeroTable.Cell>
+                    <HeroTable.Cell className="font-bold text-foreground">
+                      {br?.name || le.branchId}
+                    </HeroTable.Cell>
+                    <HeroTable.Cell className="font-semibold text-foreground">
+                      {le.productName}
+                    </HeroTable.Cell>
+                    <HeroTable.Cell align="center">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        le.type === 'IN' || le.type === 'PURCHASE'
+                          ? 'bg-emerald-500/10 text-emerald-500'
+                          : le.type === 'OUT' || le.type === 'SALE'
+                          ? 'bg-rose-500/10 text-rose-500'
+                          : 'bg-primary/10 text-primary'
+                      }`}>
+                        {le.type}
+                      </span>
+                    </HeroTable.Cell>
+                    <HeroTable.Cell align="end" className="font-bold text-foreground font-mono">
+                      {le.quantity}
+                    </HeroTable.Cell>
+                    <HeroTable.Cell className="text-default-500 font-mono text-[11px]">
+                      {le.referenceNo || '—'}
+                    </HeroTable.Cell>
+                    <HeroTable.Cell className="text-default-500 text-[11px] max-w-xs truncate font-medium">
+                      {le.remarks || '—'}
+                    </HeroTable.Cell>
+                  </HeroTable.Row>
+                );
+              })
+            )}
+          </HeroTable.Body>
+        </HeroTable>
       </div>
     </div>
   );

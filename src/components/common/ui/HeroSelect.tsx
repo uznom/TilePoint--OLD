@@ -232,10 +232,15 @@ export const HeroSelect = React.forwardRef<HTMLSelectElement, HeroSelectProps>(
     };
 
     return (
-      <div ref={containerRef} className={`relative flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${wrapperClassName}`}>
+      <div
+        ref={containerRef}
+        data-slot="select"
+        className={`select relative flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${wrapperClassName}`}
+      >
         {label && (
           <label
             htmlFor={inputId}
+            data-slot="label"
             className="text-xs font-semibold text-foreground dark:text-default-200 select-none flex items-center gap-1 font-sans tracking-tight"
           >
             <span>{label}</span>
@@ -270,22 +275,23 @@ export const HeroSelect = React.forwardRef<HTMLSelectElement, HeroSelectProps>(
         {/* HeroUI v3 Segmented Capsule Trigger Button */}
         <button
           type="button"
+          data-slot="trigger"
           disabled={effectiveDisabled}
           onClick={() => setIsOpen((prev) => !prev)}
-          className={`group flex items-stretch transition-all font-sans text-left cursor-pointer active:scale-[0.98] overflow-hidden select-none ${getRadiusClasses()} ${getVariantClasses()} ${
+          className={`select__trigger group flex items-stretch transition-all font-sans text-left cursor-pointer active:scale-[0.98] overflow-hidden select-none ${getRadiusClasses()} ${getVariantClasses()} ${
             effectiveDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
           } focus:outline-none focus:ring-2 focus:ring-primary/20 ${className}`}
         >
           {/* Left section: Icon + Label */}
-          <span className={`flex items-center gap-2 grow min-w-0 ${getSizeClasses()}`}>
-            {startContent && <span className="shrink-0 text-foreground/80 group-hover:text-foreground">{startContent}</span>}
+          <span data-slot="value" className={`select__value flex items-center gap-2 grow min-w-0 ${getSizeClasses()}`}>
+            {startContent && <span data-slot="start-content" className="shrink-0 text-foreground/80 group-hover:text-foreground">{startContent}</span>}
             <span className={`truncate ${selectedItem ? 'text-foreground font-semibold' : 'text-default-400 font-medium'}`}>
               {selectedItem ? selectedItem.label : placeholder}
             </span>
           </span>
 
           {/* Right section: Shaded Chevron Segment with Hairline Divider */}
-          <span className={`flex items-center justify-center bg-default-200/50 dark:bg-content3/50 border-l border-divider/40 dark:border-white/10 text-default-500 group-hover:text-foreground transition-colors ${getChevronPadding()}`}>
+          <span data-slot="selector-icon" className={`flex items-center justify-center bg-default-200/50 dark:bg-content3/50 border-l border-divider/40 dark:border-white/10 text-default-500 group-hover:text-foreground transition-colors ${getChevronPadding()}`}>
             <ChevronDown
               className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
                 isOpen ? 'rotate-180 text-foreground' : ''
@@ -302,7 +308,8 @@ export const HeroSelect = React.forwardRef<HTMLSelectElement, HeroSelectProps>(
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -4 }}
               transition={{ duration: 0.12 }}
-              className={`absolute ${getPositionClasses()} z-[9999] min-w-full sm:min-w-[160px] max-w-[calc(100vw-24px)] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.14)] p-1.5 max-h-64 overflow-y-auto space-y-0.5 text-foreground backdrop-blur-md font-sans`}
+              data-slot="popover"
+              className={`select__popover list-box absolute ${getPositionClasses()} z-[9999] min-w-full sm:min-w-[160px] max-w-[calc(100vw-24px)] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.14)] p-1.5 max-h-64 overflow-y-auto space-y-0.5 text-foreground backdrop-blur-md font-sans`}
             >
               {parsedItems.length > 0 ? (
                 parsedItems.map((item) => {
@@ -311,9 +318,11 @@ export const HeroSelect = React.forwardRef<HTMLSelectElement, HeroSelectProps>(
                     <button
                       key={item.key}
                       type="button"
+                      data-slot="item"
+                      data-selected={isSelected ? 'true' : undefined}
                       disabled={item.disabled}
                       onClick={() => handleSelect(item.value)}
-                      className={`flex items-center justify-between gap-2.5 w-full px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors cursor-pointer text-left active:scale-[0.98] ${
+                      className={`list-box__item flex items-center justify-between gap-2.5 w-full px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors cursor-pointer text-left active:scale-[0.98] ${
                         item.disabled ? 'opacity-40 cursor-not-allowed' : ''
                       } ${
                         isSelected
@@ -327,16 +336,16 @@ export const HeroSelect = React.forwardRef<HTMLSelectElement, HeroSelectProps>(
                   );
                 })
               ) : (
-                <div className="p-3 text-center text-xs text-default-400 font-medium">No options available</div>
+                <div data-slot="empty" className="p-3 text-center text-xs text-default-400 font-medium">No options available</div>
               )}
             </motion.div>
           )}
         </AnimatePresence>
 
         {errorMessage && isInvalid ? (
-          <p className="text-[11px] font-medium text-rose-500 animate-fade-in pl-1">{errorMessage}</p>
+          <p data-slot="error-message" className="text-[11px] font-medium text-rose-500 animate-fade-in pl-1">{errorMessage}</p>
         ) : helperText ? (
-          <p className="text-[11px] text-default-400 pl-1">{helperText}</p>
+          <p data-slot="helper-text" className="text-[11px] text-default-400 pl-1">{helperText}</p>
         ) : null}
       </div>
     );

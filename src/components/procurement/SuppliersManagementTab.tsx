@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Supplier, User, UserRole } from "../../types/db";
 import { Building2, Plus, Edit2, Trash2, Mail, Phone, Search } from "lucide-react";
 import { HeroButton } from "../common/ui/HeroButton";
+import { HeroTable } from "../common/ui/HeroTable";
 
 export interface SuppliersManagementTabProps {
   suppliers: Supplier[];
@@ -100,81 +101,75 @@ export const SuppliersManagementTab: React.FC<SuppliersManagementTabProps> = ({
       </div>
 
       {/* Suppliers Table */}
-      <div className="bg-content1 rounded-3xl border border-divider/30 overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-content2/60 border-b border-divider/20 text-[9px] font-black text-default-500 uppercase tracking-wider">
-                <th className="p-4">Enterprise Vendor</th>
-                <th className="p-4">Contact Representative</th>
-                <th className="p-4">Direct Phone</th>
-                <th className="p-4">Invoicing Email</th>
-                <th className="p-4">Depot Location</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-divider/10">
-              {filteredSuppliers.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-default-500 font-medium">
-                    No suppliers match your search criteria.
-                  </td>
-                </tr>
-              ) : (
-                filteredSuppliers.map((sup) => (
-                  <tr key={sup.id} className="hover:bg-content2/40 transition-colors active:scale-[0.98]">
-                    <td className="p-4">
-                      <button
-                        type="button"
-                        onClick={() => onViewSupplierProfile(sup)}
-                        className="font-black text-primary hover:underline cursor-pointer block text-left"
-                      >
-                        {sup.name}
-                      </button>
-                    </td>
-                    <td className="p-4 font-bold text-foreground">{sup.contactPerson}</td>
-                    <td className="p-4 font-mono text-default-500">{sup.phone || "N/A"}</td>
-                    <td className="p-4 font-mono text-default-500 truncate max-w-[180px]">{sup.email || "N/A"}</td>
-                    <td className="p-4 text-default-500 truncate max-w-[200px]">{sup.address || "N/A"}</td>
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+      <HeroTable isStriped className="min-w-full">
+        <HeroTable.Header>
+          <HeroTable.Column>Enterprise Vendor</HeroTable.Column>
+          <HeroTable.Column>Contact Representative</HeroTable.Column>
+          <HeroTable.Column>Direct Phone</HeroTable.Column>
+          <HeroTable.Column>Invoicing Email</HeroTable.Column>
+          <HeroTable.Column>Depot Location</HeroTable.Column>
+          <HeroTable.Column align="end">Actions</HeroTable.Column>
+        </HeroTable.Header>
+        <HeroTable.Body>
+          {filteredSuppliers.length === 0 ? (
+            <HeroTable.Row isHoverable={false}>
+              <HeroTable.Cell colSpan={6} className="p-8 text-center text-default-500 font-medium">
+                No suppliers match your search criteria.
+              </HeroTable.Cell>
+            </HeroTable.Row>
+          ) : (
+            filteredSuppliers.map((sup) => (
+              <HeroTable.Row key={sup.id}>
+                <HeroTable.Cell>
+                  <button
+                    type="button"
+                    onClick={() => onViewSupplierProfile(sup)}
+                    className="font-black text-primary hover:underline cursor-pointer block text-left"
+                  >
+                    {sup.name}
+                  </button>
+                </HeroTable.Cell>
+                <HeroTable.Cell className="font-bold text-foreground">{sup.contactPerson}</HeroTable.Cell>
+                <HeroTable.Cell className="font-mono text-default-500">{sup.phone || "N/A"}</HeroTable.Cell>
+                <HeroTable.Cell className="font-mono text-default-500 truncate max-w-[180px]">{sup.email || "N/A"}</HeroTable.Cell>
+                <HeroTable.Cell className="text-default-500 truncate max-w-[200px]">{sup.address || "N/A"}</HeroTable.Cell>
+                <HeroTable.Cell align="end">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onViewSupplierProfile(sup)}
+                      className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-primary transition-colors cursor-pointer active:scale-95"
+                      title="View Profile & Products"
+                    >
+                      <Building2 className="h-4 w-4" />
+                    </button>
+                    {isAdmin && (
+                      <>
                         <button
                           type="button"
-                          onClick={() => onViewSupplierProfile(sup)}
-                          className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-primary transition-colors cursor-pointer active:scale-95"
-                          title="View Profile & Products"
+                          onClick={() => onOpenEditSupplier(sup)}
+                          className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer active:scale-95"
+                          title="Edit Vendor"
                         >
-                          <Building2 className="h-4 w-4" />
+                          <Edit2 className="h-4 w-4" />
                         </button>
-                        {isAdmin && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => onOpenEditSupplier(sup)}
-                              className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer active:scale-95"
-                              title="Edit Vendor"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => onDeleteSupplier(sup)}
-                              className="p-1.5 rounded-xl hover:bg-danger/10 text-default-500 hover:text-danger transition-colors cursor-pointer active:scale-95"
-                              title="Delete Vendor"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                        <button
+                          type="button"
+                          onClick={() => onDeleteSupplier(sup)}
+                          className="p-1.5 rounded-xl hover:bg-danger/10 text-default-500 hover:text-danger transition-colors cursor-pointer active:scale-95"
+                          title="Delete Vendor"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </HeroTable.Cell>
+              </HeroTable.Row>
+            ))
+          )}
+        </HeroTable.Body>
+      </HeroTable>
     </div>
   );
 };

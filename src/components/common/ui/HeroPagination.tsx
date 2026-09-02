@@ -67,7 +67,7 @@ export const HeroPagination: React.FC<HeroPaginationProps> = ({
   const paginationItems = generatePagination();
 
   return (
-    <nav id={id} className={`flex items-center gap-1 select-none ${className}`} aria-label="Pagination">
+    <nav id={id} data-slot="pagination" className={`pagination flex items-center gap-1 select-none font-sans ${className}`} aria-label="Pagination">
       {showControls && (
         <HeroButton
           size={size}
@@ -77,6 +77,7 @@ export const HeroPagination: React.FC<HeroPaginationProps> = ({
           isDisabled={page <= 1}
           onClick={() => onChange(page - 1)}
           aria-label="Previous page"
+          data-slot="prev"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
@@ -89,6 +90,7 @@ export const HeroPagination: React.FC<HeroPaginationProps> = ({
           return (
             <span
               key={`dots-${idx}`}
+              data-slot="dots"
               className="w-8 h-8 flex items-center justify-center text-xs text-default-400 font-bold"
             >
               ...
@@ -108,6 +110,7 @@ export const HeroPagination: React.FC<HeroPaginationProps> = ({
             isIconOnly
             onClick={() => onChange(pageNum)}
             aria-current={isActive ? 'page' : undefined}
+            data-slot="item"
           >
             {pageNum}
           </HeroButton>
@@ -123,6 +126,7 @@ export const HeroPagination: React.FC<HeroPaginationProps> = ({
           isDisabled={page >= total}
           onClick={() => onChange(page + 1)}
           aria-label="Next page"
+          data-slot="next"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />

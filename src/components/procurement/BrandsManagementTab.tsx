@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Brand, Supplier, User, UserRole } from "../../types/db";
 import { Tag, Plus, Edit2, Trash2, Search, Building2 } from "lucide-react";
 import { HeroButton } from "../common/ui/HeroButton";
+import { HeroTable } from "../common/ui/HeroTable";
 
 export interface BrandsManagementTabProps {
   brands: Brand[];
@@ -87,62 +88,56 @@ export const BrandsManagementTab: React.FC<BrandsManagementTabProps> = ({
       </div>
 
       {/* Brands Table */}
-      <div className="bg-content1 rounded-3xl border border-divider/30 overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-content2/60 border-b border-divider/20 text-[9px] font-black text-default-500 uppercase tracking-wider">
-                <th className="p-4">Brand / Manufacturer</th>
-                <th className="p-4">Supplying Vendor</th>
-                <th className="p-4">Specifications & Details</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-divider/10">
-              {filteredBrands.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="p-8 text-center text-default-500 font-medium">
-                    No brands match your search criteria.
-                  </td>
-                </tr>
-              ) : (
-                filteredBrands.map((b) => {
-                  const supplier = suppliers.find((s) => s.id === b.supplierId);
-                  return (
-                    <tr key={b.id} className="hover:bg-content2/40 transition-colors active:scale-[0.98]">
-                      <td className="p-4 font-black text-foreground">{b.name}</td>
-                      <td className="p-4 font-bold text-primary">{supplier?.name || "Direct / Unlinked"}</td>
-                      <td className="p-4 text-default-500 truncate max-w-[300px]">{b.description || "General catalog line"}</td>
-                      <td className="p-4 text-right">
-                        {isAdmin && (
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => onOpenEditBrand(b)}
-                              className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer active:scale-95"
-                              title="Edit Brand"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => onDeleteBrand(b)}
-                              className="p-1.5 rounded-xl hover:bg-danger/10 text-default-500 hover:text-danger transition-colors cursor-pointer active:scale-95"
-                              title="Delete Brand"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <HeroTable isStriped className="min-w-full">
+        <HeroTable.Header>
+          <HeroTable.Column>Brand / Manufacturer</HeroTable.Column>
+          <HeroTable.Column>Supplying Vendor</HeroTable.Column>
+          <HeroTable.Column>Specifications & Details</HeroTable.Column>
+          <HeroTable.Column align="end">Actions</HeroTable.Column>
+        </HeroTable.Header>
+        <HeroTable.Body>
+          {filteredBrands.length === 0 ? (
+            <HeroTable.Row isHoverable={false}>
+              <HeroTable.Cell colSpan={4} className="p-8 text-center text-default-500 font-medium">
+                No brands match your search criteria.
+              </HeroTable.Cell>
+            </HeroTable.Row>
+          ) : (
+            filteredBrands.map((b) => {
+              const supplier = suppliers.find((s) => s.id === b.supplierId);
+              return (
+                <HeroTable.Row key={b.id}>
+                  <HeroTable.Cell className="font-black text-foreground">{b.name}</HeroTable.Cell>
+                  <HeroTable.Cell className="font-bold text-primary">{supplier?.name || "Direct / Unlinked"}</HeroTable.Cell>
+                  <HeroTable.Cell className="text-default-500 truncate max-w-[300px]">{b.description || "General catalog line"}</HeroTable.Cell>
+                  <HeroTable.Cell align="end">
+                    {isAdmin && (
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => onOpenEditBrand(b)}
+                          className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer active:scale-95"
+                          title="Edit Brand"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDeleteBrand(b)}
+                          className="p-1.5 rounded-xl hover:bg-danger/10 text-default-500 hover:text-danger transition-colors cursor-pointer active:scale-95"
+                          title="Delete Brand"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </HeroTable.Cell>
+                </HeroTable.Row>
+              );
+            })
+          )}
+        </HeroTable.Body>
+      </HeroTable>
     </div>
   );
 };

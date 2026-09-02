@@ -21,7 +21,8 @@ export const HeroSkeleton: React.FC<HeroSkeletonProps> = ({
   return (
     <div
       id={id}
-      className={`animate-pulse bg-default-200 dark:bg-default-100 rounded-medium ${className}`}
+      data-slot="skeleton"
+      className={`skeleton animate-pulse bg-default-200 dark:bg-default-100 rounded-medium ${className}`}
       {...props}
     >
       <div className="invisible">{children}</div>

@@ -16,9 +16,10 @@ export const HeroDivider: React.FC<HeroDividerProps> = ({
     return (
       <div
         id={id}
+        data-slot="divider"
         role="separator"
         aria-orientation="vertical"
-        className={`w-px h-full min-h-4 bg-divider self-stretch shrink-0 ${className}`}
+        className={`divider w-px h-full min-h-4 bg-divider self-stretch shrink-0 ${className}`}
         {...props}
       />
     );
@@ -27,12 +28,15 @@ export const HeroDivider: React.FC<HeroDividerProps> = ({
   return (
     <hr
       id={id}
+      data-slot="divider"
       role="separator"
       aria-orientation="horizontal"
-      className={`w-full border-none h-px bg-divider shrink-0 my-2 ${className}`}
+      className={`divider w-full border-none h-px bg-divider shrink-0 my-2 ${className}`}
       {...props}
     />
   );
 };
+
+export const Divider = HeroDivider;
 
 export default HeroDivider;

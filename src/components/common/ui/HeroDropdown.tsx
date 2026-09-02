@@ -233,7 +233,7 @@ export const HeroDropdown: React.FC<HeroDropdownProps> = ({ children, className 
 
   return (
     <DropdownContext.Provider value={{ isOpen, setIsOpen, close: () => setIsOpen(false) }}>
-      <div ref={containerRef} className={`relative inline-block ${className}`}>
+      <div ref={containerRef} data-slot="dropdown" className={`dropdown relative inline-block ${className}`}>
         {children}
       </div>
     </DropdownContext.Provider>
@@ -249,6 +249,7 @@ export const HeroDropdownTrigger: React.FC<HeroDropdownTriggerProps> = ({ childr
   const ctx = useContext(DropdownContext);
   return (
     <div
+      data-slot="trigger"
       onClick={() => ctx?.setIsOpen((prev) => !prev)}
       className={`inline-flex items-center cursor-pointer ${className}`}
     >
@@ -281,7 +282,8 @@ export const HeroDropdownMenu: React.FC<HeroDropdownMenuProps> = ({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: -4 }}
         transition={{ duration: 0.12 }}
-        className={`absolute top-full mt-1.5 z-[9999] min-w-48 max-w-[calc(100vw-24px)] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.14)] p-1.5 space-y-0.5 text-foreground backdrop-blur-md font-sans ${alignClass} ${className}`}
+        data-slot="menu"
+        className={`menu absolute top-full mt-1.5 z-[9999] min-w-48 max-w-[calc(100vw-24px)] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.14)] p-1.5 space-y-0.5 text-foreground backdrop-blur-md font-sans ${alignClass} ${className}`}
       >
         {children}
       </motion.div>
@@ -319,9 +321,10 @@ export const HeroDropdownItemComponent: React.FC<HeroDropdownItemComponentProps>
   return (
     <button
       type="button"
+      data-slot="menu-item"
       disabled={isDisabled}
       onClick={handleClick}
-      className={`flex items-center gap-2.5 w-full p-2.5 rounded-xl text-xs transition-colors cursor-pointer text-left active:scale-[0.98] font-sans ${
+      className={`menu__item flex items-center gap-2.5 w-full p-2.5 rounded-xl text-xs transition-colors cursor-pointer text-left active:scale-[0.98] font-sans ${
         isDisabled ? 'opacity-40 cursor-not-allowed' : ''
       } ${
         isDanger
@@ -329,10 +332,10 @@ export const HeroDropdownItemComponent: React.FC<HeroDropdownItemComponentProps>
           : 'text-foreground hover:bg-default-100 dark:hover:bg-[#27272A]'
       } ${className}`}
     >
-      {icon && <span className="shrink-0">{icon}</span>}
-      <div className="flex flex-col min-w-0">
+      {icon && <span data-slot="icon" className="shrink-0">{icon}</span>}
+      <div data-slot="label" className="flex flex-col min-w-0">
         <span className="font-semibold truncate">{children}</span>
-        {description && <span className="text-[10px] text-default-400 font-normal truncate">{description}</span>}
+        {description && <span data-slot="description" className="text-[10px] text-default-400 font-normal truncate">{description}</span>}
       </div>
     </button>
   );

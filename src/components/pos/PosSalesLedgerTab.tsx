@@ -2,7 +2,7 @@ import React from "react";
 import { Sale, User } from "../../types/db";
 import { formatCurrency } from "../../utils/formatters";
 import { Search, Eye, Printer, ShieldAlert, DollarSign, Receipt, Tag, AlertTriangle, RefreshCw } from "lucide-react";
-import { HeroButton, HeroSelect, HeroInput, HeroDateRangePicker } from "../common/ui";
+import { HeroButton, HeroSelect, HeroInput, HeroDateRangePicker, HeroTable } from "../common/ui";
 
 export interface PosSalesLedgerTabProps {
   sales: Sale[];
@@ -180,96 +180,90 @@ export const PosSalesLedgerTab: React.FC<PosSalesLedgerTabProps> = ({
       </div>
 
       {/* Sales Table */}
-      <div className="bg-content1 rounded-3xl border border-divider/30 overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-content2/60 border-b border-divider/20 text-[9px] font-black text-default-500 uppercase tracking-wider">
-                <th className="p-4">Invoice Reference</th>
-                <th className="p-4">Customer</th>
-                <th className="p-4">Cashier</th>
-                <th className="p-4">Payment Tender</th>
-                <th className="p-4">Valuation</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-divider/10">
-              {filteredSales.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="p-8 text-center text-default-500 font-medium">
-                    No transactions match the selected filter criteria.
-                  </td>
-                </tr>
-              ) : (
-                filteredSales.map((sale) => (
-                  <tr key={sale.id} className="hover:bg-content2/40 transition-colors">
-                    <td className="p-4">
-                      <span className="font-black font-mono text-primary block">
-                        #{sale.saleNumber || sale.id}
-                      </span>
-                      <span className="text-[10px] text-default-500">
-                        {sale.createdAt ? new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}
-                      </span>
-                    </td>
-                    <td className="p-4 font-bold text-foreground">{sale.customerName || "Walk-In Customer"}</td>
-                    <td className="p-4 text-default-500 font-medium">{sale.cashierName || "Terminal Cashier"}</td>
-                    <td className="p-4">
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-content2 border border-divider/30 text-foreground">
-                        {sale.paymentMethod || "Cash"}
-                      </span>
-                    </td>
-                    <td className="p-4 font-mono font-black text-foreground">
-                      {formatCurrency(sale.grandTotal || 0)}
-                    </td>
-                    <td className="p-4">
-                      {sale.isDeleted ? (
-                        <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-500 border border-rose-500/20">
-                          Voided
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                          Cleared
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => onViewReceipt(sale)}
-                          className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-primary transition-colors cursor-pointer"
-                          title="View Official Receipt"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onPrintReceipt(sale)}
-                          className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer"
-                          title="Print Receipt"
-                        >
-                          <Printer className="h-4 w-4" />
-                        </button>
-                        {!sale.isDeleted && (
-                          <button
-                            type="button"
-                            onClick={() => onOpenVoidModal(sale)}
-                            className="p-1.5 rounded-xl hover:bg-rose-500/10 text-default-500 hover:text-rose-500 transition-colors cursor-pointer"
-                            title="Void / Refund Invoice"
-                          >
-                            <ShieldAlert className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <HeroTable isStriped className="min-w-full">
+        <HeroTable.Header>
+          <HeroTable.Column>Invoice Reference</HeroTable.Column>
+          <HeroTable.Column>Customer</HeroTable.Column>
+          <HeroTable.Column>Cashier</HeroTable.Column>
+          <HeroTable.Column>Payment Tender</HeroTable.Column>
+          <HeroTable.Column>Valuation</HeroTable.Column>
+          <HeroTable.Column>Status</HeroTable.Column>
+          <HeroTable.Column align="end">Actions</HeroTable.Column>
+        </HeroTable.Header>
+        <HeroTable.Body>
+          {filteredSales.length === 0 ? (
+            <HeroTable.Row isHoverable={false}>
+              <HeroTable.Cell colSpan={7} className="p-8 text-center text-default-500 font-medium">
+                No transactions match the selected filter criteria.
+              </HeroTable.Cell>
+            </HeroTable.Row>
+          ) : (
+            filteredSales.map((sale) => (
+              <HeroTable.Row key={sale.id}>
+                <HeroTable.Cell>
+                  <span className="font-black font-mono text-primary block">
+                    #{sale.saleNumber || sale.id}
+                  </span>
+                  <span className="text-[10px] text-default-500">
+                    {sale.createdAt ? new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}
+                  </span>
+                </HeroTable.Cell>
+                <HeroTable.Cell className="font-bold text-foreground">{sale.customerName || "Walk-In Customer"}</HeroTable.Cell>
+                <HeroTable.Cell className="text-default-500 font-medium">{sale.cashierName || "Terminal Cashier"}</HeroTable.Cell>
+                <HeroTable.Cell>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-content2 border border-divider/30 text-foreground">
+                    {sale.paymentMethod || "Cash"}
+                  </span>
+                </HeroTable.Cell>
+                <HeroTable.Cell className="font-mono font-black text-foreground">
+                  {formatCurrency(sale.grandTotal || 0)}
+                </HeroTable.Cell>
+                <HeroTable.Cell>
+                  {sale.isDeleted ? (
+                    <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                      Voided
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                      Cleared
+                    </span>
+                  )}
+                </HeroTable.Cell>
+                <HeroTable.Cell align="end">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => onViewReceipt(sale)}
+                      className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-primary transition-colors cursor-pointer"
+                      title="View Official Receipt"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onPrintReceipt(sale)}
+                      className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer"
+                      title="Print Receipt"
+                    >
+                      <Printer className="h-4 w-4" />
+                    </button>
+                    {!sale.isDeleted && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenVoidModal(sale)}
+                        className="p-1.5 rounded-xl hover:bg-rose-500/10 text-default-500 hover:text-rose-500 transition-colors cursor-pointer"
+                        title="Void / Refund Invoice"
+                      >
+                        <ShieldAlert className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </HeroTable.Cell>
+              </HeroTable.Row>
+            ))
+          )}
+        </HeroTable.Body>
+      </HeroTable>
     </div>
   );
 };

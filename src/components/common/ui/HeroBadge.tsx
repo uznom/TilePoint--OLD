@@ -63,9 +63,10 @@ export const HeroBadge: React.FC<HeroBadgeProps> = ({
   };
 
   const badgeContent = isDot ? (
-    <span className={`h-2.5 w-2.5 rounded-full border-2 border-background ${getColorClasses()} ${className}`} />
+    <span data-slot="badge-dot" className={`h-2.5 w-2.5 rounded-full border-2 border-background ${getColorClasses()} ${className}`} />
   ) : (
     <span
+      data-slot="badge-content"
       className={`min-w-5 h-5 px-1 text-[10px] font-black rounded-full border-2 border-background flex items-center justify-center ${getColorClasses()} ${className}`}
     >
       {content}
@@ -73,9 +74,9 @@ export const HeroBadge: React.FC<HeroBadgeProps> = ({
   );
 
   return (
-    <div className="relative inline-flex shrink-0">
+    <div data-slot="badge-container" className="relative inline-flex shrink-0">
       {children}
-      <span className={`absolute z-10 flex items-center justify-center ${getPlacementClasses()}`}>
+      <span data-slot="badge" className={`badge absolute z-10 flex items-center justify-center ${getPlacementClasses()}`}>
         {badgeContent}
       </span>
     </div>

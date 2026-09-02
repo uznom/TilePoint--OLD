@@ -150,11 +150,12 @@ export const SearchField = React.forwardRef<HTMLInputElement, SearchFieldProps>(
     const showClear = isClearable && hasValue && !effectiveDisabled && !effectiveReadOnly;
 
     return (
-      <div className={`flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${wrapperClassName}`}>
+      <div data-slot="search-field" className={`search-field input-group flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${wrapperClassName}`}>
         {label && (
           <label
             htmlFor={inputId}
-            className="text-xs font-bold text-default-700 dark:text-default-300 select-none flex items-center gap-1"
+            data-slot="label"
+            className="text-xs font-bold text-default-700 dark:text-default-300 select-none flex items-center gap-1 font-sans tracking-tight"
           >
             <span>{label}</span>
             {isRequired && <span className="text-danger">*</span>}
@@ -162,16 +163,18 @@ export const SearchField = React.forwardRef<HTMLInputElement, SearchFieldProps>(
         )}
 
         <div
+          data-slot="input-wrapper"
           className={`relative flex items-center gap-2 transition-all duration-150 ${getRadiusClasses()} ${getSizeClasses()} ${getVariantClasses()} ${
             effectiveDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
           }`}
         >
-          <Search className="w-4 h-4 text-default-400 shrink-0" />
+          <Search data-slot="search-icon" className="w-4 h-4 text-default-400 shrink-0" />
 
           <input
             ref={ref}
             id={inputId}
             type="search"
+            data-slot="input"
             value={value !== undefined ? value : internalValue}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
@@ -185,6 +188,7 @@ export const SearchField = React.forwardRef<HTMLInputElement, SearchFieldProps>(
           {showClear && (
             <button
               type="button"
+              data-slot="clear-button"
               onClick={handleClear}
               className="text-default-400 hover:text-default-700 dark:hover:text-default-200 p-1 rounded-full hover:bg-default-200 transition-colors cursor-pointer shrink-0"
               aria-label="Clear search"
@@ -195,9 +199,9 @@ export const SearchField = React.forwardRef<HTMLInputElement, SearchFieldProps>(
         </div>
 
         {errorMessage && isInvalid ? (
-          <p className="text-[11px] font-medium text-danger animate-fade-in pl-1">{errorMessage}</p>
+          <p data-slot="error-message" className="text-[11px] font-medium text-danger animate-fade-in pl-1">{errorMessage}</p>
         ) : (description || helperText) ? (
-          <p className="text-[11px] text-default-400 pl-1">{description || helperText}</p>
+          <p data-slot="helper-text" className="text-[11px] text-default-400 pl-1">{description || helperText}</p>
         ) : null}
       </div>
     );
@@ -205,5 +209,7 @@ export const SearchField = React.forwardRef<HTMLInputElement, SearchFieldProps>(
 );
 
 SearchField.displayName = 'SearchField';
+
+export const HeroSearchField = SearchField;
 
 export default SearchField;

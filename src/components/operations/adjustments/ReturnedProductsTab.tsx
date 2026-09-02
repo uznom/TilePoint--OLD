@@ -5,6 +5,7 @@ import { formatCurrency } from "../../../utils/formatters";
 import { HeroSelect } from "../../common/ui/HeroSelect";
 import { HeroInput } from "../../common/ui/HeroInput";
 import { HeroButton } from "../../common/ui/HeroButton";
+import { HeroTable } from "../../common/ui/HeroTable";
 
 export interface ReturnedProductsTabProps {
   productReturns: ProductReturn[];
@@ -181,66 +182,60 @@ export const ReturnedProductsTab: React.FC<ReturnedProductsTabProps> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl overflow-hidden shadow-elevation-soft">
-          <div className="overflow-auto scrollbar-thin scrollbar-thumb-divider max-h-[60vh]">
-            <table className="w-full text-left font-sans text-xs">
-              <thead className="bg-zinc-100/80 dark:bg-zinc-800/80 font-bold border-b border-divider/20 text-default-600 dark:text-default-400">
-                <tr>
-                  <th className="p-3.5">Track Return</th>
-                  <th className="p-3.5">Receipt Ref</th>
-                  <th className="p-3.5">Inventory Status</th>
-                  <th className="p-3.5 text-right">Fee Deduction</th>
-                  <th className="p-3.5 text-right">Net Refunded</th>
-                  <th className="p-3.5 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-divider/10">
-                {productReturns.filter(rt => !rt.isDeleted).length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="p-8 text-center text-default-500 font-sans">
-                      No returned items registered yet.
-                    </td>
-                  </tr>
-                ) : (
-                  productReturns.filter(rt => !rt.isDeleted).map((rt) => (
-                    <tr key={rt.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                      <td className="p-3.5 font-semibold text-foreground">
-                        <div>{rt.productName}</div>
-                        <div className="text-[10px] text-default-400 mt-0.5 font-mono">
-                          {rt.id} · {rt.dateTime && !isNaN(new Date(rt.dateTime).getTime()) ? new Date(rt.dateTime).toLocaleString("en-US") : "N/A"}
-                        </div>
-                      </td>
-                      <td className="p-3.5 font-bold text-foreground font-mono">{rt.saleId}</td>
-                      <td className="p-3.5">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                          rt.status === "Restocked" ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
-                        }`}>
-                          {rt.status}
-                        </span>
-                      </td>
-                      <td className="p-3.5 text-right text-default-500 font-bold font-mono">
-                        {formatCurrency(rt.damageRestockFee || 0)}
-                      </td>
-                      <td className="p-3.5 text-right text-emerald-500 font-bold font-mono">
-                        {formatCurrency(rt.amountRefunded || 0)}
-                      </td>
-                      <td className="p-3.5 text-center">
-                        <button
-                          type="button"
-                          onClick={() => onDeleteReturn(rt.id)}
-                          className="p-1.5 hover:bg-rose-500/10 text-default-400 hover:text-rose-500 rounded-lg transition-colors cursor-pointer"
-                          title="Delete Return Log"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <HeroTable isStriped className="min-w-full">
+          <HeroTable.Header>
+            <HeroTable.Column>Track Return</HeroTable.Column>
+            <HeroTable.Column>Receipt Ref</HeroTable.Column>
+            <HeroTable.Column>Inventory Status</HeroTable.Column>
+            <HeroTable.Column align="end">Fee Deduction</HeroTable.Column>
+            <HeroTable.Column align="end">Net Refunded</HeroTable.Column>
+            <HeroTable.Column align="center">Actions</HeroTable.Column>
+          </HeroTable.Header>
+          <HeroTable.Body>
+            {productReturns.filter(rt => !rt.isDeleted).length === 0 ? (
+              <HeroTable.Row isHoverable={false}>
+                <HeroTable.Cell colSpan={6} className="p-8 text-center text-default-500 font-sans">
+                  No returned items registered yet.
+                </HeroTable.Cell>
+              </HeroTable.Row>
+            ) : (
+              productReturns.filter(rt => !rt.isDeleted).map((rt) => (
+                <HeroTable.Row key={rt.id}>
+                  <HeroTable.Cell>
+                    <div className="font-semibold text-foreground">{rt.productName}</div>
+                    <div className="text-[10px] text-default-400 mt-0.5 font-mono">
+                      {rt.id} · {rt.dateTime && !isNaN(new Date(rt.dateTime).getTime()) ? new Date(rt.dateTime).toLocaleString("en-US") : "N/A"}
+                    </div>
+                  </HeroTable.Cell>
+                  <HeroTable.Cell className="font-bold text-foreground font-mono">{rt.saleId}</HeroTable.Cell>
+                  <HeroTable.Cell>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      rt.status === "Restocked" ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+                    }`}>
+                      {rt.status}
+                    </span>
+                  </HeroTable.Cell>
+                  <HeroTable.Cell align="end" className="text-default-500 font-bold font-mono">
+                    {formatCurrency(rt.damageRestockFee || 0)}
+                  </HeroTable.Cell>
+                  <HeroTable.Cell align="end" className="text-emerald-500 font-bold font-mono">
+                    {formatCurrency(rt.amountRefunded || 0)}
+                  </HeroTable.Cell>
+                  <HeroTable.Cell align="center">
+                    <button
+                      type="button"
+                      onClick={() => onDeleteReturn(rt.id)}
+                      className="p-1.5 hover:bg-rose-500/10 text-default-400 hover:text-rose-500 rounded-lg transition-colors cursor-pointer"
+                      title="Delete Return Log"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </HeroTable.Cell>
+                </HeroTable.Row>
+              ))
+            )}
+          </HeroTable.Body>
+        </HeroTable>
       </div>
     </div>
   );

@@ -79,9 +79,9 @@ initAlasqlEngine();
 
 // Vite development middleware or compiled production static files
 const distPath = path.join(ROOT_DIR, 'dist');
-const isProduction = process.env.NODE_ENV === 'production' || (!process.env.FORCE_DEV && fs.existsSync(path.join(distPath, 'index.html')));
+const isProduction = process.env.NODE_ENV === 'production';
 
-if (isProduction) {
+if (isProduction && fs.existsSync(path.join(distPath, 'index.html'))) {
   console.log('[Shared DB Server] Serving compiled production static files from dist/...');
   app.use(express.static(distPath));
   

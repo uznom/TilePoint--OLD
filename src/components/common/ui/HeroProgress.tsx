@@ -82,12 +82,12 @@ export const HeroProgress: React.FC<HeroProgressProps> = ({
   };
 
   return (
-    <div id={id} className={`flex flex-col gap-1.5 w-full ${className}`}>
+    <div id={id} data-slot="progress" className={`progress flex flex-col gap-1.5 w-full font-sans ${className}`}>
       {(label || showValueLabel) && (
         <div className="flex items-center justify-between text-xs font-bold text-default-700 dark:text-default-300">
-          {label && <span>{label}</span>}
+          {label && <span data-slot="label">{label}</span>}
           {showValueLabel && !isIndeterminate && (
-            <span className="text-default-500 font-mono">
+            <span data-slot="value" className="text-default-500 font-mono">
               {formatValue ? formatValue(value) : `${Math.round(percentage)}%`}
             </span>
           )}
@@ -95,18 +95,18 @@ export const HeroProgress: React.FC<HeroProgressProps> = ({
       )}
 
       <div
-        className={`w-full overflow-hidden bg-default-200 dark:bg-default-100 ${getSizeClasses()} ${getRadiusClasses()}`}
+        data-slot="track"
+        className={`progress__track w-full overflow-hidden bg-default-200 dark:bg-default-100 ${getSizeClasses()} ${getRadiusClasses()}`}
       >
         {isIndeterminate ? (
           <div
-            className={`h-full w-1/3 ${getColorClasses()} animate-pulse rounded-full transition-all duration-300`}
-            style={{
-              animation: 'indeterminate 1.5s infinite linear',
-            }}
+            data-slot="indicator"
+            className={`progress__indicator h-full w-full ${getColorClasses()} animate-pulse`}
           />
         ) : (
           <div
-            className={`h-full ${getColorClasses()} transition-all duration-300 ease-out`}
+            data-slot="indicator"
+            className={`progress__indicator h-full transition-all duration-300 ease-out ${getColorClasses()}`}
             style={{ width: `${percentage}%` }}
           />
         )}
@@ -114,5 +114,7 @@ export const HeroProgress: React.FC<HeroProgressProps> = ({
     </div>
   );
 };
+
+export const Progress = HeroProgress;
 
 export default HeroProgress;

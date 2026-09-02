@@ -128,29 +128,31 @@ export const HeroAlert: React.FC<HeroAlertProps> = ({
     <div
       id={id}
       role="alert"
-      className={`relative flex items-start gap-3 p-4 rounded-2xl transition-all duration-200 ${getVariantClasses()} ${className}`}
+      data-slot="alert"
+      className={`alert relative flex items-start gap-3 p-4 rounded-2xl transition-all duration-200 ${getVariantClasses()} ${className}`}
     >
-      {renderedIcon}
+      {renderedIcon && <div data-slot="icon" className="shrink-0">{renderedIcon}</div>}
 
-      <div className="flex-1 min-w-0 font-sans">
+      <div data-slot="content" className="flex-1 min-w-0 font-sans">
         {title && (
-          <h5 className="text-xs sm:text-sm font-semibold tracking-tight leading-snug">
+          <h5 data-slot="title" className="text-xs sm:text-sm font-semibold tracking-tight leading-snug">
             {title}
           </h5>
         )}
         {description && (
-          <div className="text-xs opacity-90 leading-relaxed mt-0.5 font-normal">
+          <div data-slot="description" className="text-xs opacity-90 leading-relaxed mt-0.5 font-normal">
             {description}
           </div>
         )}
         {children && <div className="mt-2 text-xs">{children}</div>}
       </div>
 
-      {action && <div className="shrink-0 flex items-center">{action}</div>}
+      {action && <div data-slot="action" className="shrink-0 flex items-center">{action}</div>}
 
       {isClosable && onClose && (
         <button
           type="button"
+          data-slot="close-button"
           onClick={onClose}
           aria-label="Close alert"
           className="p-1 -mr-1 -mt-1 rounded-lg text-current opacity-70 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 transition-colors cursor-pointer"

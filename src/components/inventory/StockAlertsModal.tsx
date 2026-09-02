@@ -17,6 +17,7 @@ import { HeroButton } from '../common/ui/HeroButton';
 import { HeroDropdownSelect } from '../common/ui/HeroDropdown';
 import { HeroTooltip } from '../common/ui/HeroTooltip';
 import { HeroModal } from '../common/ui/HeroModal';
+import { HeroTable } from '../common/ui/HeroTable';
 
 export interface AlertProductItem {
   product: Product;
@@ -272,149 +273,145 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
         {/* Modal Table Content Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-3">
           {filteredItems.length > 0 ? (
-            <div className="overflow-x-auto rounded-medium border border-divider bg-content1">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-content2/60 border-b border-divider text-[10px] font-black uppercase text-default-500 tracking-wider">
-                    <th className="py-3 px-4">Product Code & Item</th>
-                    <th className="py-3 px-4">Category & Brand</th>
-                    <th className="py-3 px-4 text-center">Stock Level vs Minimum</th>
-                    <th className="py-3 px-4 text-center">Deficit</th>
-                    <th className="py-3 px-4 text-center">Alert Status</th>
-                    <th className="py-3 px-4 text-right">Quick Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-divider font-sans">
-                  {filteredItems.map(({ product, qty, threshold, alertType, deficit }) => {
-                    const isPoInCart = (poCart || []).some(c => c?.productId === product.id);
+            <HeroTable isStriped className="min-w-full">
+              <HeroTable.Header>
+                <HeroTable.Column>Product Code & Item</HeroTable.Column>
+                <HeroTable.Column>Category & Brand</HeroTable.Column>
+                <HeroTable.Column align="center">Stock Level vs Minimum</HeroTable.Column>
+                <HeroTable.Column align="center">Deficit</HeroTable.Column>
+                <HeroTable.Column align="center">Alert Status</HeroTable.Column>
+                <HeroTable.Column align="end">Quick Actions</HeroTable.Column>
+              </HeroTable.Header>
+              <HeroTable.Body>
+                {filteredItems.map(({ product, qty, threshold, alertType, deficit }) => {
+                  const isPoInCart = (poCart || []).some(c => c?.productId === product.id);
 
-                    return (
-                      <tr key={product.id} className="hover:bg-content2/40 transition-colors active:scale-[0.98]">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            {product.image ? (
-                              <img
-                                src={product.image}
-                                alt={product.productName}
-                                className="w-9 h-9 rounded-medium object-cover border border-divider shrink-0"
-                                referrerPolicy="no-referrer"
-                              />
-                            ) : (
-                              <div className="w-9 h-9 rounded-medium bg-primary/10 text-primary flex items-center justify-center font-black text-xs shrink-0">
-                                {product.productCode.slice(0, 3)}
-                              </div>
-                            )}
-                            <div>
-                              <div className="font-extrabold text-foreground text-xs leading-tight">
-                                {product.productName}
-                              </div>
-                              <div className="text-[10px] text-default-500 mt-0.5 flex items-center gap-1.5">
-                                <span className="font-bold text-primary">{product.productCode}</span>
-                                {product.sku && <span>• SKU: {product.sku}</span>}
-                              </div>
+                  return (
+                    <HeroTable.Row key={product.id}>
+                      <HeroTable.Cell>
+                        <div className="flex items-center gap-3">
+                          {product.image ? (
+                            <img
+                              src={product.image}
+                              alt={product.productName}
+                              className="w-9 h-9 rounded-medium object-cover border border-divider shrink-0"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <div className="w-9 h-9 rounded-medium bg-primary/10 text-primary flex items-center justify-center font-black text-xs shrink-0">
+                              {product.productCode.slice(0, 3)}
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-extrabold text-foreground text-xs leading-tight">
+                              {product.productName}
+                            </div>
+                            <div className="text-[10px] text-default-500 mt-0.5 flex items-center gap-1.5">
+                              <span className="font-bold text-primary">{product.productCode}</span>
+                              {product.sku && <span>• SKU: {product.sku}</span>}
                             </div>
                           </div>
-                        </td>
+                        </div>
+                      </HeroTable.Cell>
 
-                        <td className="py-3 px-4 text-default-600">
-                          <span className="font-bold text-foreground block text-[11px]">{product.category}</span>
-                          <span className="text-[10px] text-default-500">{product.brand || 'Generic'}</span>
-                        </td>
+                      <HeroTable.Cell>
+                        <span className="font-bold text-foreground block text-[11px]">{product.category}</span>
+                        <span className="text-[10px] text-default-500">{product.brand || 'Generic'}</span>
+                      </HeroTable.Cell>
 
-                        <td className="py-3 px-4 text-center min-w-[140px]">
-                          <div className="space-y-1 max-w-[160px] mx-auto">
-                            <div className="flex justify-between text-[11px] font-bold">
-                              <span className={qty === 0 ? 'text-danger font-extrabold' : qty <= threshold * 0.5 ? 'text-danger' : 'text-warning'}>
-                                {qty} {product.unit || 'pcs'}
-                              </span>
-                              <span className="text-default-500 text-[10px]">
-                                Min: {threshold}
-                              </span>
-                            </div>
-                            <div className="w-full h-1.5 bg-default-100 rounded-full overflow-hidden">
-                              <div 
-                                className={`h-full transition-all duration-500 rounded-full ${
-                                  qty === 0 
-                                    ? 'bg-danger w-0' 
-                                    : qty <= threshold * 0.5 
-                                      ? 'bg-danger' 
-                                      : 'bg-warning'
-                                }`} 
-                                style={{ width: `${Math.min(100, Math.max(5, (qty / (threshold || 1)) * 100))}%` }}
-                              />
-                            </div>
+                      <HeroTable.Cell align="center" className="min-w-[140px]">
+                        <div className="space-y-1 max-w-[160px] mx-auto">
+                          <div className="flex justify-between text-[11px] font-bold">
+                            <span className={qty === 0 ? 'text-danger font-extrabold' : qty <= threshold * 0.5 ? 'text-danger' : 'text-warning'}>
+                              {qty} {product.unit || 'pcs'}
+                            </span>
+                            <span className="text-default-500 text-[10px]">
+                              Min: {threshold}
+                            </span>
                           </div>
-                        </td>
+                          <div className="w-full h-1.5 bg-default-100 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full transition-all duration-500 rounded-full ${
+                                qty === 0 
+                                  ? 'bg-danger w-0' 
+                                  : qty <= threshold * 0.5 
+                                    ? 'bg-danger' 
+                                    : 'bg-warning'
+                              }`} 
+                              style={{ width: `${Math.min(100, Math.max(5, (qty / (threshold || 1)) * 100))}%` }}
+                            />
+                          </div>
+                        </div>
+                      </HeroTable.Cell>
 
-                        <td className="py-3 px-4 text-center font-bold text-xs text-danger">
-                          {deficit > 0 ? `-${deficit} ${product.unit || 'pcs'}` : '0'}
-                        </td>
+                      <HeroTable.Cell align="center" className="font-bold text-xs text-danger">
+                        {deficit > 0 ? `-${deficit} ${product.unit || 'pcs'}` : '0'}
+                      </HeroTable.Cell>
 
-                        <td className="py-3 px-4 text-center">
-                          {alertType === 'OUT_OF_STOCK' && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-danger/15 text-danger border border-danger/30">
-                              <X className="h-3 w-3" /> Out of Stock
-                            </span>
-                          )}
-                          {alertType === 'CRITICAL' && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-danger/15 text-danger border border-danger/30">
-                              <AlertCircle className="h-3 w-3" /> Critical Warn
-                            </span>
-                          )}
-                          {alertType === 'LOW' && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-warning/15 text-warning border border-warning/30">
-                              <AlertTriangle className="h-3 w-3" /> Low Stock
-                            </span>
-                          )}
-                        </td>
+                      <HeroTable.Cell align="center">
+                        {alertType === 'OUT_OF_STOCK' && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-danger/15 text-danger border border-danger/30">
+                            <X className="h-3 w-3" /> Out of Stock
+                          </span>
+                        )}
+                        {alertType === 'CRITICAL' && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-danger/15 text-danger border border-danger/30">
+                            <AlertCircle className="h-3 w-3" /> Critical Warn
+                          </span>
+                        )}
+                        {alertType === 'LOW' && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-warning/15 text-warning border border-warning/30">
+                            <AlertTriangle className="h-3 w-3" /> Low Stock
+                          </span>
+                        )}
+                      </HeroTable.Cell>
 
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <HeroButton
-                              onClick={() => onQueueRestock(product.id)}
-                              color={isPoInCart ? 'success' : 'primary'}
-                              variant={isPoInCart ? 'flat' : 'solid'}
-                              size="sm"
-                              className="text-[10.5px] font-extrabold uppercase tracking-wider"
-                              startIcon={<Plus className="h-3.5 w-3.5" />}
-                            >
-                              {isPoInCart ? 'In PO Queue' : '+ PO Queue'}
-                            </HeroButton>
+                      <HeroTable.Cell align="end">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <HeroButton
+                            onClick={() => onQueueRestock(product.id)}
+                            color={isPoInCart ? 'success' : 'primary'}
+                            variant={isPoInCart ? 'flat' : 'solid'}
+                            size="sm"
+                            className="text-[10.5px] font-extrabold uppercase tracking-wider"
+                            startIcon={<Plus className="h-3.5 w-3.5" />}
+                          >
+                            {isPoInCart ? 'In PO Queue' : '+ PO Queue'}
+                          </HeroButton>
 
-                            <HeroButton
+                          <HeroButton
+                            onClick={() => {
+                              onOpenAdjust(product);
+                              onClose();
+                            }}
+                            variant="flat"
+                            size="sm"
+                            className="text-[10.5px] font-extrabold uppercase tracking-wider"
+                            startIcon={<Sliders className="h-3.5 w-3.5" />}
+                          >
+                            Adjust
+                          </HeroButton>
+
+                          <HeroTooltip content="Locate in catalog table">
+                            <button
+                              type="button"
                               onClick={() => {
-                                onOpenAdjust(product);
+                                onLocateInCatalog(product.productCode, product.id);
                                 onClose();
                               }}
-                              variant="flat"
-                              size="sm"
-                              className="text-[10.5px] font-extrabold uppercase tracking-wider"
-                              startIcon={<Sliders className="h-3.5 w-3.5" />}
+                              className="p-1.5 text-default-400 hover:text-primary hover:bg-primary/10 rounded-medium transition-colors cursor-pointer active:scale-95"
+                              aria-label="Locate in catalog"
                             >
-                              Adjust
-                            </HeroButton>
-
-                            <HeroTooltip content="Locate in catalog table">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  onLocateInCatalog(product.productCode, product.id);
-                                  onClose();
-                                }}
-                                className="p-1.5 text-default-400 hover:text-primary hover:bg-primary/10 rounded-medium transition-colors cursor-pointer active:scale-95"
-                                aria-label="Locate in catalog"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </button>
-                            </HeroTooltip>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                              <Eye className="h-4 w-4" />
+                            </button>
+                          </HeroTooltip>
+                        </div>
+                      </HeroTable.Cell>
+                    </HeroTable.Row>
+                  );
+                })}
+              </HeroTable.Body>
+            </HeroTable>
           ) : (
             <div className="py-12 px-4 text-center rounded-medium border border-dashed border-divider bg-content2/30 space-y-3">
               <div className="w-12 h-12 rounded-full bg-success/10 text-success mx-auto flex items-center justify-center">

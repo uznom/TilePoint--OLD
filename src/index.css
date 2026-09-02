@@ -13,6 +13,14 @@
   --color-divider: var(--heroui-divider);
   --color-focus: var(--heroui-primary);
 
+  --color-surface: var(--heroui-surface, var(--heroui-content1));
+  --color-surface-secondary: var(--heroui-surface-secondary, var(--heroui-content2));
+  --color-surface-tertiary: var(--heroui-surface-tertiary, var(--heroui-content3));
+  --color-overlay: var(--heroui-overlay, var(--heroui-content1));
+  --color-muted: var(--heroui-muted, var(--heroui-default-500));
+  --color-accent: var(--heroui-primary);
+  --color-accent-foreground: var(--heroui-primary-foreground);
+
   --color-content1: var(--heroui-content1);
   --color-content1-foreground: var(--heroui-content1-foreground, var(--heroui-foreground));
   --color-content2: var(--heroui-content2);
@@ -91,6 +99,7 @@
   --radius-large: 16px;
   --radius-xl: 20px;
   --radius-2xl: 24px;
+  --radius-3xl: 32px;
   --radius-full: 9999px;
 }
 
@@ -99,6 +108,29 @@
   font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* HeroUI v3 Easing & Cursor Tokens */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --cursor-interactive: pointer;
+  --cursor-disabled: not-allowed;
+
+  /* HeroUI v3 Surface, Overlay & Muted Tokens */
+  --heroui-surface: #FFFFFF;
+  --heroui-surface-secondary: #F4F4F6;
+  --heroui-surface-tertiary: #E4E4E7;
+  --heroui-overlay: #FFFFFF;
+  --heroui-overlay-foreground: #11181C;
+  --heroui-muted: #71717A;
+
+  /* Form Field Tokens */
+  --field-background: #FFFFFF;
+  --field-foreground: #11181C;
+  --field-placeholder: #A1A1AA;
+  --field-border: rgba(17, 17, 17, 0.12);
+  --field-radius: 12px;
+  --field-border-width: 1px;
 
   --heroui-background: #F4F4F5;
   --heroui-foreground: #11181C;
@@ -167,6 +199,19 @@
 :root.dark,
 .dark,
 html.dark {
+  /* HeroUI v3 Dark Surface, Overlay & Muted Tokens */
+  --heroui-surface: #18181B;
+  --heroui-surface-secondary: #27272A;
+  --heroui-surface-tertiary: #3F3F46;
+  --heroui-overlay: #18181B;
+  --heroui-overlay-foreground: #ECEDEE;
+  --heroui-muted: #A1A1AA;
+
+  /* Dark Form Field Tokens */
+  --field-background: #18181B;
+  --field-foreground: #ECEDEE;
+  --field-placeholder: #71717A;
+  --field-border: rgba(255, 255, 255, 0.12);
   --heroui-background: #09090B;
   --heroui-foreground: #ECEDEE;
   --heroui-divider: rgba(255, 255, 255, 0.10);
@@ -522,9 +567,419 @@ html.dark select optgroup {
 .dark [data-slot="select-listbox"],
 html.dark [data-slot="popover-content"],
 html.dark [data-slot="dropdown-content"],
+.accessibility-no-backdrop-blur *,
+.accessibility-no-blur * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Disable or Reduce Animations */
+.accessibility-no-animations *,
+.accessibility-no-animations *::before,
+.accessibility-no-animations *::after {
+  animation-duration: 0.0001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.0001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Universal Modal & Drawer Backdrop System */
+.ui-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.60);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 0;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.dark .ui-backdrop {
+  background-color: rgba(0, 0, 0, 0.75);
+}
+
+/* High Contrast Mode */
+.accessibility-high-contrast {
+  --heroui-background: #000000;
+  --heroui-foreground: #FFFFFF;
+  --heroui-content1: #0A0A0A;
+  --heroui-content2: #141414;
+  --heroui-content3: #1E1E1E;
+  --heroui-content4: #282828;
+  --heroui-divider: rgba(255, 255, 255, 0.35);
+  --heroui-focus: #FFFF00;
+}
+
+.accessibility-high-contrast button {
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Text Size Scaling on root */
+html.accessibility-small-text,
+html.accessibility-text-sm {
+  font-size: 14px !important;
+  --app-font-multiplier: 0.88;
+}
+
+html.accessibility-normal-text,
+html.accessibility-text-base {
+  font-size: 16px !important;
+  --app-font-multiplier: 1.0;
+}
+
+html.accessibility-large-text,
+html.accessibility-text-lg {
+  font-size: 18px !important;
+  --app-font-multiplier: 1.125;
+}
+
+html.accessibility-xlarge-text,
+html.accessibility-text-xl {
+  font-size: 20px !important;
+  --app-font-multiplier: 1.25;
+}
+
+/* ==========================================================================
+   HeroUI v3 Modern Scrollbar System
+   ========================================================================== */
+
+/* Universal Scrollbar Styling */
+*,
+*::before,
+*::after {
+  scrollbar-width: thin;
+  scrollbar-color: var(--heroui-default-300) transparent;
+}
+
+/* WebKit Scrollbar Styling (Chrome, Safari, Edge, Opera) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--heroui-default-300);
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--heroui-default-400);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--heroui-default-500);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* HeroUI Scrollbar Utilities */
+.scrollbar-none,
+.no-scrollbar {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+.scrollbar-none::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.scrollbar-thin,
+.scrollbar-heroui,
+.heroui-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--heroui-default-300) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar,
+.scrollbar-heroui::-webkit-scrollbar,
+.heroui-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb,
+.scrollbar-heroui::-webkit-scrollbar-thumb,
+.heroui-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--heroui-default-300);
+  border-radius: 9999px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover,
+.scrollbar-heroui::-webkit-scrollbar-thumb:hover,
+.heroui-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: var(--heroui-default-400);
+}
+
+.scrollbar-thumb-divider {
+  scrollbar-color: var(--heroui-divider) transparent;
+}
+
+.scrollbar-thumb-divider::-webkit-scrollbar-thumb {
+  background-color: var(--heroui-divider);
+}
+
+.scrollbar-thumb-divider::-webkit-scrollbar-thumb:hover {
+  background-color: var(--heroui-default-400);
+}
+
+/* Dynamic dropdowns and native select styling for light and dark modes */
+select option,
+select optgroup {
+  background-color: var(--heroui-content1);
+  color: var(--heroui-foreground);
+}
+
+.dark select option,
+.dark select optgroup,
+html.dark select option,
+html.dark select optgroup {
+  background-color: #18181B;
+  color: #FAFAFA;
+}
+
+[data-slot="popover-content"],
+[data-slot="dropdown-content"],
+[data-slot="select-listbox"] {
+  background-color: var(--heroui-content1);
+  color: var(--heroui-foreground);
+}
+
+.dark [data-slot="popover-content"],
+.dark [data-slot="dropdown-content"],
+.dark [data-slot="select-listbox"],
+html.dark [data-slot="popover-content"],
+html.dark [data-slot="dropdown-content"],
 html.dark [data-slot="select-listbox"] {
   background-color: #18181B;
   color: #FAFAFA;
+}
+
+/* ==========================================================================
+   HeroUI v3 Core Component Classes (BEM Anatomy & Slot Architecture)
+   ========================================================================== */
+
+/* Status Classes */
+.status-focused {
+  outline: 2px solid var(--color-focus, #006FEE);
+  outline-offset: 2px;
+}
+
+.status-disabled {
+  opacity: var(--disabled-opacity, 0.5);
+  cursor: var(--cursor-disabled, not-allowed) !important;
+  pointer-events: none;
+}
+
+/* Button Component */
+.button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  white-space: nowrap;
+  outline: none;
+  user-select: none;
+  cursor: var(--cursor-interactive, pointer);
+  transition: transform 200ms var(--ease-smooth), background-color 150ms var(--ease-out), box-shadow 150ms var(--ease-out), opacity 150ms var(--ease-out);
+}
+
+.button:active:not(:disabled),
+.button[data-pressed="true"] {
+  transform: scale(0.97);
+}
+
+.button:focus-visible,
+.button[data-focus-visible="true"] {
+  outline: 2px solid var(--heroui-primary);
+  outline-offset: 2px;
+}
+
+.button:disabled,
+.button[aria-disabled="true"],
+.button[data-disabled="true"] {
+  opacity: 0.5;
+  cursor: var(--cursor-disabled, not-allowed) !important;
+  pointer-events: none;
+}
+
+/* Card Component */
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  border-radius: min(32px, var(--radius-2xl, 24px));
+  background-color: var(--heroui-surface, #FFFFFF);
+  color: var(--heroui-foreground, #11181C);
+  transition: box-shadow 200ms var(--ease-smooth), border-color 200ms var(--ease-smooth);
+}
+
+.dark .card {
+  background-color: var(--heroui-surface, #18181B);
+  color: var(--heroui-foreground, #ECEDEE);
+}
+
+.card__header {
+  display: flex;
+  flex-direction: column;
+}
+
+.card__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--heroui-foreground);
+}
+
+.card__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+
+.card__footer {
+  display: flex;
+  align-items: center;
+}
+
+/* Table Component */
+.table-root {
+  position: relative;
+  display: grid;
+  width: 100%;
+  overflow: clip;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.table-root--primary {
+  background-color: var(--heroui-surface-secondary, #F4F4F6);
+  padding: 0.25rem;
+  border-radius: min(32px, calc(var(--radius-3xl, 32px)));
+}
+
+.dark .table-root--primary {
+  background-color: var(--heroui-surface-secondary, #27272A);
+}
+
+.table__scroll-container {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table__header th {
+  background-color: transparent;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.6875rem;
+}
+
+.table__row {
+  transition: background-color 150ms var(--ease-smooth);
+}
+
+/* Modal & Dialog Component */
+.modal__backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 50;
+  transition: opacity 200ms var(--ease-out);
+}
+
+.dark .modal__backdrop {
+  background-color: rgba(0, 0, 0, 0.80);
+}
+
+.modal__dialog {
+  position: relative;
+  width: 100%;
+  background-color: var(--heroui-surface, #FFFFFF);
+  color: var(--heroui-foreground, #11181C);
+  border-radius: min(32px, var(--radius-3xl, 32px));
+  box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--heroui-divider);
+  outline: none;
+  overflow: hidden;
+}
+
+.dark .modal__dialog {
+  background-color: var(--heroui-surface, #18181B);
+  color: var(--heroui-foreground, #ECEDEE);
+  box-shadow: 0 24px 60px -8px rgba(0, 0, 0, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Drawer Component */
+.drawer__backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 50;
+}
+
+.dark .drawer__backdrop {
+  background-color: rgba(0, 0, 0, 0.80);
+}
+
+.drawer__dialog {
+  position: fixed;
+  background-color: var(--heroui-surface, #FFFFFF);
+  color: var(--heroui-foreground, #11181C);
+  z-index: 51;
+  box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.25);
+  border-color: var(--heroui-divider);
+}
+
+.dark .drawer__dialog {
+  background-color: var(--heroui-surface, #18181B);
+  color: var(--heroui-foreground, #ECEDEE);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Chip Component */
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  white-space: nowrap;
+  border-radius: 9999px;
+  font-weight: 600;
+  transition: background-color 150ms var(--ease-smooth), color 150ms var(--ease-smooth);
+}
+
+/* Badge Component */
+.badge {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-weight: 700;
+  z-index: 10;
+  pointer-events: none;
 }
 
 /* ==========================================================================

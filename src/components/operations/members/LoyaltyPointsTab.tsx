@@ -13,6 +13,7 @@ import { formatCurrency } from "../../../utils/formatters";
 import { HeroModal } from "../../common/ui/HeroModal";
 import { HeroButton } from "../../common/ui/HeroButton";
 import { HeroInput } from "../../common/ui/HeroInput";
+import { HeroTable } from "../../common/ui/HeroTable";
 
 export interface LoyaltyPointsTabProps {
   members: Member[];
@@ -246,83 +247,79 @@ export const LoyaltyPointsTab: React.FC<LoyaltyPointsTabProps> = ({
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-zinc-200/60 dark:border-white/5 shadow-2xs">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-zinc-100/80 dark:bg-zinc-800/80 font-bold border-b border-divider/20 text-default-600 dark:text-default-400">
-              <tr>
-                <th className="p-3.5">Member Profile</th>
-                <th className="p-3.5">Contact</th>
-                <th className="p-3.5 text-right">Points Balance</th>
-                <th className="p-3.5 text-right">Discount Value</th>
-                <th className="p-3.5 text-center">Status</th>
-                <th className="p-3.5 text-center">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-divider/10">
-              {filteredMembers.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-default-500 italic">
-                    No matching member profiles found.
-                  </td>
-                </tr>
-              ) : (
-                filteredMembers.map((m) => {
-                  const ptValue = (m.points || 0) * (config.pointValueInPhp || 1.0);
-                  return (
-                    <tr key={m.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                      <td className="p-3.5 font-semibold text-foreground">
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-7 w-7 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-xs shrink-0">
-                            {m.fullName.charAt(0)}
-                          </div>
-                          <div>
-                            <div className="font-bold text-foreground">{m.fullName}</div>
-                            <div className="text-[10px] text-default-500 font-mono">{m.id}</div>
-                          </div>
+        <HeroTable isStriped className="min-w-full">
+          <HeroTable.Header>
+            <HeroTable.Column>Member Profile</HeroTable.Column>
+            <HeroTable.Column>Contact</HeroTable.Column>
+            <HeroTable.Column align="end">Points Balance</HeroTable.Column>
+            <HeroTable.Column align="end">Discount Value</HeroTable.Column>
+            <HeroTable.Column align="center">Status</HeroTable.Column>
+            <HeroTable.Column align="center">Action</HeroTable.Column>
+          </HeroTable.Header>
+          <HeroTable.Body>
+            {filteredMembers.length === 0 ? (
+              <HeroTable.Row isHoverable={false}>
+                <HeroTable.Cell colSpan={6} className="p-8 text-center text-default-500 italic">
+                  No matching member profiles found.
+                </HeroTable.Cell>
+              </HeroTable.Row>
+            ) : (
+              filteredMembers.map((m) => {
+                const ptValue = (m.points || 0) * (config.pointValueInPhp || 1.0);
+                return (
+                  <HeroTable.Row key={m.id}>
+                    <HeroTable.Cell>
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-7 w-7 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-xs shrink-0">
+                          {m.fullName.charAt(0)}
                         </div>
-                      </td>
-                      <td className="p-3.5">
-                        <div className="text-foreground font-medium">{m.phone || "N/A"}</div>
-                        <div className="text-[10px] text-default-500">{m.email || "—"}</div>
-                      </td>
-                      <td className="p-3.5 text-right font-bold text-amber-500 text-sm font-mono">
-                        {(m.points || 0).toLocaleString()} Pts
-                      </td>
-                      <td className="p-3.5 text-right font-bold text-emerald-500 font-mono">
-                        {formatCurrency(ptValue)}
-                      </td>
-                      <td className="p-3.5 text-center">
-                        <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
-                          m.status === "Active" || !m.status ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
-                        }`}>
-                          {m.status || "Active"}
-                        </span>
-                      </td>
-                      <td className="p-3.5 text-center">
-                        <HeroButton
-                          type="button"
-                          variant="flat"
-                          color="warning"
-                          size="sm"
-                          radius="full"
-                          onClick={() => {
-                            setSelectedLoyaltyMember(m);
-                            setAdjustPointsAmount("");
-                            setAdjustPointsReason("");
-                            setShowAdjustPointsModal(true);
-                          }}
-                          className="font-bold text-[11px]"
-                        >
-                          Manage Points
-                        </HeroButton>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                        <div>
+                          <div className="font-bold text-foreground">{m.fullName}</div>
+                          <div className="text-[10px] text-default-500 font-mono">{m.id}</div>
+                        </div>
+                      </div>
+                    </HeroTable.Cell>
+                    <HeroTable.Cell>
+                      <div className="text-foreground font-medium">{m.phone || "N/A"}</div>
+                      <div className="text-[10px] text-default-500">{m.email || "—"}</div>
+                    </HeroTable.Cell>
+                    <HeroTable.Cell align="end" className="font-bold text-amber-500 text-sm font-mono">
+                      {(m.points || 0).toLocaleString()} Pts
+                    </HeroTable.Cell>
+                    <HeroTable.Cell align="end" className="font-bold text-emerald-500 font-mono">
+                      {formatCurrency(ptValue)}
+                    </HeroTable.Cell>
+                    <HeroTable.Cell align="center">
+                      <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
+                        m.status === "Active" || !m.status ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
+                      }`}>
+                        {m.status || "Active"}
+                      </span>
+                    </HeroTable.Cell>
+                    <HeroTable.Cell align="center">
+                      <HeroButton
+                        type="button"
+                        variant="flat"
+                        color="warning"
+                        size="sm"
+                        radius="full"
+                        onClick={() => {
+                          setSelectedLoyaltyMember(m);
+                          setAdjustPointsAmount("");
+                          setAdjustPointsReason("");
+                          setShowAdjustPointsModal(true);
+                        }}
+                        className="font-bold text-[11px]"
+                      >
+                        Manage Points
+                      </HeroButton>
+                    </HeroTable.Cell>
+                  </HeroTable.Row>
+                );
+              })
+            )}
+          </HeroTable.Body>
+        </HeroTable>
       </div>
 
       {/* Adjust Points Modal */}

@@ -51,13 +51,16 @@ export const HeroSpinner: React.FC<HeroSpinnerProps> = ({
   };
 
   return (
-    <div id={id} className={`inline-flex flex-col items-center justify-center gap-2 ${className}`}>
+    <div id={id} data-slot="spinner" className={`spinner inline-flex flex-col items-center justify-center gap-2 font-sans ${className}`}>
       <div
+        data-slot="circle"
         className={`animate-spin rounded-full border-solid border-t-transparent ${getSizeClasses()} ${getColorClasses()} border-current`}
       />
-      {label && <span className="text-xs text-default-500 font-medium">{label}</span>}
+      {label && <span data-slot="label" className="text-xs text-default-500 font-medium">{label}</span>}
     </div>
   );
 };
+
+export const Spinner = HeroSpinner;
 
 export default HeroSpinner;

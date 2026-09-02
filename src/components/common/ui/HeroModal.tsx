@@ -21,6 +21,7 @@ export interface HeroModalProps {
 export const HeroModal: React.FC<HeroModalProps> & {
   Header: React.FC<React.HTMLAttributes<HTMLDivElement>>;
   Body: React.FC<React.HTMLAttributes<HTMLDivElement>>;
+  Content: React.FC<React.HTMLAttributes<HTMLDivElement>>;
   Footer: React.FC<React.HTMLAttributes<HTMLDivElement>>;
 } = ({
   isOpen,
@@ -104,7 +105,8 @@ export const HeroModal: React.FC<HeroModalProps> & {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={isDismissable ? onClose : undefined}
-            className={`fixed inset-0 ${getBackdropClasses()}`}
+            data-slot="backdrop"
+            className={`modal__backdrop fixed inset-0 ${getBackdropClasses()}`}
           />
 
           {/* Modal Card */}
@@ -113,13 +115,15 @@ export const HeroModal: React.FC<HeroModalProps> & {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className={`relative w-full ${getSizeClasses()} bg-white dark:bg-zinc-900 rounded-3xl shadow-elevation-modal border border-zinc-200/80 dark:border-white/10 overflow-hidden z-10 flex flex-col max-h-[90vh] ${className}`}
+            data-slot="dialog"
+            className={`modal__dialog relative w-full ${getSizeClasses()} bg-white dark:bg-zinc-900 rounded-3xl shadow-elevation-modal border border-zinc-200/80 dark:border-white/10 overflow-hidden z-10 flex flex-col max-h-[90vh] ${className}`}
           >
             {!hideCloseButton && (
               <button
                 type="button"
+                data-slot="close-button"
                 onClick={onClose}
-                className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-default-100 dark:bg-content2/80 text-default-400 hover:text-foreground dark:hover:text-white transition-all flex items-center justify-center cursor-pointer active:scale-95"
+                className="modal__close-button absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-default-100 dark:bg-content2/80 text-default-400 hover:text-foreground dark:hover:text-white transition-all flex items-center justify-center cursor-pointer active:scale-95"
                 title="Close"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -141,7 +145,8 @@ export const HeroModal: React.FC<HeroModalProps> & {
 
 HeroModal.Header = ({ children, className = '', ...props }) => (
   <div
-    className={`px-6 py-5 border-b border-divider font-semibold text-base sm:text-lg text-foreground flex items-center gap-3 font-sans tracking-tight ${className}`}
+    data-slot="header"
+    className={`modal__header px-6 py-5 border-b border-divider font-semibold text-base sm:text-lg text-foreground flex items-center gap-3 font-sans tracking-tight ${className}`}
     {...props}
   >
     {children}
@@ -149,14 +154,21 @@ HeroModal.Header = ({ children, className = '', ...props }) => (
 );
 
 HeroModal.Body = ({ children, className = '', ...props }) => (
-  <div className={`px-6 py-5 overflow-y-auto flex-1 text-foreground font-sans ${className}`} {...props}>
+  <div data-slot="body" className={`modal__body px-6 py-5 overflow-y-auto flex-1 text-foreground font-sans ${className}`} {...props}>
+    {children}
+  </div>
+);
+
+HeroModal.Content = ({ children, className = '', ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div data-slot="modal-content" className={`flex flex-col flex-1 overflow-hidden ${className}`} {...props}>
     {children}
   </div>
 );
 
 HeroModal.Footer = ({ children, className = '', ...props }) => (
   <div
-    className={`px-6 py-4 border-t border-divider bg-content1 dark:bg-content1/60 flex items-center justify-end gap-3 font-sans ${className}`}
+    data-slot="footer"
+    className={`modal__footer px-6 py-4 border-t border-divider bg-content1 dark:bg-content1/60 flex items-center justify-end gap-3 font-sans ${className}`}
     {...props}
   >
     {children}

@@ -223,7 +223,7 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
   };
 
   const baseClasses =
-    'relative inline-flex items-center justify-center font-sans tracking-tight transition-all duration-200 ease-out outline-none select-none cursor-pointer active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-content1 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100';
+    'button relative inline-flex items-center justify-center font-sans tracking-tight transition-all duration-200 ease-out outline-none select-none cursor-pointer active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-content1 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100';
 
   const widthClass = fullWidth ? 'w-full' : '';
 
@@ -231,6 +231,8 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
     <button
       id={id}
       type={type}
+      data-slot="button"
+      data-disabled={effectiveDisabled ? 'true' : undefined}
       disabled={effectiveDisabled}
       onClick={handleClick}
       className={`${baseClasses} ${getRadiusClasses()} ${getSizeClasses()} ${getVariantClasses()} ${widthClass} ${className}`}
@@ -246,9 +248,9 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
         </span>
       ) : (
         <>
-          {effectiveStartIcon && <span className="shrink-0">{effectiveStartIcon}</span>}
+          {effectiveStartIcon && <span className="shrink-0" data-slot="start-content">{effectiveStartIcon}</span>}
           {children && <span>{children}</span>}
-          {effectiveEndIcon && <span className="shrink-0">{effectiveEndIcon}</span>}
+          {effectiveEndIcon && <span className="shrink-0" data-slot="end-content">{effectiveEndIcon}</span>}
         </>
       )}
     </button>

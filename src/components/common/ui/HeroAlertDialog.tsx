@@ -73,7 +73,8 @@ export const AlertDialog: React.FC<AlertDialogProps> = ({
       {isOpen && (
         <div
           id={id}
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+          data-slot="alert-dialog"
+          className="alert-dialog fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto font-sans"
         >
           {/* Backdrop */}
           <motion.div
@@ -82,40 +83,42 @@ export const AlertDialog: React.FC<AlertDialogProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-sm"
+            data-slot="backdrop"
+            className="alert-dialog__backdrop fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-sm"
           />
 
           {/* Dialog Card */}
           <motion.div
             role="alertdialog"
             aria-modal="true"
+            data-slot="dialog"
             initial={{ opacity: 0, scale: 0.96, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className={`relative w-full max-w-md bg-content1 rounded-2xl shadow-2xl border border-divider/40 overflow-hidden z-10 p-6 flex flex-col gap-4 ${className}`}
+            className={`alert-dialog__dialog relative w-full max-w-md bg-content1 rounded-2xl shadow-2xl border border-divider/40 overflow-hidden z-10 p-6 flex flex-col gap-4 ${className}`}
           >
             <div className="flex items-start gap-4">
-              <div className="shrink-0 p-2.5 rounded-full bg-default-100 dark:bg-default-50/10">
+              <div data-slot="icon" className="shrink-0 p-2.5 rounded-full bg-default-100 dark:bg-default-50/10">
                 {getIcon()}
               </div>
 
-              <div className="flex-1 min-w-0">
+              <div data-slot="content" className="flex-1 min-w-0">
                 {title && (
-                  <h3 className="text-base sm:text-lg font-bold text-foreground leading-tight">
+                  <h3 data-slot="title" className="text-base sm:text-lg font-bold text-foreground leading-tight">
                     {title}
                   </h3>
                 )}
                 {description && (
-                  <p className="mt-1 text-xs sm:text-sm text-default-500 leading-relaxed">
+                  <p data-slot="description" className="mt-1 text-xs sm:text-sm text-default-500 leading-relaxed">
                     {description}
                   </p>
                 )}
-                {children && <div className="mt-2 text-xs sm:text-sm">{children}</div>}
+                {children && <div data-slot="body" className="mt-2 text-xs sm:text-sm">{children}</div>}
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2.5 mt-2 pt-2">
+            <div data-slot="footer" className="flex items-center justify-end gap-2.5 mt-2 pt-2">
               <HeroButton
                 variant="flat"
                 color="default"
@@ -148,5 +151,7 @@ export const AlertDialog: React.FC<AlertDialogProps> = ({
 };
 
 AlertDialog.displayName = 'AlertDialog';
+
+export const HeroAlertDialog = AlertDialog;
 
 export default AlertDialog;

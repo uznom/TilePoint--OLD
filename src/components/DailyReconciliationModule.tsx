@@ -29,7 +29,7 @@ import { saveFileToBackup } from "../lib/fileBackupHelper";
 import { UserRole } from "../types/db";
 import { ToastNotification } from "./ToastNotification";
 import { HeaderBar } from "./common/HeaderBar";
-import { HeroDropdownSelect, HeroDatePicker } from "./common/ui";
+import { HeroDropdownSelect, HeroDatePicker, HeroTable } from "./common/ui";
 
 interface DailyReconciliationModuleProps {
   darkMode?: boolean;
@@ -881,124 +881,116 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
             </div>
 
             {showSalesList && (
-              <div className="overflow-x-auto border border-zinc-200/50 dark:border-white/5 rounded-2xl">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-zinc-100/80 dark:bg-zinc-800/80 border-b border-divider/20 text-foreground font-bold uppercase tracking-wider text-[10px]">
-                      <th className="p-3.5">Receipt No.</th>
-                      <th className="p-3.5">Cashier</th>
-                      <th className="p-3.5 text-right">Sales (₱)</th>
-                      <th className="p-3.5 text-right">COGS (₱)</th>
-                      <th className="p-3.5 text-right">Gross Margin</th>
-                      <th className="p-3.5 text-center">Details</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.sales.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="p-8 text-center text-default-400 italic">
-                          No non-voided sales logged for this branch on selected date.
-                        </td>
-                      </tr>
-                    ) : (
-                      stats.sales.map((s) => {
-                        const saleCogs = stats.saleItemCogsMap[s.id]?.cogs || 0;
-                        const grossMargin = s.grandTotal > 0 ? ((s.grandTotal - saleCogs) / s.grandTotal) * 100 : 0;
-                        const isExpanded = expandedSaleId === s.id;
+              <HeroTable isStriped className="min-w-full">
+                <HeroTable.Header>
+                  <HeroTable.Column>Receipt No.</HeroTable.Column>
+                  <HeroTable.Column>Cashier</HeroTable.Column>
+                  <HeroTable.Column align="end">Sales (₱)</HeroTable.Column>
+                  <HeroTable.Column align="end">COGS (₱)</HeroTable.Column>
+                  <HeroTable.Column align="end">Gross Margin</HeroTable.Column>
+                  <HeroTable.Column align="center">Details</HeroTable.Column>
+                </HeroTable.Header>
+                <HeroTable.Body>
+                  {stats.sales.length === 0 ? (
+                    <HeroTable.Row isHoverable={false}>
+                      <HeroTable.Cell colSpan={6} className="p-8 text-center text-default-400 italic">
+                        No non-voided sales logged for this branch on selected date.
+                      </HeroTable.Cell>
+                    </HeroTable.Row>
+                  ) : (
+                    stats.sales.map((s) => {
+                      const saleCogs = stats.saleItemCogsMap[s.id]?.cogs || 0;
+                      const grossMargin = s.grandTotal > 0 ? ((s.grandTotal - saleCogs) / s.grandTotal) * 100 : 0;
+                      const isExpanded = expandedSaleId === s.id;
 
-                        return (
-                          <React.Fragment key={s.id}>
-                            <tr className="border-b border-divider/10 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition-all font-medium">
-                              <td className="p-3.5 text-foreground font-bold font-mono">{s.saleNumber}</td>
-                              <td className="p-3.5 text-default-500">{s.cashierName}</td>
-                              <td className="p-3.5 text-right text-foreground font-bold font-mono">
-                                {s.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                              </td>
-                              <td className="p-3.5 text-right text-amber-500 font-bold font-mono">
-                                {saleCogs.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                              </td>
-                              <td className={`p-3.5 text-right font-bold font-mono ${
-                                grossMargin >= 25 ? "text-emerald-500" : "text-amber-500"
-                              }`}>
-                                {grossMargin.toFixed(1)}%
-                              </td>
-                              <td className="p-3.5 text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => setExpandedSaleId(isExpanded ? null : s.id)}
-                                  className="p-1 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-default-500 hover:text-foreground border border-zinc-200/50 dark:border-white/5 rounded-lg transition active:scale-95 cursor-pointer"
-                                >
-                                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                </button>
-                              </td>
-                            </tr>
-                            {isExpanded && (
-                              <tr>
-                                <td colSpan={6} className="bg-zinc-100/40 dark:bg-zinc-800/40 p-4 border-b border-divider/20">
-                                  <div className="space-y-2.5">
-                                    <div className="text-[10px] font-bold uppercase tracking-wider text-default-500 font-mono">
-                                      Receipt {s.saleNumber} Itemized Costing
-                                    </div>
-                                    <div className="overflow-hidden border border-zinc-200/50 dark:border-white/5 rounded-xl bg-white dark:bg-zinc-900">
-                                      <table className="w-full text-left text-xs">
-                                        <thead>
-                                          <tr className="bg-zinc-100/80 dark:bg-zinc-800/80 text-foreground border-b border-divider/20 font-bold uppercase text-[9px] tracking-wider font-mono">
-                                            <th className="p-2.5">Item / SKU</th>
-                                            <th className="p-2.5 text-center">Qty</th>
-                                            <th className="p-2.5 text-right">Price (₱)</th>
-                                            <th className="p-2.5 text-right">Cost (₱)</th>
-                                            <th className="p-2.5 text-right">Line Total (₱)</th>
-                                            <th className="p-2.5 text-right">Margin</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-divider/10 font-mono text-[11px]">
-                                          {(!stats.saleItemCogsMap[s.id]?.items || stats.saleItemCogsMap[s.id].items.length === 0) ? (
-                                            <tr>
-                                              <td colSpan={6} className="p-4 text-center text-xs text-default-400 italic">
-                                                No itemized product details found for this transaction.
-                                              </td>
-                                            </tr>
-                                          ) : (
-                                            stats.saleItemCogsMap[s.id].items.map((item: any) => {
-                                              const prod = products.find((p) => p.id === item.productId);
-                                              const cost = prod && prod.costPrice > 0 ? prod.costPrice : item.unitPrice * 0.6;
-                                              const margin = item.unitPrice > 0 ? ((item.unitPrice - cost) / item.unitPrice) * 100 : 0;
-                                              return (
-                                                <tr key={item.id} className="text-default-500 font-medium">
-                                                  <td className="p-2.5 font-sans font-medium text-foreground">{item.productName}</td>
-                                                  <td className="p-2.5 text-center text-default-500">{item.quantity}</td>
-                                                  <td className="p-2.5 text-right">
-                                                    {item.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                  </td>
-                                                  <td className="p-2.5 text-right text-amber-500">
-                                                    {cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                  </td>
-                                                  <td className="p-2.5 text-right text-foreground font-bold">
-                                                    {item.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                  </td>
-                                                  <td className={`p-2.5 text-right font-bold ${
-                                                    margin >= 25 ? "text-emerald-500" : "text-amber-500"
-                                                  }`}>
-                                                    {margin.toFixed(0)}%
-                                                  </td>
-                                                </tr>
-                                              );
-                                            })
-                                          )}
-                                        </tbody>
-                                      </table>
-                                    </div>
+                      return (
+                        <React.Fragment key={s.id}>
+                          <HeroTable.Row>
+                            <HeroTable.Cell className="text-foreground font-bold font-mono">{s.saleNumber}</HeroTable.Cell>
+                            <HeroTable.Cell className="text-default-500">{s.cashierName}</HeroTable.Cell>
+                            <HeroTable.Cell align="end" className="text-foreground font-bold font-mono">
+                              {s.grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </HeroTable.Cell>
+                            <HeroTable.Cell align="end" className="text-amber-500 font-bold font-mono">
+                              {saleCogs.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </HeroTable.Cell>
+                            <HeroTable.Cell align="end" className={`font-bold font-mono ${
+                              grossMargin >= 25 ? "text-emerald-500" : "text-amber-500"
+                            }`}>
+                              {grossMargin.toFixed(1)}%
+                            </HeroTable.Cell>
+                            <HeroTable.Cell align="center">
+                              <button
+                                type="button"
+                                onClick={() => setExpandedSaleId(isExpanded ? null : s.id)}
+                                className="p-1 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-default-500 hover:text-foreground border border-zinc-200/50 dark:border-white/5 rounded-lg transition active:scale-95 cursor-pointer"
+                              >
+                                {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                              </button>
+                            </HeroTable.Cell>
+                          </HeroTable.Row>
+                          {isExpanded && (
+                            <HeroTable.Row isHoverable={false}>
+                              <HeroTable.Cell colSpan={6} className="bg-zinc-100/40 dark:bg-zinc-800/40 p-4 border-b border-divider/20">
+                                <div className="space-y-2.5">
+                                  <div className="text-[10px] font-bold uppercase tracking-wider text-default-500 font-mono">
+                                    Receipt {s.saleNumber} Itemized Costing
                                   </div>
-                                </td>
-                              </tr>
-                            )}
-                          </React.Fragment>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                                  <HeroTable isCompact isStriped className="min-w-full">
+                                    <HeroTable.Header>
+                                      <HeroTable.Column>Item / SKU</HeroTable.Column>
+                                      <HeroTable.Column align="center">Qty</HeroTable.Column>
+                                      <HeroTable.Column align="end">Price (₱)</HeroTable.Column>
+                                      <HeroTable.Column align="end">Cost (₱)</HeroTable.Column>
+                                      <HeroTable.Column align="end">Line Total (₱)</HeroTable.Column>
+                                      <HeroTable.Column align="end">Margin</HeroTable.Column>
+                                    </HeroTable.Header>
+                                    <HeroTable.Body>
+                                      {(!stats.saleItemCogsMap[s.id]?.items || stats.saleItemCogsMap[s.id].items.length === 0) ? (
+                                        <HeroTable.Row isHoverable={false}>
+                                          <HeroTable.Cell colSpan={6} className="p-4 text-center text-xs text-default-400 italic">
+                                            No itemized product details found for this transaction.
+                                          </HeroTable.Cell>
+                                        </HeroTable.Row>
+                                      ) : (
+                                        stats.saleItemCogsMap[s.id].items.map((item: any) => {
+                                          const prod = products.find((p) => p.id === item.productId);
+                                          const cost = prod && prod.costPrice > 0 ? prod.costPrice : item.unitPrice * 0.6;
+                                          const margin = item.unitPrice > 0 ? ((item.unitPrice - cost) / item.unitPrice) * 100 : 0;
+                                          return (
+                                            <HeroTable.Row key={item.id}>
+                                              <HeroTable.Cell className="font-sans font-medium text-foreground">{item.productName}</HeroTable.Cell>
+                                              <HeroTable.Cell align="center" className="text-default-500 font-mono">{item.quantity}</HeroTable.Cell>
+                                              <HeroTable.Cell align="end" className="font-mono">
+                                                {item.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                              </HeroTable.Cell>
+                                              <HeroTable.Cell align="end" className="text-amber-500 font-mono">
+                                                {cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                              </HeroTable.Cell>
+                                              <HeroTable.Cell align="end" className="text-foreground font-bold font-mono">
+                                                {item.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                              </HeroTable.Cell>
+                                              <HeroTable.Cell align="end" className={`font-bold font-mono ${
+                                                margin >= 25 ? "text-emerald-500" : "text-amber-500"
+                                              }`}>
+                                                {margin.toFixed(0)}%
+                                              </HeroTable.Cell>
+                                            </HeroTable.Row>
+                                          );
+                                        })
+                                      )}
+                                    </HeroTable.Body>
+                                  </HeroTable>
+                                </div>
+                              </HeroTable.Cell>
+                            </HeroTable.Row>
+                          )}
+                        </React.Fragment>
+                      );
+                    })
+                  )}
+                </HeroTable.Body>
+              </HeroTable>
             )}
           </div>
 
@@ -1019,46 +1011,42 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
             </div>
 
             {showExpensesList && (
-              <div className="overflow-x-auto border border-zinc-200/50 dark:border-white/5 rounded-2xl">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-zinc-100/80 dark:bg-zinc-800/80 border-b border-divider/20 text-foreground font-bold uppercase tracking-wider text-[10px]">
-                      <th className="p-3.5">Category</th>
-                      <th className="p-3.5">Notes</th>
-                      <th className="p-3.5">Recorded By</th>
-                      <th className="p-3.5 text-right">Amount (₱)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stats.expenses.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="p-8 text-center">
-                          <div className="flex flex-col items-center justify-center space-y-2 py-4">
-                            <Receipt className="h-8 w-8 text-rose-500/40" />
-                            <p className="font-bold text-xs text-foreground">No Operating Expenses Logged</p>
-                            <p className="text-[11px] text-default-500 max-w-xs font-medium">
-                              No operating expenses logged for this branch on the selected reporting date.
-                            </p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      stats.expenses.map((e) => (
-                        <tr key={e.id} className="border-b border-divider/10 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition font-medium">
-                          <td className="p-3.5 text-rose-500 font-bold uppercase text-[10px] tracking-wider font-mono">{e.category}</td>
-                          <td className="p-3.5 text-default-500 text-[11px] leading-relaxed max-w-xs truncate" title={e.notes}>
-                            {e.notes || "No details provided"}
-                          </td>
-                          <td className="p-3.5 text-default-500">{e.recordedBy}</td>
-                          <td className="p-3.5 text-right text-rose-500 font-bold font-mono">
-                            {e.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <HeroTable isStriped className="min-w-full">
+                <HeroTable.Header>
+                  <HeroTable.Column>Category</HeroTable.Column>
+                  <HeroTable.Column>Notes</HeroTable.Column>
+                  <HeroTable.Column>Recorded By</HeroTable.Column>
+                  <HeroTable.Column align="end">Amount (₱)</HeroTable.Column>
+                </HeroTable.Header>
+                <HeroTable.Body>
+                  {stats.expenses.length === 0 ? (
+                    <HeroTable.Row isHoverable={false}>
+                      <HeroTable.Cell colSpan={4} className="p-8 text-center">
+                        <div className="flex flex-col items-center justify-center space-y-2 py-4">
+                          <Receipt className="h-8 w-8 text-rose-500/40" />
+                          <p className="font-bold text-xs text-foreground">No Operating Expenses Logged</p>
+                          <p className="text-[11px] text-default-500 max-w-xs font-medium">
+                            No operating expenses logged for this branch on the selected reporting date.
+                          </p>
+                        </div>
+                      </HeroTable.Cell>
+                    </HeroTable.Row>
+                  ) : (
+                    stats.expenses.map((e) => (
+                      <HeroTable.Row key={e.id}>
+                        <HeroTable.Cell className="text-rose-500 font-bold uppercase text-[10px] tracking-wider font-mono">{e.category}</HeroTable.Cell>
+                        <HeroTable.Cell className="text-default-500 text-[11px] leading-relaxed max-w-xs truncate">
+                          {e.notes || "No details provided"}
+                        </HeroTable.Cell>
+                        <HeroTable.Cell className="text-default-500">{e.recordedBy}</HeroTable.Cell>
+                        <HeroTable.Cell align="end" className="text-rose-500 font-bold font-mono">
+                          {e.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </HeroTable.Cell>
+                      </HeroTable.Row>
+                    ))
+                  )}
+                </HeroTable.Body>
+              </HeroTable>
             )}
           </div>
         </div>

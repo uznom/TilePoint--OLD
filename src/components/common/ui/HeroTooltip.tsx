@@ -283,6 +283,7 @@ export const HeroTooltip: React.FC<HeroTooltipProps> = ({
   return (
     <div
       ref={triggerRef}
+      data-slot="trigger"
       className={wrapperClassName || "relative inline-flex items-center"}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -299,6 +300,7 @@ export const HeroTooltip: React.FC<HeroTooltipProps> = ({
                 ref={tooltipRef}
                 id={id}
                 role="tooltip"
+                data-slot="tooltip"
                 initial={{ opacity: 0, scale: 0.92 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.92 }}
@@ -312,11 +314,12 @@ export const HeroTooltip: React.FC<HeroTooltipProps> = ({
                   pointerEvents: 'none',
                   zIndex: 999999,
                 }}
-                className={`px-2.5 py-1.5 text-[11px] font-semibold tracking-wide rounded-lg whitespace-nowrap select-none ${getColorClasses()} ${className}`}
+                className={`tooltip px-2.5 py-1.5 text-[11px] font-semibold tracking-wide rounded-lg whitespace-nowrap select-none ${getColorClasses()} ${className}`}
               >
-                {content}
+                <span data-slot="content">{content}</span>
                 {showArrow && (
                   <span
+                    data-slot="arrow"
                     className={`absolute w-2 h-2 rotate-45 ${getColorClasses()} ${getArrowClasses()}`}
                   />
                 )}
@@ -328,5 +331,7 @@ export const HeroTooltip: React.FC<HeroTooltipProps> = ({
     </div>
   );
 };
+
+export const Tooltip = HeroTooltip;
 
 export default HeroTooltip;

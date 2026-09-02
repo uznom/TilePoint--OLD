@@ -7,6 +7,7 @@ import { HeroInput } from "../../common/ui/HeroInput";
 import { HeroTextarea } from "../../common/ui/HeroTextarea";
 import { HeroButton } from "../../common/ui/HeroButton";
 import { HeroDropdownSelect } from "../../common/ui/HeroDropdown";
+import { HeroTable } from "../../common/ui/HeroTable";
 
 export interface AddExpenseTabProps {
   branches: { id: string; name: string; isDeleted?: boolean }[];
@@ -182,90 +183,83 @@ export const AddExpenseTab: React.FC<AddExpenseTabProps> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl overflow-hidden shadow-elevation-soft">
-          <table className="w-full text-left font-sans text-xs">
-            <thead className="bg-zinc-100/80 dark:bg-zinc-800/80 font-bold border-b border-divider/20 text-default-600 dark:text-default-400">
-              <tr>
-                <th className="p-3.5">Track Info</th>
-                <th className="p-3.5">Category</th>
-                <th className="p-3.5">Officer</th>
-                <th className="p-3.5">Branch ID</th>
-                <th className="p-3.5 text-right">Amount</th>
-                <th className="p-3.5 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredExpenses.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center">
-                    <div className="flex flex-col items-center justify-center space-y-2.5 py-6">
-                      <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-2xs border border-primary/15">
-                        <Receipt className="h-6 w-6" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="font-bold text-sm text-foreground">
-                          {expenseSearch ? "No Matching Expenses Found" : "No Operational Expenses Logged"}
-                        </p>
-                        <p className="text-xs text-default-500 max-w-sm mx-auto leading-relaxed">
-                          {expenseSearch
-                            ? `No disbursement entry matches "${expenseSearch}". Try adjusting your filter term.`
-                            : "No petty cash or store operating expenses logged yet. Use the disbursement form on the left to record new expenses."}
-                        </p>
-                      </div>
-                      {expenseSearch && (
-                        <HeroButton
-                          type="button"
-                          variant="flat"
-                          size="sm"
-                          radius="full"
-                          onClick={() => setExpenseSearch("")}
-                        >
-                          Clear Expense Filter
-                        </HeroButton>
-                      )}
+        <HeroTable isStriped className="min-w-full">
+          <HeroTable.Header>
+            <HeroTable.Column>Track Info</HeroTable.Column>
+            <HeroTable.Column>Category</HeroTable.Column>
+            <HeroTable.Column>Officer</HeroTable.Column>
+            <HeroTable.Column>Branch ID</HeroTable.Column>
+            <HeroTable.Column align="end">Amount</HeroTable.Column>
+            <HeroTable.Column align="center">Actions</HeroTable.Column>
+          </HeroTable.Header>
+          <HeroTable.Body>
+            {filteredExpenses.length === 0 ? (
+              <HeroTable.Row isHoverable={false}>
+                <HeroTable.Cell colSpan={6} className="p-8 text-center">
+                  <div className="flex flex-col items-center justify-center space-y-2.5 py-6">
+                    <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-2xs border border-primary/15">
+                      <Receipt className="h-6 w-6" />
                     </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredExpenses.map((ex) => (
-                  <tr
-                    key={ex.id}
-                    className="border-b border-divider/10 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
-                  >
-                    <td className="p-3.5 font-semibold text-foreground">
-                      <div>{ex.notes}</div>
-                      <div className="text-[10px] text-default-500 mt-0.5">
-                        {ex.dateTime && !isNaN(new Date(ex.dateTime).getTime())
-                          ? new Date(ex.dateTime).toLocaleString("en-US")
-                          : "N/A"}
-                      </div>
-                    </td>
-                    <td className="p-3.5">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-foreground border border-zinc-200/50 dark:border-white/5">
-                        {ex.category}
-                      </span>
-                    </td>
-                    <td className="p-3.5 text-default-500 font-bold">{ex.recordedBy}</td>
-                    <td className="p-3.5 text-default-500">{ex.branchId}</td>
-                    <td className="p-3.5 text-right text-rose-500 font-bold font-mono">
-                      -{formatCurrency(ex.amount)}
-                    </td>
-                    <td className="p-3.5 text-center">
-                      <button
+                    <div className="space-y-1">
+                      <p className="font-bold text-sm text-foreground">
+                        {expenseSearch ? "No Matching Expenses Found" : "No Operational Expenses Logged"}
+                      </p>
+                      <p className="text-xs text-default-500 max-w-sm mx-auto leading-relaxed">
+                        {expenseSearch
+                          ? `No disbursement entry matches "${expenseSearch}". Try adjusting your filter term.`
+                          : "No petty cash or store operating expenses logged yet. Use the disbursement form on the left to record new expenses."}
+                      </p>
+                    </div>
+                    {expenseSearch && (
+                      <HeroButton
                         type="button"
-                        onClick={() => onDeleteExpense(ex.id)}
-                        className="p-1.5 hover:bg-rose-500/10 text-rose-500 rounded-lg transition-colors cursor-pointer"
-                        title="Delete Expense"
+                        variant="flat"
+                        size="sm"
+                        radius="full"
+                        onClick={() => setExpenseSearch("")}
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                        Clear Expense Filter
+                      </HeroButton>
+                    )}
+                  </div>
+                </HeroTable.Cell>
+              </HeroTable.Row>
+            ) : (
+              filteredExpenses.map((ex) => (
+                <HeroTable.Row key={ex.id}>
+                  <HeroTable.Cell>
+                    <div className="font-semibold text-foreground">{ex.notes}</div>
+                    <div className="text-[10px] text-default-500 mt-0.5">
+                      {ex.dateTime && !isNaN(new Date(ex.dateTime).getTime())
+                        ? new Date(ex.dateTime).toLocaleString("en-US")
+                        : "N/A"}
+                    </div>
+                  </HeroTable.Cell>
+                  <HeroTable.Cell>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-foreground border border-zinc-200/50 dark:border-white/5">
+                      {ex.category}
+                    </span>
+                  </HeroTable.Cell>
+                  <HeroTable.Cell className="text-default-500 font-bold">{ex.recordedBy}</HeroTable.Cell>
+                  <HeroTable.Cell className="text-default-500">{ex.branchId}</HeroTable.Cell>
+                  <HeroTable.Cell align="end" className="text-rose-500 font-bold font-mono">
+                    -{formatCurrency(ex.amount)}
+                  </HeroTable.Cell>
+                  <HeroTable.Cell align="center">
+                    <button
+                      type="button"
+                      onClick={() => onDeleteExpense(ex.id)}
+                      className="p-1.5 hover:bg-rose-500/10 text-rose-500 rounded-lg transition-colors cursor-pointer"
+                      title="Delete Expense"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </HeroTable.Cell>
+                </HeroTable.Row>
+              ))
+            )}
+          </HeroTable.Body>
+        </HeroTable>
       </div>
     </div>
   );

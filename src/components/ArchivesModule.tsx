@@ -1,4 +1,5 @@
 import { HeroModal } from './common/ui/HeroModal';
+import { HeroTable } from './common/ui/HeroTable';
 import React, { useMemo, useState } from 'react';
 import {
   AlertOctagon,
@@ -597,115 +598,111 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-divider/20 bg-content1/50 text-[10px] uppercase font-bold text-default-500 tracking-wider">
-                  <th className="py-3 px-3.5 w-10 text-center select-none">
-                    <input
-                      type="checkbox"
-                      checked={
-                        filteredItems.length > 0 &&
-                        getSelectedItems().length === filteredItems.length
-                      }
-                      onChange={handleToggleSelectAll}
-                      className="rounded border-divider/40 dark:border-divider/30 text-primary focus:ring-primary cursor-pointer h-3.5 w-3.5"
-                    />
-                  </th>
-                  <th className="py-3 px-3 w-28">Category</th>
-                  <th className="py-3 px-4">Record Identifier & Name</th>
-                  <th className="py-3 px-4">Metadata / Details</th>
-                  <th className="py-3 px-4 w-40">Deleted Timestamp</th>
-                  <th className="py-3 px-4 text-right w-48">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-divider/10">
-                {paginatedItems.map((item) => {
-                  const key = `${item.type}_${item.id}`;
-                  const isSelected = !!selectedKeys[key];
+          <>
+            <HeroTable isStriped className="min-w-full">
+            <HeroTable.Header>
+              <HeroTable.Column align="center" className="w-10 select-none">
+                <input
+                  type="checkbox"
+                  checked={
+                    filteredItems.length > 0 &&
+                    getSelectedItems().length === filteredItems.length
+                  }
+                  onChange={handleToggleSelectAll}
+                  className="rounded border-divider/40 dark:border-divider/30 text-primary focus:ring-primary cursor-pointer h-3.5 w-3.5"
+                />
+              </HeroTable.Column>
+              <HeroTable.Column className="w-28">Category</HeroTable.Column>
+              <HeroTable.Column>Record Identifier & Name</HeroTable.Column>
+              <HeroTable.Column>Metadata / Details</HeroTable.Column>
+              <HeroTable.Column className="w-40">Deleted Timestamp</HeroTable.Column>
+              <HeroTable.Column align="end" className="w-48">Actions</HeroTable.Column>
+            </HeroTable.Header>
+            <HeroTable.Body>
+              {paginatedItems.map((item) => {
+                const key = `${item.type}_${item.id}`;
+                const isSelected = !!selectedKeys[key];
 
-                  return (
-                    <tr
-                      key={key}
-                      className={`hover:bg-content1/60 transition-colors ${
-                        isSelected ? 'bg-primary/5' : ''
-                      }`}
-                    >
-                      {/* SELECT CHECKBOX */}
-                      <td className="py-3.5 px-3.5 text-center">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => handleToggleSelectOne(key)}
-                          className="rounded border-divider/40 dark:border-divider/30 text-primary focus:ring-primary cursor-pointer h-3.5 w-3.5"
-                        />
-                      </td>
+                return (
+                  <HeroTable.Row
+                    key={key}
+                    className={isSelected ? 'bg-primary/5' : ''}
+                  >
+                    {/* SELECT CHECKBOX */}
+                    <HeroTable.Cell align="center">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleSelectOne(key)}
+                        className="rounded border-divider/40 dark:border-divider/30 text-primary focus:ring-primary cursor-pointer h-3.5 w-3.5"
+                      />
+                    </HeroTable.Cell>
 
-                      {/* CATEGORY BADGE */}
-                      <td className="py-3.5 px-3">
-                        <span
-                          className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide border ${item.badgeColor}`}
+                    {/* CATEGORY BADGE */}
+                    <HeroTable.Cell>
+                      <span
+                        className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide border ${item.badgeColor}`}
+                      >
+                        {item.typeLabel}
+                      </span>
+                    </HeroTable.Cell>
+
+                    {/* TITLE & SUBTITLE */}
+                    <HeroTable.Cell>
+                      <div className="font-bold text-foreground">{item.title}</div>
+                      <div className="text-[11px] text-default-500 mt-0.5">
+                        {item.subtitle}
+                      </div>
+                    </HeroTable.Cell>
+
+                    {/* DETAILS */}
+                    <HeroTable.Cell className="text-default-500 text-[11px]">
+                      {item.details || '—'}
+                    </HeroTable.Cell>
+
+                    {/* TIMESTAMP */}
+                    <HeroTable.Cell className="text-default-500 text-[11px]">
+                      {item.deletedAt
+                        ? new Date(item.deletedAt).toLocaleDateString(undefined, {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'Archived'}
+                      {item.deletedBy && (
+                        <div className="text-[10px] text-default-500/70">
+                          By: {item.deletedBy}
+                        </div>
+                      )}
+                    </HeroTable.Cell>
+
+                    {/* ACTIONS */}
+                    <HeroTable.Cell align="end">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => handleRestoreSingle(item)}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-[11px] font-bold cursor-pointer transition-all shadow-xs active:scale-95"
+                          title="Restore this record back to active database"
                         >
-                          {item.typeLabel}
-                        </span>
-                      </td>
-
-                      {/* TITLE & SUBTITLE */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-foreground">{item.title}</div>
-                        <div className="text-[11px] text-default-500 mt-0.5">
-                          {item.subtitle}
-                        </div>
-                      </td>
-
-                      {/* DETAILS */}
-                      <td className="py-3.5 px-4 text-default-500 text-[11px]">
-                        {item.details || '—'}
-                      </td>
-
-                      {/* TIMESTAMP */}
-                      <td className="py-3.5 px-4 text-default-500 text-[11px] ">
-                        {item.deletedAt
-                          ? new Date(item.deletedAt).toLocaleDateString(undefined, {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })
-                          : 'Archived'}
-                        {item.deletedBy && (
-                          <div className="text-[10px] text-default-500/70">
-                            By: {item.deletedBy}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* ACTIONS */}
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => handleRestoreSingle(item)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-[11px] font-bold cursor-pointer transition-all shadow-xs active:scale-95"
-                            title="Restore this record back to active database"
-                          >
-                            <RotateCcw className="h-3.5 w-3.5" />
-                            <span>Restore</span>
-                          </button>
-                          <button
-                            onClick={() => setItemToPurge(item)}
-                            className="p-1.5 rounded-xl text-default-500/60 hover:text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all active:scale-95"
-                            title="Permanently purge from system"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          <span>Restore</span>
+                        </button>
+                        <button
+                          onClick={() => setItemToPurge(item)}
+                          className="p-1.5 rounded-xl text-default-500/60 hover:text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all active:scale-95"
+                          title="Permanently purge from system"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </HeroTable.Cell>
+                  </HeroTable.Row>
+                );
+              })}
+            </HeroTable.Body>
+          </HeroTable>
 
             {/* Pagination Controls */}
             {filteredItems.length > 0 && (
@@ -748,7 +745,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
                 </div>
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
 

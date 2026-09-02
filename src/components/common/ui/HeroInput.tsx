@@ -120,10 +120,11 @@ export const HeroInput = React.forwardRef<HTMLInputElement, HeroInputProps>(
     const showClear = isClearable && Boolean(value) && !effectiveDisabled && !effectiveReadOnly;
 
     return (
-      <div className={`flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${wrapperClassName}`}>
+      <div data-slot="input-group" className={`input-group flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${wrapperClassName}`}>
         {label && (
           <label
             htmlFor={inputId}
+            data-slot="label"
             className="text-xs font-semibold text-foreground dark:text-default-200 select-none flex items-center gap-1 font-sans tracking-tight"
           >
             <span>{label}</span>
@@ -132,16 +133,18 @@ export const HeroInput = React.forwardRef<HTMLInputElement, HeroInputProps>(
         )}
 
         <div
+          data-slot="input-wrapper"
           className={`relative flex items-center gap-2 transition-all duration-150 ${getRadiusClasses()} ${getSizeClasses()} ${getVariantClasses()} ${
             effectiveDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
           } ${className}`}
         >
-          {startContent && <div className="shrink-0 text-default-400 flex items-center">{startContent}</div>}
+          {startContent && <div data-slot="start-content" className="shrink-0 text-default-400 flex items-center">{startContent}</div>}
 
           <input
             ref={ref}
             id={inputId}
             type={type}
+            data-slot="input"
             value={value}
             defaultValue={defaultValue}
             onChange={handleChange}
@@ -154,6 +157,7 @@ export const HeroInput = React.forwardRef<HTMLInputElement, HeroInputProps>(
           {showClear && (
             <button
               type="button"
+              data-slot="clear-button"
               onClick={onClear}
               className="text-default-400 hover:text-default-700 p-0.5 rounded-full hover:bg-default-200 transition-colors cursor-pointer shrink-0"
               title="Clear input"
@@ -165,13 +169,13 @@ export const HeroInput = React.forwardRef<HTMLInputElement, HeroInputProps>(
             </button>
           )}
 
-          {endContent && <div className="shrink-0 text-default-400 flex items-center">{endContent}</div>}
+          {endContent && <div data-slot="end-content" className="shrink-0 text-default-400 flex items-center">{endContent}</div>}
         </div>
 
         {errorMessage && isInvalid ? (
-          <p className="text-[11px] font-medium text-danger animate-fade-in pl-1">{errorMessage}</p>
+          <p data-slot="error-message" className="text-[11px] font-medium text-danger animate-fade-in pl-1">{errorMessage}</p>
         ) : helperText ? (
-          <p className="text-[11px] text-default-400 pl-1">{helperText}</p>
+          <p data-slot="helper-text" className="text-[11px] text-default-400 pl-1">{helperText}</p>
         ) : null}
       </div>
     );

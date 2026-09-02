@@ -59,7 +59,7 @@ export const HeroAccordion: React.FC<HeroAccordionProps> = ({
 
   return (
     <AccordionContext.Provider value={{ variant, expandedKeys, toggleKey }}>
-      <div id={id} className={`w-full ${getContainerStyle()} ${className}`}>
+      <div id={id} data-slot="accordion" className={`accordion w-full ${getContainerStyle()} ${className}`}>
         {children}
       </div>
     </AccordionContext.Provider>
@@ -95,24 +95,28 @@ export const HeroAccordionItem: React.FC<HeroAccordionItemProps> = ({
   return (
     <div
       id={id}
-      className={`overflow-hidden transition-all duration-150 ${
+      data-slot="item"
+      data-expanded={isExpanded ? 'true' : undefined}
+      className={`accordion__item overflow-hidden transition-all duration-150 ${
         isSplitted ? 'border border-divider rounded-medium bg-content1 shadow-xs' : ''
       } ${className}`}
     >
       <button
         type="button"
+        data-slot="trigger"
         onClick={() => ctx.toggleKey(itemKey)}
-        className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left transition-colors hover:bg-default-100/50 cursor-pointer select-none"
+        className="accordion__trigger w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left transition-colors hover:bg-default-100/50 cursor-pointer select-none"
       >
         <div className="flex items-center gap-3 min-w-0">
-          {startContent && <div className="shrink-0 text-default-400">{startContent}</div>}
+          {startContent && <div data-slot="start-content" className="shrink-0 text-default-400">{startContent}</div>}
           <div className="flex flex-col min-w-0">
-            <span className="text-xs font-bold text-foreground truncate">{title}</span>
-            {subtitle && <span className="text-[11px] text-default-400 truncate">{subtitle}</span>}
+            <span data-slot="title" className="text-xs font-bold text-foreground truncate">{title}</span>
+            {subtitle && <span data-slot="subtitle" className="text-[11px] text-default-400 truncate">{subtitle}</span>}
           </div>
         </div>
         <div
-          className={`shrink-0 text-default-400 transform transition-transform duration-200 ${
+          data-slot="indicator"
+          className={`accordion__indicator shrink-0 text-default-400 transform transition-transform duration-200 ${
             isExpanded ? 'rotate-180 text-primary' : ''
           }`}
         >
@@ -123,12 +127,15 @@ export const HeroAccordionItem: React.FC<HeroAccordionItemProps> = ({
       </button>
 
       {isExpanded && (
-        <div className="px-4 pb-4 pt-1 text-xs text-default-600 dark:text-default-300 animate-fade-in">
+        <div data-slot="content" className="accordion__content px-4 py-3 border-t border-divider/40 text-xs text-foreground bg-content1/50 animate-fade-in">
           {children}
         </div>
       )}
     </div>
   );
 };
+
+export const Accordion = HeroAccordion;
+export const AccordionItem = HeroAccordionItem;
 
 export default HeroAccordion;

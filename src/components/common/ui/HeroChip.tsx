@@ -214,17 +214,19 @@ export const HeroChip: React.FC<HeroChipProps> = ({
   return (
     <span
       id={id}
+      data-slot="chip"
       onClick={onClick}
-      className={`inline-flex items-center justify-center font-sans font-semibold tracking-tight select-none transition-colors duration-150 ${getRadiusClasses()} ${getSizeClasses()} ${styles.container} ${onClick ? 'cursor-pointer active:scale-95' : ''} ${className}`}
+      className={`chip inline-flex items-center justify-center font-sans font-semibold tracking-tight select-none transition-colors duration-150 ${getRadiusClasses()} ${getSizeClasses()} ${styles.container} ${onClick ? 'cursor-pointer active:scale-95' : ''} ${className}`}
     >
-      {avatar && <span className="shrink-0 -ml-1 mr-1">{avatar}</span>}
-      {startContent && <span className="shrink-0">{startContent}</span>}
-      {showDot && <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${styles.dot}`} />}
-      <span>{children}</span>
-      {endContent && <span className="shrink-0">{endContent}</span>}
+      {avatar && <span data-slot="avatar" className="shrink-0 -ml-1 mr-1">{avatar}</span>}
+      {startContent && <span data-slot="start-content" className="shrink-0">{startContent}</span>}
+      {showDot && <span data-slot="dot" className={`h-1.5 w-1.5 rounded-full shrink-0 ${styles.dot}`} />}
+      <span data-slot="content">{children}</span>
+      {endContent && <span data-slot="end-content" className="shrink-0">{endContent}</span>}
       {onClose && (
         <button
           type="button"
+          data-slot="close-button"
           onClick={(e) => {
             e.stopPropagation();
             onClose();

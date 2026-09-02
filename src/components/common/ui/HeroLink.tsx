@@ -58,14 +58,15 @@ export const HeroLink: React.FC<HeroLinkProps> = ({
   return (
     <a
       id={id}
+      data-slot="link"
       target={isExternal ? '_blank' : undefined}
       rel={isExternal ? 'noopener noreferrer' : undefined}
-      className={`inline-flex items-center gap-1 font-semibold transition-colors duration-150 cursor-pointer ${getColorClass()} ${getUnderlineClass()} ${className}`}
+      className={`link inline-flex items-center gap-1 font-semibold transition-colors duration-150 cursor-pointer font-sans ${getColorClass()} ${getUnderlineClass()} ${className}`}
       {...props}
     >
-      <span>{children}</span>
+      <span data-slot="content">{children}</span>
       {(isExternal || showAnchorIcon) && (
-        <svg className="w-3.5 h-3.5 inline-block opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg data-slot="anchor-icon" className="w-3.5 h-3.5 inline-block opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -77,5 +78,7 @@ export const HeroLink: React.FC<HeroLinkProps> = ({
     </a>
   );
 };
+
+export const Link = HeroLink;
 
 export default HeroLink;
