@@ -88,4 +88,26 @@ export function upsertRecordAlasql(tableName, record) {
   } catch (e) {}
 }
 
+export function getAlasqlDb() {
+  return alasql;
+}
+
+export function alasqlExecute(sql, params = []) {
+  return alasql(sql, params);
+}
+
+export function saveAlasqlToDisk() {
+  try {
+    const data = {};
+    for (const [key, tableName] of Object.entries(KEY_TO_TABLE_MAP)) {
+      if (alasql.tables && alasql.tables[tableName]) {
+        data[key] = alasql(`SELECT * FROM \`${tableName}\``) || [];
+      }
+    }
+    fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('[AlaSQL] Error saving to disk:', err.message);
+  }
+}
+
 export { alasql };

@@ -580,13 +580,13 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by name, @username, email, or ID..."
-                  className="w-full pl-9 pr-8 py-2 text-xs bg-background border border-divider/40 rounded-xl text-foreground placeholder:text-default-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all font-medium"
+                  className="w-full pl-9 pr-8 py-2 text-xs bg-background border border-divider/40 rounded-xl text-foreground placeholder:text-default-400 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all font-medium active:scale-[0.98]"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-default-400 hover:text-foreground rounded-full hover:bg-default-100 cursor-pointer"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-default-400 hover:text-foreground rounded-full hover:bg-default-100 cursor-pointer active:scale-95"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -653,25 +653,25 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                 {searchQuery && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-primary/10 text-primary border border-primary/20 font-semibold">
                     Query: "{searchQuery}"
-                    <button type="button" onClick={() => setSearchQuery('')} className="hover:text-primary/70"><X className="h-3 w-3" /></button>
+                    <button type="button" onClick={() => setSearchQuery('')} className="hover:text-primary/70 active:scale-[0.98]"><X className="h-3 w-3" /></button>
                   </span>
                 )}
                 {roleFilter !== 'ALL' && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-primary/10 text-primary border border-primary/20 font-semibold">
                     Role: {roleFilter}
-                    <button type="button" onClick={() => setRoleFilter('ALL')} className="hover:text-primary/70"><X className="h-3 w-3" /></button>
+                    <button type="button" onClick={() => setRoleFilter('ALL')} className="hover:text-primary/70 active:scale-[0.98]"><X className="h-3 w-3" /></button>
                   </span>
                 )}
                 {branchFilter !== 'ALL' && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-primary/10 text-primary border border-primary/20 font-semibold">
                     Branch: {getBranchName(branchFilter)}
-                    <button type="button" onClick={() => setBranchFilter('ALL')} className="hover:text-primary/70"><X className="h-3 w-3" /></button>
+                    <button type="button" onClick={() => setBranchFilter('ALL')} className="hover:text-primary/70 active:scale-[0.98]"><X className="h-3 w-3" /></button>
                   </span>
                 )}
                 {statusFilter !== 'ALL' && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-primary/10 text-primary border border-primary/20 font-semibold">
                     Status: {statusFilter}
-                    <button type="button" onClick={() => setStatusFilter('ALL')} className="hover:text-primary/70"><X className="h-3 w-3" /></button>
+                    <button type="button" onClick={() => setStatusFilter('ALL')} className="hover:text-primary/70 active:scale-[0.98]"><X className="h-3 w-3" /></button>
                   </span>
                 )}
                 <button
@@ -710,7 +710,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                     setBranchFilter('ALL');
                     setStatusFilter('ALL');
                   }}
-                  className="px-3.5 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                  className="px-3.5 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 font-bold rounded-xl text-xs transition-colors cursor-pointer active:scale-[0.98]"
                 >
                   Clear Filters
                 </button>
@@ -734,7 +734,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                       delay: Math.min(idx * 0.04, 0.28),
                       ease: [0.16, 1, 0.3, 1]
                     }}
-                    className="p-5 bg-content1 border border-divider/40 hover:border-primary/50 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between relative group text-foreground"
+                    className="p-5 bg-content1 border border-divider/40 hover:border-primary/50 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between relative group text-foreground active:scale-[0.98]"
                   >
                     {/* Top Row: Avatar, Identity, Status */}
                     <div className="space-y-4">
@@ -763,7 +763,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
 
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <h4 className="text-sm font-black text-foreground truncate group-hover:text-primary transition-colors">
+                              <h4 className="text-sm font-black text-foreground truncate group-hover:text-primary transition-colors active:scale-[0.98]">
                                 {u.fullName}
                               </h4>
                               {u.isNew && (
@@ -838,7 +838,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                             <button
                               type="button"
                               onClick={() => copyEmailToClipboard(u.email, u.id)}
-                              className="p-1 hover:bg-default-100 text-default-400 hover:text-foreground rounded cursor-pointer transition-colors"
+                              className="p-1 hover:bg-default-100 text-default-400 hover:text-foreground rounded cursor-pointer transition-colors active:scale-95"
                               title="Copy email to clipboard"
                             >
                               {copiedEmailId === u.id ? (
@@ -870,7 +870,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                                 <button
                                   type="button"
                                   onClick={() => togglePinReveal(u.id)}
-                                  className="p-1 text-default-400 hover:text-warning rounded hover:bg-warning-50/20 cursor-pointer transition-colors"
+                                  className="p-1 text-default-400 hover:text-warning rounded hover:bg-warning-50/20 cursor-pointer transition-colors active:scale-95"
                                   title={isPinRevealed ? 'Hide PIN' : 'Reveal PIN'}
                                 >
                                   {isPinRevealed ? (
@@ -1025,7 +1025,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                           delay: Math.min(idx * 0.03, 0.25),
                           ease: [0.16, 1, 0.3, 1]
                         }}
-                        className="hover:bg-content2/40 transition-colors"
+                        className="hover:bg-content2/40 transition-colors active:scale-[0.98]"
                       >
                         {/* Employee Profile Cell */}
                         <td className="py-3 px-4">
@@ -1092,7 +1092,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                                 <button
                                   type="button"
                                   onClick={() => togglePinReveal(u.id)}
-                                  className="p-1 text-default-400 hover:text-amber-500 rounded hover:bg-amber-500/10 cursor-pointer transition-colors"
+                                  className="p-1 text-default-400 hover:text-amber-500 rounded hover:bg-amber-500/10 cursor-pointer transition-colors active:scale-95"
                                   title={isPinRevealed ? 'Hide PIN' : 'Reveal PIN'}
                                 >
                                   {isPinRevealed ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
@@ -1125,7 +1125,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                               <button
                                 type="button"
                                 onClick={() => handleResetPassword(u.id, u.fullName)}
-                                className="p-1.5 hover:bg-primary/10 text-primary rounded-lg flex items-center gap-1 cursor-pointer transition-colors text-[10.5px] font-bold"
+                                className="p-1.5 hover:bg-primary/10 text-primary rounded-lg flex items-center gap-1 cursor-pointer transition-colors text-[10.5px] font-bold active:scale-95"
                                 title="Reset password"
                               >
                                 <Lock className="h-3.5 w-3.5" />
@@ -1145,7 +1145,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                               <button
                                 type="button"
                                 onClick={() => handleOpenEdit(u)}
-                                className="p-1.5 hover:bg-default-100 text-default-500 rounded-lg flex items-center gap-1 cursor-pointer transition-colors text-[10.5px] font-bold"
+                                className="p-1.5 hover:bg-default-100 text-default-500 rounded-lg flex items-center gap-1 cursor-pointer transition-colors text-[10.5px] font-bold active:scale-95"
                                 title="Edit details"
                               >
                                 <Edit2 className="h-3.5 w-3.5" />
@@ -1273,7 +1273,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                           delay: Math.min(idx * 0.03, 0.25),
                           ease: [0.16, 1, 0.3, 1]
                         }}
-                        className="hover:bg-content2/40 transition-colors"
+                        className="hover:bg-content2/40 transition-colors active:scale-[0.98]"
                       >
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
@@ -1326,7 +1326,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                             <button
                               type="button"
                               onClick={() => handleTerminateRemote(session.id, session.fullName)}
-                              className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white border border-rose-500/25 text-[10.5px] font-bold rounded-xl inline-flex items-center gap-1 cursor-pointer transition-colors"
+                              className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white border border-rose-500/25 text-[10.5px] font-bold rounded-xl inline-flex items-center gap-1 cursor-pointer transition-colors active:scale-95"
                               title="Terminate remote session and force sign-out"
                             >
                               <PowerOff className="h-3 w-3" /> Terminate
@@ -1363,7 +1363,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                         delay: Math.min(idx * 0.04, 0.28),
                         ease: [0.16, 1, 0.3, 1]
                       }}
-                      className="p-5 bg-content1 border border-divider/30 hover:border-primary/40 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between relative group text-foreground"
+                      className="p-5 bg-content1 border border-divider/30 hover:border-primary/40 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between relative group text-foreground active:scale-[0.98]"
                     >
                       <div className="space-y-4">
                         {/* Live Header Status */}
@@ -1480,7 +1480,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                               type="button"
                               onClick={handleExtendCurrentSession}
                               disabled={extendingSession}
-                              className="px-3 py-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground border border-primary/20 text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer transition-colors"
+                              className="px-3 py-1.5 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground border border-primary/20 text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer transition-colors active:scale-95"
                               title="Extend corporate session duration by 60 minutes"
                             >
                               {extendingSession ? "Extending..." : "+60m Extend"}
@@ -1490,7 +1490,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                           <button
                             type="button"
                             onClick={() => handleTerminateRemote(session.id, session.fullName)}
-                            className="w-full py-2 bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white border border-rose-500/25 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                            className="w-full py-2 bg-rose-500/10 hover:bg-rose-500 text-rose-600 hover:text-white border border-rose-500/25 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-colors active:scale-95"
                             title="Terminate remote session and force sign-out"
                           >
                             <PowerOff className="h-3.5 w-3.5" /> Terminate Remote Session
@@ -1545,7 +1545,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                 value={fullName ?? ''}
                 onChange={e => setFullName(e.target.value)}
                 placeholder="e.g. Maria Santos"
-                className="w-full bg-background border border-divider/40 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-semibold"
+                className="w-full bg-background border border-divider/40 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-semibold active:scale-[0.98]"
               />
             </div>
 
@@ -1557,7 +1557,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                 value={username ?? ''}
                 onChange={e => setUsername(e.target.value)}
                 placeholder="e.g. msantos"
-                className="w-full bg-background border border-divider/40 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-semibold"
+                className="w-full bg-background border border-divider/40 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-semibold active:scale-[0.98]"
               />
             </div>
 
@@ -1569,7 +1569,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                 value={email ?? ''}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="e.g. msantos@tilepoint.corp"
-                className="w-full bg-background border border-divider/40 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-semibold"
+                className="w-full bg-background border border-divider/40 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-semibold active:scale-[0.98]"
               />
             </div>
 
@@ -1601,7 +1601,7 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
                   value={managerPin ?? ''}
                   onChange={e => setManagerPin(e.target.value.replace(/\D/g, ''))}
                   placeholder="Enter 4 to 6 digit PIN (e.g. 4321)"
-                  className="w-full bg-background border border-amber-500/40 focus:border-amber-500 px-3.5 py-2 text-xs text-foreground font-mono font-bold focus:outline-none transition-colors rounded-xl"
+                  className="w-full bg-background border border-amber-500/40 focus:border-amber-500 px-3.5 py-2 text-xs text-foreground font-mono font-bold focus:outline-none transition-colors rounded-xl active:scale-[0.98]"
                 />
                 <span className="text-[9.5px] text-default-400 block pt-0.5">
                   Used to authorize cashier voids, high-value discounts, and stock reconciliations.

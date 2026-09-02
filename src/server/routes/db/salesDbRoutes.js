@@ -11,7 +11,6 @@ import {
   saveAlasqlToDisk
 } from '../../db/alasqlEngine.js';
 import { emitPulseUpdate } from '../../realtime/socketHandler.js';
-import { sanitizeSqlValue } from '../../db/dbHelpers.js';
 
 const router = express.Router();
 

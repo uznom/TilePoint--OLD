@@ -1,5 +1,7 @@
 import React from "react";
 import { HeroModal } from "../../common/ui/HeroModal";
+import { HeroSelect } from "../../common/ui/HeroSelect";
+import { HeroButton } from "../../common/ui/HeroButton";
 import { Branch, Product, Supplier } from "../../../types/db";
 import { FileText, X, Plus, Trash2 } from "lucide-react";
 import { formatCurrency } from "../../../utils/formatters";
@@ -147,35 +149,33 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
           {/* Supplier & Destination Select */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-default-500 uppercase tracking-wider pl-1">
-                Vendor Supplier <span className="text-danger">*</span>
-              </label>
-              <select
+              <HeroSelect
+                label="Vendor Supplier"
+                isRequired
                 value={selectedSupplierId ?? ''}
                 onChange={(e) => setSelectedSupplierId(e.target.value)}
-                className="w-full bg-content2 border border-divider/40 rounded-2xl px-4 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                placeholder="-- Choose Vendor --"
               >
                 <option value="">-- Choose Vendor --</option>
                 {suppliers.filter((s) => !s.isDeleted).map((s) => (
                   <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
-              </select>
+              </HeroSelect>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-default-500 uppercase tracking-wider pl-1">
-                Destination Warehouse / Branch <span className="text-danger">*</span>
-              </label>
-              <select
+              <HeroSelect
+                label="Destination Warehouse / Branch"
+                isRequired
                 value={selectedBranchId ?? ''}
                 onChange={(e) => setSelectedBranchId(e.target.value)}
-                className="w-full bg-content2 border border-divider/40 rounded-2xl px-4 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                placeholder="-- Select Receiving Site --"
               >
                 <option value="">-- Select Receiving Site --</option>
                 {branches.map((b) => (
                   <option key={b.id} value={b.id}>{b.name} ({b.address || "Main Site"})</option>
                 ))}
-              </select>
+              </HeroSelect>
             </div>
           </div>
 
@@ -194,9 +194,9 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
               </button>
             </div>
 
-            <div className="grid grid-cols-12 gap-2">
+            <div className="grid grid-cols-12 gap-2 items-center">
               <div className="col-span-12 sm:col-span-6">
-                <select
+                <HeroSelect
                   value={selectedProductId ?? ''}
                   onChange={(e) => {
                     const id = e.target.value;
@@ -204,7 +204,8 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
                     const prod = products.find((p) => p.id === id);
                     if (prod) setItemCost(prod.costPrice || 0);
                   }}
-                  className="w-full bg-content1 border border-divider/40 rounded-xl px-3 py-2 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  placeholder="-- Choose Catalog Product --"
+                  size="sm"
                 >
                   <option value="">-- Choose Catalog Product --</option>
                   {filteredProducts.map((p) => (
@@ -212,7 +213,7 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
                       {p.productName} ({p.sku}) - {formatCurrency(p.costPrice || 0)}
                     </option>
                   ))}
-                </select>
+                </HeroSelect>
               </div>
 
               <div className="col-span-6 sm:col-span-3">
@@ -223,7 +224,7 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
                   value={itemCost || ""}
                   onChange={(e) => setItemCost(Number(e.target.value))}
                   placeholder="Cost Price"
-                  className="w-full bg-content1 border border-divider/40 rounded-xl px-3 py-2 text-xs font-bold font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full h-8 bg-content1 border border-divider/40 rounded-xl px-3 text-xs font-bold font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
 
@@ -234,18 +235,21 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
                   value={itemQuantity}
                   onChange={(e) => setItemQuantity(Math.max(1, Number(e.target.value)))}
                   placeholder="Qty"
-                  className="w-full bg-content1 border border-divider/40 rounded-xl px-3 py-2 text-xs font-bold font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  className="w-full h-8 bg-content1 border border-divider/40 rounded-xl px-3 text-xs font-bold font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
 
-              <div className="col-span-2 sm:col-span-1 flex items-center">
-                <button
-                  type="button"
+              <div className="col-span-2 sm:col-span-1 flex items-center justify-center">
+                <HeroButton
+                  isIconOnly
+                  size="sm"
+                  variant="solid"
+                  color="primary"
                   onClick={handleAddItem}
-                  className="w-full h-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl flex items-center justify-center font-black cursor-pointer"
+                  className="w-8 h-8 rounded-xl"
                 >
                   <Plus className="h-4 w-4" />
-                </button>
+                </HeroButton>
               </div>
             </div>
           </div>
@@ -328,21 +332,28 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
           </div>
 
           <div className="flex gap-2.5">
-            <button
-              type="button"
+            <HeroButton
+              variant="flat"
+              color="default"
+              size="sm"
+              radius="full"
               onClick={onClose}
-              className="px-4 py-2 bg-content2 hover:bg-content3 border border-divider/30 text-xs font-bold text-foreground rounded-full transition-colors cursor-pointer"
             >
               Cancel
-            </button>
-            <button
-              type="button"
-              disabled={isSubmittingPo || draftItems.length === 0}
+            </HeroButton>
+            <HeroButton
+              variant="solid"
+              color="primary"
+              size="sm"
+              radius="full"
+              isDisabled={isSubmittingPo || draftItems.length === 0}
+              isLoading={isSubmittingPo}
+              loadingText="Creating PO..."
               onClick={onSavePo}
-              className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-full shadow-lg transition-all cursor-pointer disabled:opacity-50"
+              className="font-black uppercase tracking-wider shadow-lg"
             >
-              {isSubmittingPo ? "Creating PO..." : "Issue Purchase Order"}
-            </button>
+              Issue Purchase Order
+            </HeroButton>
           </div>
         </div>
     </HeroModal>

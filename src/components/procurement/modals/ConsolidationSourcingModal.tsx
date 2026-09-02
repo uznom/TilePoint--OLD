@@ -1,5 +1,7 @@
 import React from "react";
 import { HeroModal } from "../../common/ui/HeroModal";
+import { HeroSelect } from "../../common/ui/HeroSelect";
+import { HeroButton } from "../../common/ui/HeroButton";
 import { Branch, Supplier } from "../../../types/db";
 import { Sparkles, X } from "lucide-react";
 
@@ -63,20 +65,17 @@ export const ConsolidationSourcingModal: React.FC<ConsolidationSourcingModalProp
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-default-500 uppercase tracking-wider pl-1">
-              Destination Delivery Warehouse
-            </label>
-            <select
+            <HeroSelect
+              label="Destination Delivery Warehouse"
               value={poDestinationBranch}
               onChange={(e) => setPoDestinationBranch(e.target.value)}
-              className="w-full bg-content2 border border-divider/40 rounded-2xl px-4 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             >
               {branches.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name} ({b.address || "Main Site"})
                 </option>
               ))}
-            </select>
+            </HeroSelect>
           </div>
 
           <div className="space-y-1.5">
@@ -92,9 +91,9 @@ export const ConsolidationSourcingModal: React.FC<ConsolidationSourcingModalProp
                     setPaymentTerm(days);
                     setIsCustomPayoutDate(false);
                   }}
-                  className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer active:scale-95 ${
                     paymentTerm === days && !isCustomPayoutDate
-                      ? "bg-primary text-primary-foreground border-primary"
+                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
                       : "bg-content2 border-divider/30 text-default-600 hover:bg-content3"
                   }`}
                 >
@@ -130,20 +129,25 @@ export const ConsolidationSourcingModal: React.FC<ConsolidationSourcingModalProp
         </div>
 
         <div className="flex justify-end gap-2.5 pt-3 border-t border-divider/20">
-          <button
-            type="button"
+          <HeroButton
+            variant="flat"
+            color="default"
+            size="sm"
+            radius="full"
             onClick={onClose}
-            className="px-4 py-2 bg-content2 hover:bg-content3 border border-divider/30 text-xs font-bold text-foreground rounded-full transition-colors cursor-pointer"
           >
             Cancel
-          </button>
-          <button
-            type="button"
+          </HeroButton>
+          <HeroButton
+            variant="solid"
+            color="primary"
+            size="sm"
+            radius="full"
+            className="font-black uppercase tracking-wider shadow-lg"
             onClick={onConfirmGeneratePOs}
-            className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-full shadow-lg transition-all cursor-pointer"
           >
             Create Purchase Orders
-          </button>
+          </HeroButton>
         </div>
     </HeroModal>
   );

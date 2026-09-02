@@ -66,7 +66,7 @@ export const PosCustomerModal: React.FC<PosCustomerModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full"
+                className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full active:scale-95"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -81,7 +81,7 @@ export const PosCustomerModal: React.FC<PosCustomerModalProps> = ({
                 value={customerModalInput}
                 onChange={(e) => setCustomerModalInput(e.target.value)}
                 placeholder="Full Name / Company Name"
-                className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
+                className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold active:scale-[0.98]"
               />
             </div>
 
@@ -94,7 +94,7 @@ export const PosCustomerModal: React.FC<PosCustomerModalProps> = ({
                 value={customerModalAddressInput}
                 onChange={(e) => setCustomerModalAddressInput(e.target.value)}
                 placeholder="Unit / Street / Barangay / City / Province"
-                className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
+                className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold active:scale-[0.98]"
               />
             </div>
 
@@ -108,7 +108,7 @@ export const PosCustomerModal: React.FC<PosCustomerModalProps> = ({
                   value={customerModalTinInput}
                   onChange={(e) => setCustomerModalTinInput(formatTin(e.target.value))}
                   placeholder="000-000-000-000"
-                  className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
+                  className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold active:scale-[0.98]"
                 />
               </div>
 
@@ -121,7 +121,7 @@ export const PosCustomerModal: React.FC<PosCustomerModalProps> = ({
                   value={customerModalBusinessStyleInput}
                   onChange={(e) => setCustomerModalBusinessStyleInput(e.target.value)}
                   placeholder="e.g. Retail / General Contractor"
-                  className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
+                  className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold active:scale-[0.98]"
                 />
               </div>
             </div>
@@ -135,7 +135,7 @@ export const PosCustomerModal: React.FC<PosCustomerModalProps> = ({
                 value={customerModalNotesInput}
                 onChange={(e) => setCustomerModalNotesInput(e.target.value)}
                 placeholder="e.g. Master Bath Renovation / Lot 4 Villa"
-                className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
+                className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold active:scale-[0.98]"
               />
             </div>
 
@@ -171,7 +171,7 @@ export const PosCustomerModal: React.FC<PosCustomerModalProps> = ({
                                 onClose();
                                 onOpenAddMember(customerModalInput.trim());
                               }}
-                              className="px-3 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 text-xs font-extrabold rounded-lg inline-flex items-center gap-1.5 cursor-pointer transition-colors border-0"
+                              className="px-3 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-500 text-xs font-extrabold rounded-lg inline-flex items-center gap-1.5 cursor-pointer transition-colors border-0 active:scale-95"
                             >
                               <UserPlus className="h-3.5 w-3.5" />
                               <span>Add "{customerModalInput.trim()}" as Member</span>
@@ -190,7 +190,7 @@ export const PosCustomerModal: React.FC<PosCustomerModalProps> = ({
                         if (m.address) setCustomerModalAddressInput(m.address);
                         if (m.tin) setCustomerModalTinInput(formatTin(m.tin));
                       }}
-                      className="w-full text-left p-2 hover:bg-primary/10 rounded-lg text-xs font-bold text-foreground flex justify-between items-center cursor-pointer border-0 bg-transparent transition-colors"
+                      className="w-full text-left p-2 hover:bg-primary/10 rounded-lg text-xs font-bold text-foreground flex justify-between items-center cursor-pointer border-0 bg-transparent transition-colors active:scale-[0.98]"
                     >
                       <div className="flex flex-col text-left">
                         <span>{m.fullName}</span>
@@ -211,7 +211,7 @@ export const PosCustomerModal: React.FC<PosCustomerModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
+                className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors active:scale-95"
               >
                 Cancel
               </button>

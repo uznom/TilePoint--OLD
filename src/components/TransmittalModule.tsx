@@ -792,7 +792,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </thead>
  <tbody className="divide-y divide-divider/10 print:divide-zinc-300">
  {stocks.map((item: any, i: number) => (
- <tr key={i} className="hover:bg-content1/30">
+ <tr key={i} className="hover:bg-content1/30 active:scale-[0.98]">
  <td className="py-1.5 font-bold text-foreground print:text-black">
  {item.productName || item.productId}
  </td>
@@ -942,7 +942,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </thead>
  <tbody className="divide-y divide-divider/10 print:divide-zinc-300">
  {expensesList.map((ex: any, i: number) => (
- <tr key={i} className="hover:bg-content1/30">
+ <tr key={i} className="hover:bg-content1/30 active:scale-[0.98]">
  <td className="py-1.5 font-bold text-rose-500 print:text-black">
  {ex.category}
  </td>
@@ -990,7 +990,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  {shiftsList.map((sh: any, i: number) => {
  const hasVariance = sh.variance !== 0;
  return (
- <tr key={i} className="hover:bg-content1/30">
+ <tr key={i} className="hover:bg-content1/30 active:scale-[0.98]">
  <td className="py-1.5 font-bold text-foreground print:text-black">
  {sh.cashierName}
  </td>
@@ -1257,7 +1257,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  return (
  <tr
  key={idx}
- className="hover:bg-content1/50 transition-colors"
+ className="hover:bg-content1/50 transition-colors active:scale-[0.98]"
  >
  <td className="py-3.5 px-4">
  <div className="font-extrabold text-primary text-xs">
@@ -1301,7 +1301,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  setInspectTab("itemized");
  setActiveTrans(t);
  }}
- className="py-1 px-3 text-[10px] rounded-full border border-primary/35 text-primary bg-primary/5 hover:bg-primary/10 cursor-pointer font-bold transition-colors flex items-center gap-1"
+ className="py-1 px-3 text-[10px] rounded-full border border-primary/35 text-primary bg-primary/5 hover:bg-primary/10 cursor-pointer font-bold transition-colors flex items-center gap-1 active:scale-95"
  >
  <Printer className="h-3 w-3 text-primary" /> Inspect
  &amp; Print
@@ -1309,7 +1309,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
 
  <button
  onClick={() => handleExportTransmittal(t)}
- className="p-1 px-1.5 text-secondary hover:scale-105 rounded-full border border-secondary/20 bg-secondary/5 cursor-pointer transition-colors"
+ className="p-1 px-1.5 text-secondary hover:scale-105 rounded-full border border-secondary/20 bg-secondary/5 cursor-pointer transition-colors active:scale-95"
  title="Download raw packet data"
  >
  <Download className="h-3.5 w-3.5" />
@@ -1355,7 +1355,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <button
  type="button"
  onClick={() => setShowModal(false)}
- className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full"
+ className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full active:scale-95"
  >
  <X className="h-5 w-5" />
  </button>
@@ -1369,7 +1369,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
       <button
         type="button"
         onClick={() => compileBranchData(selectedDocType)}
-        className="bg-primary/10 text-primary hover:bg-primary/25 border border-primary/20 px-2 py-0.5 rounded text-[9px] font-black uppercase transition-colors"
+        className="bg-primary/10 text-primary hover:bg-primary/25 border border-primary/20 px-2 py-0.5 rounded text-[9px] font-black uppercase transition-colors active:scale-[0.98]"
         title="Automatically snapshot and wrap core matching branch records into standard JSON ledger schema"
       >
         Pull Live Data
@@ -1419,7 +1419,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  rows={4}
  value={payloadText ?? ''}
  onChange={(e) => setPayloadText(e.target.value)}
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg active:scale-[0.98]"
  />
  </div>
 
@@ -1432,7 +1432,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  value={notes ?? ''}
  onChange={(e) => setNotes(e.target.value)}
  placeholder="Summary memo notes"
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg active:scale-[0.98]"
  />
  </div>
 
@@ -1440,7 +1440,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <button
  type="button"
  onClick={() => setShowModal(false)}
- className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
+ className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors active:scale-95"
  >
  Cancel
  </button>
@@ -1466,7 +1466,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </h3>
  <button
  onClick={() => setActiveTrans(null)}
- className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full"
+ className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full active:scale-95"
  >
  <X className="h-5 w-5" />
  </button>
@@ -1604,7 +1604,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  "Inter-branch document verified and authenticated successfully.",
  );
  }}
- className="w-full py-2 bg-secondary text-secondary-foreground rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1 hover:bg-secondary/90 transition-all border-0"
+ className="w-full py-2 bg-secondary text-secondary-foreground rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1 hover:bg-secondary/90 transition-all border-0 active:scale-95"
  >
  <CheckSquare className="h-4 w-4" /> Authenticate &amp;
  Approve Document
@@ -1626,7 +1626,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  );
  showToast("Preparing slip print canvas...");
  }}
- className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm flex items-center gap-1.5 transition-all"
+ className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm flex items-center gap-1.5 transition-all active:scale-95"
  >
  <Printer className="h-4 w-4" /> Print / Save PDF
  </button>
@@ -1634,7 +1634,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <button
  type="button"
  onClick={() => handleExportTransmittal(activeTrans)}
- className="px-3 py-2 bg-default-100 text-primary hover:bg-default-100 text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer transition-colors border border-divider/10"
+ className="px-3 py-2 bg-default-100 text-primary hover:bg-default-100 text-xs font-bold rounded-xl flex items-center gap-1 cursor-pointer transition-colors border border-divider/10 active:scale-95"
  title="Download raw JSON packet"
  >
  <Download className="h-4 w-4" /> Export JSON
@@ -1643,7 +1643,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <button
  type="button"
  onClick={() => setActiveTrans(null)}
- className="px-4 py-2 text-xs font-bold rounded-xl cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
+ className="px-4 py-2 text-xs font-bold rounded-xl cursor-pointer hover:bg-default-100 text-default-500 transition-colors active:scale-[0.98]"
  >
  Close
  </button>
@@ -1826,7 +1826,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <button
  type="button"
  onClick={() => setShowImportModal(false)}
- className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full"
+ className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full active:scale-95"
  >
  <X className="h-5 w-5" />
  </button>
@@ -1841,7 +1841,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  value={rawImportText ?? ''}
  onChange={(e) => setRawImportText(e.target.value)}
  placeholder="Paste raw downloaded transmittal JSON slip data here..."
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg "
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg  active:scale-[0.98]"
  />
  </div>
 
@@ -1849,7 +1849,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <button
  type="button"
  onClick={() => setShowImportModal(false)}
- className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
+ className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors active:scale-95"
  >
  Cancel
  </button>

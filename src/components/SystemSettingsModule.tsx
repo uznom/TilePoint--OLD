@@ -521,7 +521,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
             <button
               type="button"
               onClick={handleResetToDefaults}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-divider/30 hover:bg-primary/10 text-default-600 hover:text-primary text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-divider/30 hover:bg-primary/10 text-default-600 hover:text-primary text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer active:scale-95"
               title="Reset display and accessibility preferences to defaults"
             >
               <RotateCcw className="h-3.5 w-3.5" />
@@ -538,7 +538,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-xl text-default-400 hover:text-foreground hover:bg-default-100 transition-colors cursor-pointer"
+              className="p-1.5 rounded-xl text-default-400 hover:text-foreground hover:bg-default-100 transition-colors cursor-pointer active:scale-95"
               title="Close"
             >
               <X className="h-5 w-5" />
@@ -589,9 +589,9 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               setDynamicConfigTab('categories');
               setShowDynamicConfig(true);
             }}
-            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer"
+            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer active:scale-[0.98]"
           >
-            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1">
+            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1 active:scale-[0.98]">
               <Tag className="h-3.5 w-3.5" />
               <span className="text-[10px] font-black">{productCategories.length}</span>
             </div>
@@ -605,9 +605,9 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               setDynamicConfigTab('units');
               setShowDynamicConfig(true);
             }}
-            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer"
+            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer active:scale-[0.98]"
           >
-            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1">
+            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1 active:scale-[0.98]">
               <Ruler className="h-3.5 w-3.5" />
               <span className="text-[10px] font-black">{unitTypes.length}</span>
             </div>
@@ -621,9 +621,9 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               setDynamicConfigTab('payments');
               setShowDynamicConfig(true);
             }}
-            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer"
+            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer active:scale-[0.98]"
           >
-            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1">
+            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1 active:scale-[0.98]">
               <CreditCard className="h-3.5 w-3.5" />
               <span className="text-[10px] font-black">{paymentMethodsList.length}</span>
             </div>
@@ -637,9 +637,9 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               setDynamicConfigTab('discounts');
               setShowDynamicConfig(true);
             }}
-            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer"
+            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer active:scale-[0.98]"
           >
-            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1">
+            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1 active:scale-[0.98]">
               <Percent className="h-3.5 w-3.5" />
               <span className="text-[10px] font-black">{discountSchemes.length}</span>
             </div>
@@ -653,9 +653,9 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               setDynamicConfigTab('damages');
               setShowDynamicConfig(true);
             }}
-            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer col-span-2 sm:col-span-1"
+            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer col-span-2 sm:col-span-1 active:scale-[0.98]"
           >
-            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1">
+            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1 active:scale-[0.98]">
               <AlertTriangle className="h-3.5 w-3.5" />
               <span className="text-[10px] font-black">{damageReasonsList.length}</span>
             </div>
@@ -1235,7 +1235,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
                   setSnapshotSuccessToast('Database backup downloaded.');
                   setTimeout(() => setSnapshotSuccessToast(null), 3000);
                 }}
-                className="px-3.5 py-2.5 bg-content2 hover:bg-content3 text-foreground font-black text-xs uppercase tracking-wider rounded-xl border border-divider/30 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                className="px-3.5 py-2.5 bg-content2 hover:bg-content3 text-foreground font-black text-xs uppercase tracking-wider rounded-xl border border-divider/30 transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95"
               >
                 <FolderArchive className="h-4 w-4" />
                 <span>Download JSON</span>
@@ -1355,7 +1355,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
                           forceCloseAllShifts();
                           alert('All unclosed shifts have been closed.');
                         }}
-                        className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border border-amber-500/30 cursor-pointer"
+                        className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border border-amber-500/30 cursor-pointer active:scale-[0.98]"
                       >
                         Force-Close Shifts
                       </button>
@@ -1367,7 +1367,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
                           localStorage.removeItem('tp_active_cart');
                           window.location.reload();
                         }}
-                        className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border border-amber-500/30 cursor-pointer"
+                        className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border border-amber-500/30 cursor-pointer active:scale-[0.98]"
                       >
                         Clear Cart
                       </button>
@@ -1375,7 +1375,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
                     <button
                       type="button"
                       onClick={() => setForceUnlockReset(true)}
-                      className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-500 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border border-rose-500/30 cursor-pointer"
+                      className="px-3 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-500 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border border-rose-500/30 cursor-pointer active:scale-[0.98]"
                     >
                       Bypass Safety Guard
                     </button>

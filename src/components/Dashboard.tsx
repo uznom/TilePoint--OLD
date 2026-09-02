@@ -627,7 +627,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 setIsRefreshing(true);
                 setTimeout(() => setIsRefreshing(false), 500);
               }}
-              className="bg-default-100 hover:bg-default-200 dark:bg-content2 dark:hover:bg-content3 text-foreground"
+              className="bg-default-100 hover:bg-default-200 dark:bg-content2 dark:hover:bg-content3 text-foreground active:scale-[0.98]"
               aria-label="Refresh Metrics"
             >
               <RotateCw className={`h-4 w-4 text-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -649,7 +649,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Revenue */}
         <HeroCard
-          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 shadow-xs"
+          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 shadow-xs active:scale-[0.98]"
           variant="bordered"
           radius="2xl"
         >
@@ -680,7 +680,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Inventory Stock Valuation */}
         <HeroCard
-          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 shadow-xs"
+          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 shadow-xs active:scale-[0.98]"
           variant="bordered"
           radius="2xl"
         >
@@ -711,21 +711,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Top Performer Tile - Clickable to open Top 20 & Slow 10 Velocity Analytics */}
         <HeroCard
-          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-primary/60 hover:shadow-sm cursor-pointer group bg-content1 shadow-xs"
+          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-primary/60 hover:shadow-sm cursor-pointer group bg-content1 shadow-xs active:scale-[0.98]"
           variant="bordered"
           radius="2xl"
           onClick={() => setIsTopSellingModalOpen(true)}
         >
           <div className="flex items-start justify-between">
-            <span className="text-xs font-medium text-default-500 tracking-tight group-hover:text-primary transition-colors">
+            <span className="text-xs font-medium text-default-500 tracking-tight group-hover:text-primary transition-colors active:scale-[0.98]">
               Top Selling Product
             </span>
-            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400 border border-amber-500/20 group-hover:bg-amber-100 transition-all">
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400 border border-amber-500/20 group-hover:bg-amber-100 transition-all active:scale-95">
               Top 20 / Slow 10
             </span>
           </div>
           <div className="mt-3">
-            <div className="text-lg font-bold text-foreground tracking-tight truncate group-hover:text-primary transition-colors" title={topProduct.name}>
+            <div className="text-lg font-bold text-foreground tracking-tight truncate group-hover:text-primary transition-colors active:scale-[0.98]" title={topProduct.name}>
               {topProduct.name}
             </div>
             <div className="text-xs text-default-400 mt-1 flex items-center justify-between font-normal">
@@ -739,7 +739,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Operational Pulse & Alerts */}
         <HeroCard
-          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 shadow-xs"
+          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 shadow-xs active:scale-[0.98]"
           variant="bordered"
           radius="2xl"
         >
@@ -754,21 +754,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
             <div
               onClick={() => onNavigate('deliveries-panel')}
-              className="p-2 rounded-xl bg-default-100/70 dark:bg-content2/60 hover:bg-default-200/70 cursor-pointer transition-colors"
+              className="p-2 rounded-xl bg-default-100/70 dark:bg-content2/60 hover:bg-default-200/70 cursor-pointer transition-colors active:scale-[0.98]"
             >
               <div className="text-sm font-bold text-sky-500 tabular-nums">{pendingDeliveriesCount}</div>
               <div className="text-[10px] text-default-400 font-medium">Cargo</div>
             </div>
             <div
               onClick={() => onNavigate('pos')}
-              className="p-2 rounded-xl bg-default-100/70 dark:bg-content2/60 hover:bg-default-200/70 cursor-pointer transition-colors"
+              className="p-2 rounded-xl bg-default-100/70 dark:bg-content2/60 hover:bg-default-200/70 cursor-pointer transition-colors active:scale-[0.98]"
             >
               <div className="text-sm font-bold text-amber-500 tabular-nums">{parkedSalesCount}</div>
               <div className="text-[10px] text-default-400 font-medium">Parked</div>
             </div>
             <div
               onClick={() => onNavigate('inventory-stocks')}
-              className="p-2 rounded-xl bg-default-100/70 dark:bg-content2/60 hover:bg-default-200/70 cursor-pointer transition-colors"
+              className="p-2 rounded-xl bg-default-100/70 dark:bg-content2/60 hover:bg-default-200/70 cursor-pointer transition-colors active:scale-[0.98]"
             >
               <div className="text-sm font-bold text-rose-500 tabular-nums">{lowStockCount}</div>
               <div className="text-[10px] text-default-400 font-medium">Low Stock</div>
@@ -856,7 +856,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                       cx={pt.x}
                       cy={pt.y}
                       r={hoveredPointIndex === idx ? 6 : 4}
-                      className="fill-background stroke-primary transition-all duration-150 cursor-pointer"
+                      className="fill-background stroke-primary transition-all duration-150 cursor-pointer active:scale-[0.98]"
                       strokeWidth="2.5"
                       onMouseEnter={() => setHoveredPointIndex(idx)}
                       onMouseLeave={() => setHoveredPointIndex(null)}
@@ -924,7 +924,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                       setTablePage(1);
                     }}
                     placeholder="Search invoice or customer..."
-                    className="w-full bg-default-100 dark:bg-content2/80 border border-divider/40 text-foreground text-xs rounded-full pl-9 pr-3.5 py-2 outline-none focus:border-primary/50 transition-colors font-sans"
+                    className="w-full bg-default-100 dark:bg-content2/80 border border-divider/40 text-foreground text-xs rounded-full pl-9 pr-3.5 py-2 outline-none focus:border-primary/50 transition-colors font-sans active:scale-95"
                   />
                 </div>
 
@@ -1213,7 +1213,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 <div
                   key={del.id}
                   onClick={() => onNavigate('deliveries-panel')}
-                  className="p-2.5 rounded-xl bg-default-100/50 hover:bg-default-100 cursor-pointer transition-colors flex items-center justify-between"
+                  className="p-2.5 rounded-xl bg-default-100/50 hover:bg-default-100 cursor-pointer transition-colors flex items-center justify-between active:scale-[0.98]"
                 >
                   <div className="min-w-0 pr-2">
                     <div className="text-xs font-bold text-foreground truncate">
@@ -1290,7 +1290,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             <button
               type="button"
               onClick={() => setSelectedSale(null)}
-              className="p-1 rounded-full text-default-400 hover:text-foreground"
+              className="p-1 rounded-full text-default-400 hover:text-foreground active:scale-95"
             >
               <X className="h-4 w-4" />
             </button>
@@ -1407,7 +1407,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
           <div className="max-h-[350px] overflow-y-auto divide-y divide-divider/10 border border-divider/20 rounded-xl">
             {filteredStockProducts.map((prod) => (
-              <div key={prod.id} className="p-3 hover:bg-default-100/50 flex items-center justify-between text-xs">
+              <div key={prod.id} className="p-3 hover:bg-default-100/50 flex items-center justify-between text-xs active:scale-[0.98]">
                 <div>
                   <div className="font-bold text-foreground">{prod.productName}</div>
                   <div className="text-[10px] text-default-400 flex items-center gap-2 mt-0.5">

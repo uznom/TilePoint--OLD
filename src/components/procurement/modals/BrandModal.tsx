@@ -1,5 +1,7 @@
 import React from "react";
 import { HeroModal } from "../../common/ui/HeroModal";
+import { HeroSelect } from "../../common/ui/HeroSelect";
+import { HeroButton } from "../../common/ui/HeroButton";
 import { Supplier } from "../../../types/db";
 import { Tag, X } from "lucide-react";
 
@@ -79,14 +81,12 @@ export const BrandModal: React.FC<BrandModalProps> = ({
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-default-500 uppercase tracking-wider pl-1">
-              Associated Supplier Vendor <span className="text-danger">*</span>
-            </label>
-            <select
-              required
+            <HeroSelect
+              label="Associated Supplier Vendor"
+              isRequired
               value={brandSupplierId ?? ''}
               onChange={(e) => setBrandSupplierId(e.target.value)}
-              className="w-full bg-content2 border border-divider/40 rounded-2xl px-4 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              placeholder="-- Choose Supplying Vendor --"
             >
               <option value="">-- Choose Supplying Vendor --</option>
               {suppliers
@@ -96,7 +96,7 @@ export const BrandModal: React.FC<BrandModalProps> = ({
                     {sup.name}
                   </option>
                 ))}
-            </select>
+            </HeroSelect>
           </div>
 
           <div className="space-y-1.5">
@@ -113,19 +113,25 @@ export const BrandModal: React.FC<BrandModalProps> = ({
           </div>
 
           <div className="flex justify-end gap-2.5 pt-3 border-t border-divider/20">
-            <button
-              type="button"
+            <HeroButton
+              variant="flat"
+              color="default"
+              size="sm"
+              radius="full"
               onClick={onClose}
-              className="px-4 py-2 bg-content2 hover:bg-content3 border border-divider/30 text-xs font-bold text-foreground rounded-full transition-colors cursor-pointer"
             >
               Cancel
-            </button>
-            <button
+            </HeroButton>
+            <HeroButton
               type="submit"
-              className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-full shadow-lg transition-all cursor-pointer"
+              variant="solid"
+              color="primary"
+              size="sm"
+              radius="full"
+              className="font-black uppercase tracking-wider shadow-lg"
             >
               {isEditingBrand ? "Save Brand Details" : "Register Brand"}
-            </button>
+            </HeroButton>
           </div>
         </form>
     </HeroModal>

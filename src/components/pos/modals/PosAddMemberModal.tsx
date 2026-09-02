@@ -60,7 +60,7 @@ export const PosAddMemberModal: React.FC<PosAddMemberModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="text-default-500 hover:text-foreground p-1.5 rounded-full hover:bg-primary/10 transition-colors cursor-pointer"
+                className="text-default-500 hover:text-foreground p-1.5 rounded-full hover:bg-primary/10 transition-colors cursor-pointer active:scale-95"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -84,7 +84,7 @@ export const PosAddMemberModal: React.FC<PosAddMemberModalProps> = ({
                   value={newMemberName}
                   onChange={(e) => setNewMemberName(e.target.value)}
                   placeholder="Full Name / Company"
-                  className="w-full bg-content1 border border-divider/40 rounded-xl px-3.5 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all"
+                  className="w-full bg-content1 border border-divider/40 rounded-xl px-3.5 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all active:scale-[0.98]"
                 />
               </div>
 
@@ -98,7 +98,7 @@ export const PosAddMemberModal: React.FC<PosAddMemberModalProps> = ({
                     value={newMemberPhone}
                     onChange={(e) => setNewMemberPhone(e.target.value)}
                     placeholder="Phone number"
-                    className="w-full bg-content1 border border-divider/40 rounded-xl px-3.5 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all"
+                    className="w-full bg-content1 border border-divider/40 rounded-xl px-3.5 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all active:scale-[0.98]"
                   />
                 </div>
 
@@ -111,7 +111,7 @@ export const PosAddMemberModal: React.FC<PosAddMemberModalProps> = ({
                     value={newMemberEmail}
                     onChange={(e) => setNewMemberEmail(e.target.value)}
                     placeholder="Email address"
-                    className="w-full bg-content1 border border-divider/40 rounded-xl px-3.5 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all"
+                    className="w-full bg-content1 border border-divider/40 rounded-xl px-3.5 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all active:scale-[0.98]"
                   />
                 </div>
               </div>
@@ -127,7 +127,7 @@ export const PosAddMemberModal: React.FC<PosAddMemberModalProps> = ({
                   value={newMemberLimit}
                   onChange={(e) => setNewMemberLimit(e.target.value)}
                   placeholder="0"
-                  className="w-full bg-content1 border border-divider/40 rounded-xl px-3.5 py-2 text-xs font-extrabold text-foreground focus:outline-none focus:border-primary transition-all"
+                  className="w-full bg-content1 border border-divider/40 rounded-xl px-3.5 py-2 text-xs font-extrabold text-foreground focus:outline-none focus:border-primary transition-all active:scale-[0.98]"
                 />
               </div>
 
@@ -135,13 +135,13 @@ export const PosAddMemberModal: React.FC<PosAddMemberModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 border border-divider/40 hover:bg-content3 text-foreground text-xs font-bold rounded-xl cursor-pointer transition-colors"
+                  className="px-4 py-2 border border-divider/40 hover:bg-content3 text-foreground text-xs font-bold rounded-xl cursor-pointer transition-colors active:scale-[0.98]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-extrabold rounded-xl shadow-md cursor-pointer transition-colors flex items-center gap-1.5"
+                  className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-extrabold rounded-xl shadow-md cursor-pointer transition-colors flex items-center gap-1.5 active:scale-95"
                 >
                   <UserPlus className="h-4 w-4" />
                   <span>Save & Link Account</span>

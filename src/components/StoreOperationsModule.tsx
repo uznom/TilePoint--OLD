@@ -489,14 +489,14 @@ export default function StoreOperationsModule({
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="flex-1 py-1.5 rounded-lg bg-content2 hover:bg-content2 font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                  className="flex-1 py-1.5 rounded-lg bg-content2 hover:bg-content2 font-bold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95"
                 >
                   <Printer className="h-3 w-3" /> Print
                 </button>
                 <button
                   type="button"
                   onClick={() => setPrintReceiptData(null)}
-                  className="flex-1 py-1.5 rounded-lg bg-content1 hover:bg-content2 text-white font-bold transition cursor-pointer"
+                  className="flex-1 py-1.5 rounded-lg bg-content1 hover:bg-content2 text-white font-bold transition cursor-pointer active:scale-[0.98]"
                 >
                   Close
                 </button>

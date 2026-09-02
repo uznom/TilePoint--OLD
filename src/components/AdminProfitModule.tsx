@@ -595,7 +595,7 @@ export function AdminProfitModule({
         {/* 3 Main Metric Cards Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Gross Revenue */}
-          <div className="bg-content1 border border-emerald-500/20 rounded-2xl p-4 flex flex-col justify-between hover:border-emerald-500/40 transition-colors">
+          <div className="bg-content1 border border-emerald-500/20 rounded-2xl p-4 flex flex-col justify-between hover:border-emerald-500/40 transition-colors active:scale-[0.98]">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-default-500">Gross Revenue</span>
               <span className="text-[9.5px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded-full font-bold uppercase">
@@ -617,7 +617,7 @@ export function AdminProfitModule({
           </div>
 
           {/* Outflows & Deductions */}
-          <div className="bg-content1 border border-rose-500/20 rounded-2xl p-4 flex flex-col justify-between hover:border-rose-500/40 transition-colors">
+          <div className="bg-content1 border border-rose-500/20 rounded-2xl p-4 flex flex-col justify-between hover:border-rose-500/40 transition-colors active:scale-[0.98]">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-default-500">Total Deductions</span>
               <span className="text-[9.5px] bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/25 px-2 py-0.5 rounded-full font-bold uppercase">
@@ -691,28 +691,28 @@ export function AdminProfitModule({
  <div className="w-full h-4.5 rounded-xl bg-content1 flex overflow-hidden shadow-inner text-[9px] font-black text-white text-center border border-divider/20">
               <div
                 style={{ width: `${(metrics.cogs / metrics.grossRevenue) * 100}%` }}
-                className="bg-amber-600/90 flex items-center justify-center min-w-[12px] transition-all"
+                className="bg-amber-600/90 flex items-center justify-center min-w-[12px] transition-all active:scale-[0.98]"
                 title={`COGS: ${((metrics.cogs / metrics.grossRevenue) * 100).toFixed(1)}%`}
               >
                 {((metrics.cogs / metrics.grossRevenue) * 100) >= 12 && `COGS (${((metrics.cogs / metrics.grossRevenue) * 100).toFixed(0)}%)`}
               </div>
               <div
                 style={{ width: `${(metrics.opex / metrics.grossRevenue) * 100}%` }}
-                className="bg-rose-600/90 flex items-center justify-center min-w-[12px] transition-all"
+                className="bg-rose-600/90 flex items-center justify-center min-w-[12px] transition-all active:scale-[0.98]"
                 title={`OpEx: ${((metrics.opex / metrics.grossRevenue) * 100).toFixed(1)}%`}
               >
                 {((metrics.opex / metrics.grossRevenue) * 100) >= 12 && `OpEx (${((metrics.opex / metrics.grossRevenue) * 100).toFixed(0)}%)`}
               </div>
               <div
                 style={{ width: `${(metrics.shrinkage / metrics.grossRevenue) * 100}%` }}
-                className="bg-red-700/95 flex items-center justify-center min-w-[12px] transition-all"
+                className="bg-red-700/95 flex items-center justify-center min-w-[12px] transition-all active:scale-[0.98]"
                 title={`Loss: ${((metrics.shrinkage / metrics.grossRevenue) * 100).toFixed(1)}%`}
               >
                 {((metrics.shrinkage / metrics.grossRevenue) * 100) >= 12 && `Loss (${((metrics.shrinkage / metrics.grossRevenue) * 100).toFixed(0)}%)`}
               </div>
               <div
                 style={{ width: `${Math.max(0, (metrics.netProfit / metrics.grossRevenue) * 100)}%` }}
-                className="bg-emerald-600/90 flex items-center justify-center min-w-[12px] transition-all"
+                className="bg-emerald-600/90 flex items-center justify-center min-w-[12px] transition-all active:scale-[0.98]"
                 title={`Net Profit: ${((metrics.netProfit / metrics.grossRevenue) * 100).toFixed(1)}%`}
               >
                 {((metrics.netProfit / metrics.grossRevenue) * 100) >= 12 && `Margin (${((metrics.netProfit / metrics.grossRevenue) * 100).toFixed(0)}%)`}
@@ -984,14 +984,14 @@ export function AdminProfitModule({
                         <button
                           type="button"
                           onClick={() => handleModifierSave(b.id)}
-                          className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-foreground text-[10px] font-black uppercase rounded-lg cursor-pointer shrink-0 transition-colors"
+                          className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-foreground text-[10px] font-black uppercase rounded-lg cursor-pointer shrink-0 transition-colors active:scale-[0.98]"
                         >
                           Save
                         </button>
                         <button
                           type="button"
                           onClick={() => setEditingBranchId(null)}
-                          className="px-2.5 py-1.5 bg-content1 text-default-500 text-[10px] font-bold uppercase rounded-lg cursor-pointer shrink-0 transition-colors"
+                          className="px-2.5 py-1.5 bg-content1 text-default-500 text-[10px] font-bold uppercase rounded-lg cursor-pointer shrink-0 transition-colors active:scale-[0.98]"
                         >
                           Esc
                         </button>
@@ -1091,7 +1091,7 @@ export function AdminProfitModule({
 
               <button
                 type="submit"
-                className="w-full py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow transition-all flex items-center justify-center gap-1.5"
+                className="w-full py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow transition-all flex items-center justify-center gap-1.5 active:scale-95"
               >
                 <Plus className="h-4 w-4" />
                 <span>Add Expense Log</span>
@@ -1252,7 +1252,7 @@ export function AdminProfitModule({
                             <button
                               type="button"
                               onClick={() => handleDeleteExpense(exp.id)}
-                              className="text-default-500 hover:text-rose-500 cursor-pointer text-[10px] font-bold"
+                              className="text-default-500 hover:text-rose-500 cursor-pointer text-[10px] font-bold active:scale-[0.98]"
                             >
                               Delete
                             </button>
@@ -1295,7 +1295,7 @@ export function AdminProfitModule({
                           URL.revokeObjectURL(url);
                           showToastMsg("Exported Master Transaction History CSV", "success");
                         }}
-                        className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] font-extrabold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                        className="px-3 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-[10px] font-extrabold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95"
                       >
                         <Download className="h-3 w-3" />
                         <span>Export CSV</span>
@@ -1307,7 +1307,7 @@ export function AdminProfitModule({
                           downloadWindowsLauncherScript();
                           showToastMsg("Downloaded TilePoint Windows Launcher (.cmd)", "info");
                         }}
-                        className="px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground text-[10px] font-extrabold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+                        className="px-3 py-1.5 bg-primary hover:opacity-90 text-primary-foreground text-[10px] font-extrabold uppercase tracking-wider rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95"
                       >
                         <Terminal className="h-3 w-3" />
                         <span>Windows Launcher (.cmd)</span>
@@ -1363,7 +1363,7 @@ export function AdminProfitModule({
                         return (
                           <div
                             key={s.id}
-                            className="p-2.5 bg-content1 border border-divider/15 rounded-xl flex items-center justify-between text-xs hover:border-primary/30 transition-all"
+                            className="p-2.5 bg-content1 border border-divider/15 rounded-xl flex items-center justify-between text-xs hover:border-primary/30 transition-all active:scale-[0.98]"
                           >
                             <div className="space-y-0.5">
                               <div className="flex items-center gap-2">

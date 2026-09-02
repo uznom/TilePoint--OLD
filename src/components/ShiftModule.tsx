@@ -190,7 +190,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
  <div className="grid grid-cols-2 gap-3 pt-2">
  <button
  onClick={() => setShowXReport(true)}
- className="p-2.5 text-xs font-bold bg-primary/10 text-primary hover:bg-primary/15 border border-divider/20 rounded-full cursor-pointer text-center transition-all duration-200"
+ className="p-2.5 text-xs font-bold bg-primary/10 text-primary hover:bg-primary/15 border border-divider/20 rounded-full cursor-pointer text-center transition-all duration-200 active:scale-95"
  >
  X Report (Mid-Shift Audit)
  </button>
@@ -222,7 +222,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
   value={closingCashInput ?? ''}
   onChange={e => setClosingCashInput(e.target.value)}
   placeholder="3000"
-  className="w-full bg-default-100 dark:bg-content1 border border-divider/40 focus:border-primary px-3.5 py-2.5 text-sm text-center font-semibold tracking-tight text-foreground focus:outline-none transition-colors rounded-xl font-sans tabular-nums"
+  className="w-full bg-default-100 dark:bg-content1 border border-divider/40 focus:border-primary px-3.5 py-2.5 text-sm text-center font-semibold tracking-tight text-foreground focus:outline-none transition-colors rounded-xl font-sans tabular-nums active:scale-[0.98]"
   />
   </div>
 
@@ -317,7 +317,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
        placeholder="e.g. 1000.00"
        value={startCashInput ?? ''}
        onChange={e => setStartCashInput(e.target.value)}
-       className="w-full bg-default-100 dark:bg-content1 border border-divider/40 focus:border-primary px-3.5 py-2.5 text-base text-center font-semibold tracking-tight text-foreground focus:outline-none transition-colors rounded-xl font-sans tabular-nums"
+       className="w-full bg-default-100 dark:bg-content1 border border-divider/40 focus:border-primary px-3.5 py-2.5 text-base text-center font-semibold tracking-tight text-foreground focus:outline-none transition-colors rounded-xl font-sans tabular-nums active:scale-[0.98]"
      />
      <div className="grid grid-cols-4 gap-1.5 pt-1">
        {[500, 1000, 2000, 3000].map((amt) => (
@@ -447,7 +447,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
   {sortedShifts
   .slice((shiftPage - 1) * shiftPageSize, shiftPage * shiftPageSize)
   .map((s, idx) => (
-  <tr key={idx} className="hover:bg-content1/50">
+  <tr key={idx} className="hover:bg-content1/50 active:scale-[0.98]">
   <td className="py-2.5 px-3 text-[11px] font-bold text-primary">{s.id}</td>
   <td className="py-2.5 px-3">{s.cashierName}</td>
   <td className="py-2.5 px-3 text-right ">{formatCurrency(s.startCash)}</td>
@@ -550,7 +550,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
  window.print();
  addAuditLog('X_REPORT_PRINT', `Printed cashier X-Report for active shift ${activeShift.id}`, 'Shifts', activeShift.id);
  }}
- className="flex-1 py-2 px-3 text-[10px] rounded-full border border-divider/30 font-bold cursor-pointer flex justify-center gap-1.5 items-center hover:bg-default-100 text-primary transition-colors"
+ className="flex-1 py-2 px-3 text-[10px] rounded-full border border-divider/30 font-bold cursor-pointer flex justify-center gap-1.5 items-center hover:bg-default-100 text-primary transition-colors active:scale-95"
  >
  <Printer className="h-3.5 w-3.5" /> Print Ticket
  </button>
@@ -620,7 +620,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
  closeShift(expectedEndCash); // auto closes shift at precision
  setShowZReport(false);
  }}
- className="w-full py-2.5 bg-secondary text-secondary-foreground font-extrabold text-xs uppercase tracking-widest rounded-full cursor-pointer transition shadow text-center hover:bg-secondary/90"
+ className="w-full py-2.5 bg-secondary text-secondary-foreground font-extrabold text-xs uppercase tracking-widest rounded-full cursor-pointer transition shadow text-center hover:bg-secondary/90 active:scale-95"
  >
  Accept and Seal Z-Report Close
  </button>

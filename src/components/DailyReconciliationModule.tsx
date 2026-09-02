@@ -690,7 +690,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
             </h3>
 
             <div className="space-y-3">
-              <label className="flex items-start gap-3 p-3 rounded-xl hover:bg-content1/40 transition-all border border-transparent hover:border-divider/30 cursor-pointer select-none">
+              <label className="flex items-start gap-3 p-3 rounded-xl hover:bg-content1/40 transition-all border border-transparent hover:border-divider/30 cursor-pointer select-none active:scale-[0.98]">
                 <input
                   type="checkbox"
                   disabled={isReconciled}
@@ -706,7 +706,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-3 rounded-xl hover:bg-content1/40 transition-all border border-transparent hover:border-divider/30 cursor-pointer select-none">
+              <label className="flex items-start gap-3 p-3 rounded-xl hover:bg-content1/40 transition-all border border-transparent hover:border-divider/30 cursor-pointer select-none active:scale-[0.98]">
                 <input
                   type="checkbox"
                   disabled={isReconciled}
@@ -722,7 +722,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                 </div>
               </label>
 
-              <label className="flex items-start gap-3 p-3 rounded-xl hover:bg-content1/40 transition-all border border-transparent hover:border-divider/30 cursor-pointer select-none">
+              <label className="flex items-start gap-3 p-3 rounded-xl hover:bg-content1/40 transition-all border border-transparent hover:border-divider/30 cursor-pointer select-none active:scale-[0.98]">
                 <input
                   type="checkbox"
                   disabled={isReconciled}
@@ -779,11 +779,11 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                 {/* Copy to Clipboard */}
                 <button
                   onClick={() => handleCopyText(sharePayloadText, "Encrypted sales report copied to clipboard!")}
-                  className="p-3 bg-content1 hover:bg-content3 border border-divider/20 hover:border-divider/40 text-left rounded-xl transition group flex flex-col justify-between h-[84px] cursor-pointer"
+                  className="p-3 bg-content1 hover:bg-content3 border border-divider/20 hover:border-divider/40 text-left rounded-xl transition group flex flex-col justify-between h-[84px] cursor-pointer active:scale-[0.98]"
                 >
                   <div className="flex items-center justify-between w-full">
  <span className="text-[9px] font-black uppercase tracking-wider text-default-500">Clipboard</span>
-                    <Copy className="h-4 w-4 text-default-500 group-hover:scale-110 transition-transform" />
+                    <Copy className="h-4 w-4 text-default-500 group-hover:scale-110 transition-transform active:scale-[0.98]" />
                   </div>
                   <div>
                     <div className="text-[11px] font-bold text-foreground leading-tight">Copy JSON Packet</div>
@@ -803,11 +803,11 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                       }
                     }, 500);
                   }}
-                  className="p-3 bg-content1 hover:bg-content3 border border-divider/20 hover:border-divider/40 text-left rounded-xl transition group flex flex-col justify-between h-[84px] cursor-pointer"
+                  className="p-3 bg-content1 hover:bg-content3 border border-divider/20 hover:border-divider/40 text-left rounded-xl transition group flex flex-col justify-between h-[84px] cursor-pointer active:scale-[0.98]"
                 >
                   <div className="flex items-center justify-between w-full">
  <span className="text-[9px] font-black uppercase tracking-wider text-default-500">Messenger</span>
-                    <ArrowRight className="h-4 w-4 text-primary transition-transform group-hover:translate-x-0.5" />
+                    <ArrowRight className="h-4 w-4 text-primary transition-transform group-hover:translate-x-0.5 active:scale-[0.98]" />
                   </div>
                   <div>
                     <div className="text-[11px] font-bold text-foreground leading-tight">Share on Messenger</div>
@@ -833,7 +833,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                     }
                   }, 500);
                 }}
-                className="w-full py-2.5 bg-primary/10 hover:bg-primary/15 border border-primary/20 text-primary hover:text-primary/80 font-extrabold uppercase text-[10px] tracking-wider rounded-xl transition flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2.5 bg-primary/10 hover:bg-primary/15 border border-primary/20 text-primary hover:text-primary/80 font-extrabold uppercase text-[10px] tracking-wider rounded-xl transition flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
               >
                 <Mail className="h-4 w-4" />
                 <span>Email Reconciled Report to Admin</span>
@@ -870,7 +870,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
               </h3>
               <button
                 onClick={() => setShowSalesList(!showSalesList)}
-                className="p-1 hover:bg-content1 text-default-500 hover:text-foreground rounded-lg transition"
+                className="p-1 hover:bg-content1 text-default-500 hover:text-foreground rounded-lg transition active:scale-95"
               >
                 {showSalesList ? <ChevronUp className="h-4.5 w-4.5" /> : <ChevronDown className="h-4.5 w-4.5" />}
               </button>
@@ -904,7 +904,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
 
                         return (
                           <React.Fragment key={s.id}>
- <tr className="border-b border-divider/15 hover:bg-content1/40 transition-all ">
+ <tr className="border-b border-divider/15 hover:bg-content1/40 transition-all  active:scale-[0.98]">
                               <td className="p-3 text-foreground font-extrabold">{s.saleNumber}</td>
                               <td className="p-3 text-default-500 font-sans">{s.cashierName}</td>
                               <td className="p-3 text-right text-foreground">
@@ -921,7 +921,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                               <td className="p-3 text-center">
                                 <button
                                   onClick={() => setExpandedSaleId(isExpanded ? null : s.id)}
-                                  className="p-1 bg-content1 hover:bg-default-100 text-default-500 hover:text-foreground border border-divider/20 rounded-lg transition"
+                                  className="p-1 bg-content1 hover:bg-default-100 text-default-500 hover:text-foreground border border-divider/20 rounded-lg transition active:scale-95"
                                 >
                                   {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                 </button>
@@ -1006,7 +1006,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
               </h3>
               <button
                 onClick={() => setShowExpensesList(!showExpensesList)}
-                className="p-1 hover:bg-content1 text-default-500 hover:text-foreground rounded-lg transition"
+                className="p-1 hover:bg-content1 text-default-500 hover:text-foreground rounded-lg transition active:scale-95"
               >
                 {showExpensesList ? <ChevronUp className="h-4.5 w-4.5" /> : <ChevronDown className="h-4.5 w-4.5" />}
               </button>
@@ -1038,7 +1038,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
                       </tr>
                     ) : (
                       stats.expenses.map((e) => (
- <tr key={e.id} className="border-b border-divider/10 hover:bg-content1/40 transition text-default-500">
+ <tr key={e.id} className="border-b border-divider/10 hover:bg-content1/40 transition text-default-500 active:scale-[0.98]">
                           <td className="p-3 text-rose-400 font-extrabold uppercase text-[10px] tracking-wider">{e.category}</td>
                           <td className="p-3 text-default-500 font-sans text-[11px] leading-relaxed max-w-xs truncate" title={e.notes}>
                             {e.notes || "No details provided"}

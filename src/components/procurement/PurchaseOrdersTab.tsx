@@ -159,7 +159,7 @@ export const PurchaseOrdersTab: React.FC<PurchaseOrdersTabProps> = ({
                   const supplier = suppliers.find((s) => s.id === po.supplierId);
                   const destBranch = branches.find((b) => b.id === po.branchId);
                   return (
-                    <tr key={po.id} className="hover:bg-content2/40 transition-colors">
+                    <tr key={po.id} className="hover:bg-content2/40 transition-colors active:scale-[0.98]">
                       <td className="p-4">
                         <span className="font-black font-mono text-primary block">
                           #{po.poNumber}
@@ -203,7 +203,7 @@ export const PurchaseOrdersTab: React.FC<PurchaseOrdersTabProps> = ({
                           <button
                             type="button"
                             onClick={() => onViewPoDetails(po)}
-                            className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-primary transition-colors cursor-pointer"
+                            className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-primary transition-colors cursor-pointer active:scale-95"
                             title="View Requisition Details"
                           >
                             <Eye className="h-4 w-4" />
@@ -211,7 +211,7 @@ export const PurchaseOrdersTab: React.FC<PurchaseOrdersTabProps> = ({
                           <button
                             type="button"
                             onClick={() => onPrintPo(po)}
-                            className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer"
+                            className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer active:scale-95"
                             title="Print PO Document"
                           >
                             <Printer className="h-4 w-4" />
@@ -220,7 +220,7 @@ export const PurchaseOrdersTab: React.FC<PurchaseOrdersTabProps> = ({
                             <button
                               type="button"
                               onClick={() => onOpenReceiveModal(po)}
-                              className="px-2.5 py-1 bg-emerald-600/10 hover:bg-emerald-600 hover:text-white text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-black uppercase tracking-wider rounded-full transition-all cursor-pointer flex items-center gap-1"
+                              className="px-2.5 py-1 bg-emerald-600/10 hover:bg-emerald-600 hover:text-white text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-black uppercase tracking-wider rounded-full transition-all cursor-pointer flex items-center gap-1 active:scale-95"
                               title="Ingest Inbound Stock"
                             >
                               <PackageCheck className="h-3 w-3" />

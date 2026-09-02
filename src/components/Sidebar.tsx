@@ -191,7 +191,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   type="button"
                   onClick={() => handleCategoryClick(cat)}
-                  className={`h-10 w-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
+                  className={`h-10 w-10 rounded-xl flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
                     isCategoryActive
                       ? "bg-primary text-primary-foreground shadow-sm font-bold"
                       : "text-default-500 hover:text-foreground hover:bg-default-100/70"
@@ -248,15 +248,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         style={{ willChange: "width" }}
         transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
         className={`hidden md:flex select-none bg-background border-r border-divider/30 py-4 px-3 sticky top-0 flex-col justify-between h-screen transition-colors duration-200 shrink-0 ${
-          isProfileMenuOpen ? "z-[9999] overflow-visible" : "z-40 overflow-hidden"
-        } ${isSidebarHidden ? "!hidden" : ""}`}
+          isSidebarHidden ? "overflow-hidden p-0 border-none" : ""
+        }`}
       >
-        <div className="flex flex-col gap-4 min-w-0 flex-1 overflow-hidden">
-          {/* USER PROFILE HEADER */}
+        <div className="flex flex-col gap-4 overflow-hidden flex-1">
+          {/* USER PROFILE CARD */}
           <div
             id="sidebar-profile-trigger"
             onClick={() => isSidebarExpanded && setIsProfileMenuOpen(!isProfileMenuOpen)}
-            className={`flex items-center gap-3 cursor-pointer p-2 rounded-2xl bg-content1/50 border border-divider/20 hover:bg-content1 hover:border-divider/40 transition-all ${
+            className={`w-full p-2 rounded-2xl bg-content1/80 border border-divider/30 shadow-xs hover:border-divider flex items-center gap-2.5 cursor-pointer transition-all duration-200 shrink-0 select-none active:scale-[0.98] ${
               isSidebarExpanded ? "px-3" : "justify-center"
             }`}
             title="User Profile & Account Menu"
@@ -308,7 +308,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => changeTab("tutorials")}
             className={`w-full flex items-center ${
               isSidebarExpanded ? "px-3 py-2 justify-start" : "h-9 w-9 justify-center mx-auto"
-            } rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            } rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-[0.98] ${
               activeTab === "tutorials"
                 ? "bg-primary text-primary-foreground font-bold shadow-xs shadow-primary/20"
                 : "text-default-500 hover:text-foreground hover:bg-default-100/60"
@@ -331,7 +331,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   type="button"
                   onClick={() => handleToggleDarkMode(!darkMode)}
-                  className="p-1.5 rounded-lg hover:bg-default-100 text-default-500 hover:text-foreground transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg hover:bg-default-100 text-default-500 hover:text-foreground transition-all cursor-pointer active:scale-95"
                   title="Toggle Light / Dark Mode"
                   aria-label="Toggle Theme"
                 >
@@ -340,7 +340,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsSidebarExpanded(false)}
-                  className="p-1.5 rounded-lg hover:bg-default-100 text-default-500 hover:text-foreground transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg hover:bg-default-100 text-default-500 hover:text-foreground transition-all cursor-pointer active:scale-95"
                   title="Collapse Sidebar"
                 >
                   <PanelLeftClose className="h-3.5 w-3.5" />
@@ -352,7 +352,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={() => handleToggleDarkMode(!darkMode)}
-                className="h-9 w-9 flex items-center justify-center rounded-xl text-default-500 hover:text-foreground hover:bg-default-100/60 transition-colors cursor-pointer"
+                className="h-9 w-9 flex items-center justify-center rounded-xl text-default-500 hover:text-foreground hover:bg-default-100/60 transition-all cursor-pointer active:scale-95"
                 title="Toggle Theme"
               >
                 {darkMode ? <Sun className="h-3.5 w-3.5 text-amber-500" /> : <Moon className="h-3.5 w-3.5 text-indigo-500" />}
@@ -360,7 +360,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={() => setIsSidebarExpanded(true)}
-                className="h-9 w-9 flex items-center justify-center rounded-xl text-default-500 hover:text-foreground hover:bg-default-100/60 transition-colors cursor-pointer"
+                className="h-9 w-9 flex items-center justify-center rounded-xl text-default-500 hover:text-foreground hover:bg-default-100/60 transition-all cursor-pointer active:scale-95"
                 title="Expand Sidebar"
               >
                 <PanelLeft className="h-4 w-4" />
@@ -374,11 +374,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => setShowLogoutConfirmModal(true)}
             className={`w-full flex items-center ${
               isSidebarExpanded ? "px-3 py-2 justify-start" : "h-9 w-9 justify-center mx-auto"
-            } rounded-xl text-xs font-medium text-default-500 hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer`}
+            } rounded-xl text-xs font-medium text-default-500 hover:text-rose-500 hover:bg-rose-500/10 transition-all cursor-pointer active:scale-[0.98]`}
             title={!isSidebarExpanded ? "Sign Out" : undefined}
           >
             <LogOut className="h-4 w-4 shrink-0 text-default-400 group-hover:text-rose-500" />
-            {isSidebarExpanded && <span className="ml-2.5 text-xs">Sign Out</span>}
+            {isSidebarExpanded && <span className="ml-2.5 text-xs text-rose-500 font-semibold">Sign Out</span>}
           </button>
         </div>
 

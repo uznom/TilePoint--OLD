@@ -79,7 +79,7 @@ export const PosShiftModal: React.FC<PosShiftModalProps> = ({
                       setStartCashInput((Number(previouslyClosedShift?.cashCount) || 0).toString());
                       showToast(`Loaded previous shift balance of ₱${(Number(previouslyClosedShift?.cashCount) || 0).toFixed(2)}`);
                     }}
-                    className="w-full py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl font-bold transition-all text-center text-[10px] cursor-pointer"
+                    className="w-full py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl font-bold transition-all text-center text-[10px] cursor-pointer active:scale-[0.98]"
                   >
                     Use Previous Shift Balance
                   </button>
@@ -100,7 +100,7 @@ export const PosShiftModal: React.FC<PosShiftModalProps> = ({
                   placeholder="e.g. 1000.00"
                   value={startCashInput}
                   onChange={(e) => setStartCashInput(e.target.value)}
-                  className="w-full bg-background border-b-2 border-divider px-3 py-2.5 text-base text-foreground focus:outline-none focus:border-primary transition-colors text-center font-black rounded-lg"
+                  className="w-full bg-background border-b-2 border-divider px-3 py-2.5 text-base text-foreground focus:outline-none focus:border-primary transition-colors text-center font-black rounded-lg active:scale-[0.98]"
                 />
                 <div className="grid grid-cols-4 gap-1.5 pt-1">
                   {[500, 1000, 2000, 3000].map((amt) => (
@@ -124,13 +124,13 @@ export const PosShiftModal: React.FC<PosShiftModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors text-center"
+                  className="flex-1 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors text-center active:scale-95"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 rounded-xl px-4 py-2 text-xs cursor-pointer text-center hover:bg-primary/90 transition-colors"
+                  className="flex-1 bg-primary text-primary-foreground font-bold shadow-md shadow-primary/20 rounded-xl px-4 py-2 text-xs cursor-pointer text-center hover:bg-primary/90 transition-colors active:scale-[0.98]"
                 >
                   Open Terminal Shift
                 </button>

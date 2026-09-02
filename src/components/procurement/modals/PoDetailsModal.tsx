@@ -51,7 +51,7 @@ export const PoDetailsModal: React.FC<PoDetailsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer"
+            className="p-1.5 rounded-full hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer active:scale-95"
           >
             <X className="h-4 w-4" />
           </button>
@@ -130,7 +130,7 @@ export const PoDetailsModal: React.FC<PoDetailsModalProps> = ({
           <button
             type="button"
             onClick={() => onPrintPo(activePo)}
-            className="px-4 py-2 bg-content2 hover:bg-content3 border border-divider/40 text-xs font-bold text-foreground rounded-full transition-colors cursor-pointer flex items-center gap-1.5"
+            className="px-4 py-2 bg-content2 hover:bg-content3 border border-divider/40 text-xs font-bold text-foreground rounded-full transition-colors cursor-pointer flex items-center gap-1.5 active:scale-95"
           >
             <Printer className="h-3.5 w-3.5" />
             <span>Print Official PO Document</span>
@@ -138,7 +138,7 @@ export const PoDetailsModal: React.FC<PoDetailsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-full shadow-lg transition-all cursor-pointer"
+            className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-full shadow-lg transition-all cursor-pointer active:scale-95"
           >
             Close
           </button>

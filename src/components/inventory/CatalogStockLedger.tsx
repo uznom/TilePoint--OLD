@@ -390,7 +390,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                 <button
                   type="button"
                   onClick={() => setTerm('')}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-default-400 hover:text-rose-500 cursor-pointer text-xs font-semibold transition-colors"
+                  className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-default-400 hover:text-rose-500 cursor-pointer text-xs font-semibold transition-colors active:scale-[0.98]"
                   aria-label="Clear search"
                 >
                   ✕
@@ -518,7 +518,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
               onClick={() => setSelectedProdIds({})}
               variant="light"
               size="sm"
-              className="text-[11px] font-bold uppercase tracking-wider text-default-500 hover:text-danger"
+              className="text-[11px] font-bold uppercase tracking-wider text-default-500 hover:text-danger active:scale-[0.98]"
             >
               Clear Selection
             </HeroButton>
@@ -771,7 +771,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                           <button
                             type="button"
                             onClick={() => toggleProductExpand(p.id)}
-                            className="p-1 hover:bg-primary/10 text-primary rounded-medium cursor-pointer transition-colors"
+                            className="p-1 hover:bg-primary/10 text-primary rounded-medium cursor-pointer transition-colors active:scale-95"
                             aria-label="Toggle details"
                           >
                             {isExpanded ? (
@@ -932,7 +932,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                             <button
                               type="button"
                               onClick={() => handleOpenCodesModal(p)}
-                              className="p-1.5 text-default-400 hover:text-primary hover:bg-default-100 transition-colors rounded-medium cursor-pointer shrink-0"
+                              className="p-1.5 text-default-400 hover:text-primary hover:bg-default-100 transition-colors rounded-medium cursor-pointer shrink-0 active:scale-95"
                               aria-label="View or print barcode"
                             >
                               <Barcode className="h-4 w-4" />
@@ -943,7 +943,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                             <button
                               type="button"
                               onClick={() => handleQueueRestock(p.id)}
-                              className="p-1.5 text-default-400 hover:text-warning hover:bg-warning/10 transition-colors rounded-medium cursor-pointer shrink-0"
+                              className="p-1.5 text-default-400 hover:text-warning hover:bg-warning/10 transition-colors rounded-medium cursor-pointer shrink-0 active:scale-95"
                               aria-label="Queue restock"
                             >
                               <Truck className="h-4 w-4" />
@@ -956,7 +956,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => handleOpenAdjust(p)}
-                                  className="p-1.5 text-default-400 hover:text-success hover:bg-default-100 transition-colors rounded-medium cursor-pointer shrink-0"
+                                  className="p-1.5 text-default-400 hover:text-success hover:bg-default-100 transition-colors rounded-medium cursor-pointer shrink-0 active:scale-95"
                                   aria-label="Adjust stock"
                                 >
                                   <Sliders className="h-4 w-4" />
@@ -966,7 +966,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => handleOpenEdit(p)}
-                                  className="p-1.5 text-default-400 hover:text-primary hover:bg-default-100 transition-colors rounded-medium cursor-pointer shrink-0"
+                                  className="p-1.5 text-default-400 hover:text-primary hover:bg-default-100 transition-colors rounded-medium cursor-pointer shrink-0 active:scale-95"
                                   aria-label="Edit specs"
                                 >
                                   <Edit2 className="h-4 w-4" />
@@ -977,7 +977,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteTrigger(p.id, p.productName)}
-                                    className="p-1.5 text-default-400 hover:text-danger hover:bg-danger/10 transition-colors rounded-medium cursor-pointer shrink-0"
+                                    className="p-1.5 text-default-400 hover:text-danger hover:bg-danger/10 transition-colors rounded-medium cursor-pointer shrink-0 active:scale-95"
                                     aria-label="Delete product"
                                   >
                                     <Trash2 className="h-4 w-4" />

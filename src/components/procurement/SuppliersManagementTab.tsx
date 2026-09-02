@@ -122,7 +122,7 @@ export const SuppliersManagementTab: React.FC<SuppliersManagementTabProps> = ({
                 </tr>
               ) : (
                 filteredSuppliers.map((sup) => (
-                  <tr key={sup.id} className="hover:bg-content2/40 transition-colors">
+                  <tr key={sup.id} className="hover:bg-content2/40 transition-colors active:scale-[0.98]">
                     <td className="p-4">
                       <button
                         type="button"
@@ -141,7 +141,7 @@ export const SuppliersManagementTab: React.FC<SuppliersManagementTabProps> = ({
                         <button
                           type="button"
                           onClick={() => onViewSupplierProfile(sup)}
-                          className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-primary transition-colors cursor-pointer"
+                          className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-primary transition-colors cursor-pointer active:scale-95"
                           title="View Profile & Products"
                         >
                           <Building2 className="h-4 w-4" />
@@ -151,7 +151,7 @@ export const SuppliersManagementTab: React.FC<SuppliersManagementTabProps> = ({
                             <button
                               type="button"
                               onClick={() => onOpenEditSupplier(sup)}
-                              className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer"
+                              className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer active:scale-95"
                               title="Edit Vendor"
                             >
                               <Edit2 className="h-4 w-4" />
@@ -159,7 +159,7 @@ export const SuppliersManagementTab: React.FC<SuppliersManagementTabProps> = ({
                             <button
                               type="button"
                               onClick={() => onDeleteSupplier(sup)}
-                              className="p-1.5 rounded-xl hover:bg-danger/10 text-default-500 hover:text-danger transition-colors cursor-pointer"
+                              className="p-1.5 rounded-xl hover:bg-danger/10 text-default-500 hover:text-danger transition-colors cursor-pointer active:scale-95"
                               title="Delete Vendor"
                             >
                               <Trash2 className="h-4 w-4" />

@@ -270,7 +270,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <div className="absolute top-4 right-4">
  <button 
  onClick={() => setShowAddForm(false)}
- className="p-1 px-2.5 rounded-lg border border-divider/30 hover:bg-content4 transition text-xs font-bold uppercase tracking-wider"
+ className="p-1 px-2.5 rounded-lg border border-divider/30 hover:bg-content4 transition text-xs font-bold uppercase tracking-wider active:scale-95"
  >
  Close
  </button>
@@ -471,7 +471,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  <div className="pt-2">
  <button
  type="submit"
- className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-md cursor-pointer border border-transparent"
+ className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black text-xs uppercase tracking-widest transition-all shadow-md cursor-pointer border border-transparent active:scale-[0.98]"
  >
  Commit Stock Damage Reduction
  </button>
@@ -621,7 +621,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  if (log.actionTaken === 'Claimed from Supplier / Insurance Code') actionLabelColor = 'text-rose-700 bg-rose-100';
 
  return (
- <tr key={log.id} className="hover:bg-content3 transition text-xs font-semibold">
+ <tr key={log.id} className="hover:bg-content3 transition text-xs font-semibold active:scale-[0.98]">
  <td className="py-3.5 px-4 font-black text-default-400 font-mono text-[11px]">
  {log.id.slice(0, 12)}
  </td>
@@ -659,7 +659,7 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  }
  setConfirmTargetId(log.id);
  }}
- className="p-1.5 hover:bg-red-500/10 text-red-500 rounded-lg transition border-0 cursor-pointer bg-transparent disabled:opacity-40"
+ className="p-1.5 hover:bg-red-500/10 text-red-500 rounded-lg transition border-0 cursor-pointer bg-transparent disabled:opacity-40 active:scale-95"
  title={isRowClearingBlocked() ? `Deactivated: register is holding ${getRowClearingBlockedReason()}` : "Soft-delete damage log"}
  disabled={isRowClearingBlocked()}
  >

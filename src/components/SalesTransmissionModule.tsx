@@ -973,7 +973,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                   rollbackSnapshots.map((snap, i) => (
                     <div
                       key={snap.id}
-                      className="p-3.5 rounded-xl border border-divider/15 bg-content1 flex items-center justify-between gap-3 text-left hover:border-primary/30 transition"
+                      className="p-3.5 rounded-xl border border-divider/15 bg-content1 flex items-center justify-between gap-3 text-left hover:border-primary/30 transition active:scale-[0.98]"
                     >
                       <div className="space-y-1">
                         <div className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
@@ -1206,7 +1206,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  {rollbackSnapshots.map((snap) => (
  <div
  key={snap.id}
- className="p-3 bg-content1/50 border border-divider/15 rounded-xl hover:border-rose-500/30 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+ className="p-3 bg-content1/50 border border-divider/15 rounded-xl hover:border-rose-500/30 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs active:scale-[0.98]"
  >
  <div className="space-y-1">
  <div className="flex items-center gap-2">
@@ -1471,7 +1471,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  </div>
  <button
  onClick={() => setSelectedReport(null)}
- className="p-1.5 hover:bg-primary/10 hover:text-rose-500 rounded-xl cursor-pointer"
+ className="p-1.5 hover:bg-primary/10 hover:text-rose-500 rounded-xl cursor-pointer active:scale-95"
  title="Dismiss details drawer"
  >
  <XIcon className="h-5 w-5" />
@@ -1552,7 +1552,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
 
  <button
  onClick={() => handleSetAuditStatus('Pending Audit')}
- className="py-2.5 px-3 bg-background border border-divider/40 hover:bg-rose-500/10 hover:text-rose-400 text-foreground transition-all text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer text-center"
+ className="py-2.5 px-3 bg-background border border-divider/40 hover:bg-rose-500/10 hover:text-rose-400 text-foreground transition-all text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer text-center active:scale-[0.98]"
  >
  Set Pending
  </button>
@@ -1580,7 +1580,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  type="button"
  disabled={!isAuthorizedToExport}
  onClick={() => handleExportCSV('selected', false)}
- className="py-2.5 bg-content1 hover:bg-background border border-divider/20 hover:border-emerald-500/30 text-foreground hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-default-500 disabled:border-transparent font-sans"
+ className="py-2.5 bg-content1 hover:bg-background border border-divider/20 hover:border-emerald-500/30 text-foreground hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-default-500 disabled:border-transparent font-sans active:scale-95"
  title="Export Selected Transmitted Report in CSV Format"
  >
  <span className="text-[8px] uppercase font-bold text-default-500 block">CSV</span>
@@ -1599,7 +1599,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
      triggerToast('Failed to export Excel workbook.', 'error');
    }
  }}
- className="py-2.5 bg-content1 hover:bg-background border border-teal-500/30 hover:border-teal-500/60 text-teal-600 dark:text-teal-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-default-500 disabled:border-transparent font-sans shadow-sm"
+ className="py-2.5 bg-content1 hover:bg-background border border-teal-500/30 hover:border-teal-500/60 text-teal-600 dark:text-teal-400 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-default-500 disabled:border-transparent font-sans shadow-sm active:scale-95"
  title="Export Selected Transmitted Report as Microsoft Excel (.XLSX) Workbook"
  >
  <FileSpreadsheet className="h-3.5 w-3.5 text-teal-500" />
@@ -1610,7 +1610,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  type="button"
  disabled={!isAuthorizedToExport}
  onClick={() => handleOpenPrintPreview('selected')}
- className="py-2.5 bg-content1 hover:bg-background border border-divider/20 hover:border-amber-500/30 text-foreground hover:text-amber-600 dark:hover:text-amber-500 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-default-500 disabled:border-transparent font-sans"
+ className="py-2.5 bg-content1 hover:bg-background border border-divider/20 hover:border-amber-500/30 text-foreground hover:text-amber-600 dark:hover:text-amber-500 rounded-xl text-[10px] font-bold transition-all text-center cursor-pointer flex flex-col items-center justify-center gap-1 disabled:opacity-35 disabled:hover:text-default-500 disabled:border-transparent font-sans active:scale-95"
  title="Open layout template and prompt printer utility"
  >
  <Printer className="h-3.5 w-3.5 text-default-500 dark:text-default-500" />
@@ -1700,7 +1700,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
   <div
   key={sale.id}
   onClick={() => setSelectedSale(sale)}
-  className="p-3 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-content1 rounded-xl cursor-pointer transition-all border border-transparent hover:border-divider/30 hover:scale-[1.005] select-none"
+  className="p-3 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-content1 rounded-xl cursor-pointer transition-all border border-transparent hover:border-divider/30 hover:scale-[1.005] select-none active:scale-[0.98]"
   title="Click to view detailed itemized sale receipt and tile metrics"
   >
   <div className="space-y-1 text-left">
@@ -1792,7 +1792,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
       </thead>
       <tbody className="divide-y divide-divider/10">
        {(selectedReport.expenses ?? []).map((exp, idx) => (
-        <tr key={idx} className="hover:bg-content1">
+        <tr key={idx} className="hover:bg-content1 active:scale-[0.98]">
          <td className="p-2.5 font-bold text-white">{exp.category}</td>
          <td className="p-2.5 text-default-500">{exp.recordedBy}</td>
          <td className="p-2.5 text-default-500 truncate max-w-[150px]">{exp.notes || "No description"}</td>
@@ -1865,7 +1865,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
      </thead>
      <tbody className="divide-y divide-divider/10">
       {(selectedReport.deliveries ?? []).map((del, idx) => (
-       <tr key={idx} className="hover:bg-content1">
+       <tr key={idx} className="hover:bg-content1 active:scale-[0.98]">
  <td className="p-2.5 font-bold text-white">{del.id || del.trackingNumber}</td>
         <td className="p-2.5 font-semibold text-default-700">{del.recipientName || del.customerName || "Standard Delivery"}</td>
         <td className="p-2.5">
@@ -1901,7 +1901,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
    <div className="p-1 max-h-[360px] overflow-y-auto">
  <div className="divide-y divide-divider/10 text-[10.5px]">
      {(selectedReport.boa ?? []).map((log, idx) => (
-      <div key={idx} className="p-2.5 hover:bg-content1 space-y-1">
+      <div key={idx} className="p-2.5 hover:bg-content1 space-y-1 active:scale-[0.98]">
        <div className="flex justify-between items-center text-[10px]">
         <span className="text-default-500 font-bold uppercase text-[9px] tracking-wider px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400">
          {log.type}
@@ -1941,7 +1941,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
      </thead>
      <tbody className="divide-y divide-divider/10">
       {(selectedReport.purchaseOrders ?? []).map((po, idx) => (
-       <tr key={idx} className="hover:bg-content1">
+       <tr key={idx} className="hover:bg-content1 active:scale-[0.98]">
  <td className="p-2.5 font-bold text-white">{po.poNumber || po.id}</td>
         <td className="p-2.5 text-default-700">{po.supplierName || "Standard Supplier"}</td>
         <td className="p-2.5">
@@ -1996,7 +1996,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  </div>
  <button
  onClick={() => setSelectedSale(null)}
- className="p-1.5 text-default-500 hover:text-white rounded-xl hover:bg-white/10 cursor-pointer"
+ className="p-1.5 text-default-500 hover:text-white rounded-xl hover:bg-white/10 cursor-pointer active:scale-95"
  >
  <XIcon className="h-5 w-5" />
  </button>
@@ -2036,7 +2036,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  {selectedReport.saleItems
  .filter(item => item.saleId === selectedSale.id)
  .map((item, idx) => (
- <tr key={idx} className="hover:bg-content1/35 transition-colors">
+ <tr key={idx} className="hover:bg-content1/35 transition-colors active:scale-[0.98]">
  <td className="py-2.5 px-3 font-semibold text-foreground">{item.productName}</td>
  <td className="py-2.5 px-3 text-right ">₱{item.unitPrice.toLocaleString()}</td>
  <td className="py-2.5 px-3 text-center font-bold text-foreground">{item.quantity}</td>
@@ -2082,7 +2082,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <div className="flex justify-end pt-2">
  <button
  onClick={() => setSelectedSale(null)}
- className="px-5 py-2.5 bg-background hover:bg-primary/10 border border-divider/30 text-foreground hover:text-primary text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+ className="px-5 py-2.5 bg-background hover:bg-primary/10 border border-divider/30 text-foreground hover:text-primary text-xs font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer active:scale-[0.98]"
  >
  Close Invoice
  </button>
@@ -2111,7 +2111,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
   </div>
   <button
   onClick={() => setShowJsonImport(false)}
-  className="p-1.5 text-default-500 hover:text-foreground rounded-xl hover:bg-foreground/10 cursor-pointer"
+  className="p-1.5 text-default-500 hover:text-foreground rounded-xl hover:bg-foreground/10 cursor-pointer active:scale-95"
   >
   <XIcon className="h-5 w-5" />
   </button>
@@ -2243,7 +2243,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <ActionButton
  variant="outline"
  onClick={() => setShowJsonImport(false)}
- className="hover:bg-primary/10"
+ className="hover:bg-primary/10 active:scale-[0.98]"
  >
  Cancel
  </ActionButton>
@@ -2284,7 +2284,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
           </div>
           <button
             onClick={() => setShowShareModal(false)}
-            className="p-1.5 text-default-500 hover:text-foreground rounded-xl hover:bg-default-100 cursor-pointer"
+            className="p-1.5 text-default-500 hover:text-foreground rounded-xl hover:bg-default-100 cursor-pointer active:scale-95"
           >
             <XIcon className="h-5 w-5" />
           </button>
@@ -2310,11 +2310,11 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
               {/* Copy JSON content (highly robust) */}
               <button
                 onClick={() => handleCopyText(sharePayloadText, 'Sales report copied to clipboard!')}
-                className="p-4 bg-content1 hover:bg-content3 border border-divider/20 hover:border-divider/40 text-foreground rounded-2xl text-left transition-all group flex flex-col justify-between h-24 cursor-pointer"
+                className="p-4 bg-content1 hover:bg-content3 border border-divider/20 hover:border-divider/40 text-foreground rounded-2xl text-left transition-all group flex flex-col justify-between h-24 cursor-pointer active:scale-[0.98]"
               >
                 <div className="flex items-center justify-between w-full">
  <span className="text-[10px] font-black uppercase tracking-wider text-default-500">Clipboard</span>
-                  <Copy className="h-4 w-4 text-default-500 group-hover:scale-110 transition-transform" />
+                  <Copy className="h-4 w-4 text-default-500 group-hover:scale-110 transition-transform active:scale-[0.98]" />
                 </div>
                 <div>
                   <div className="text-xs font-bold text-foreground mb-0.5">Copy JSON String</div>
@@ -2325,11 +2325,11 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
               {/* Manual re-download */}
               <button
                 onClick={handleManualDownload}
-                className="p-4 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-600 dark:text-emerald-400 rounded-2xl text-left transition-all group flex flex-col justify-between h-24 cursor-pointer"
+                className="p-4 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-600 dark:text-emerald-400 rounded-2xl text-left transition-all group flex flex-col justify-between h-24 cursor-pointer active:scale-[0.98]"
               >
                 <div className="flex items-center justify-between w-full">
  <span className="text-[10px] font-black uppercase tracking-wider ">Local File</span>
-                  <Download className="h-4 w-4 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
+                  <Download className="h-4 w-4 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform active:scale-[0.98]" />
                 </div>
                 <div>
                   <div className="text-xs font-bold text-foreground mb-0.5">Download JSON File</div>
@@ -2349,11 +2349,11 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                     }
                   }, 500);
                 }}
-                className="p-4 bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 text-primary rounded-2xl text-left transition-all group flex flex-col justify-between h-24 cursor-pointer"
+                className="p-4 bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/40 text-primary rounded-2xl text-left transition-all group flex flex-col justify-between h-24 cursor-pointer active:scale-[0.98]"
               >
                 <div className="flex items-center justify-between w-full">
  <span className="text-[10px] font-black uppercase tracking-wider ">Messenger</span>
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1 active:scale-[0.98]" />
                 </div>
                 <div>
                   <div className="text-xs font-bold text-foreground mb-0.5">Share via Messenger</div>
@@ -2374,11 +2374,11 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
                     }
                   }, 500);
                 }}
-                className="p-4 bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/20 hover:border-amber-500/40 text-amber-600 dark:text-amber-400 rounded-2xl text-left transition-all group flex flex-col justify-between h-24 cursor-pointer"
+                className="p-4 bg-amber-500/10 hover:bg-amber-500/15 border border-amber-500/20 hover:border-amber-500/40 text-amber-600 dark:text-amber-400 rounded-2xl text-left transition-all group flex flex-col justify-between h-24 cursor-pointer active:scale-[0.98]"
               >
                 <div className="flex items-center justify-between w-full">
  <span className="text-[10px] font-black uppercase tracking-wider ">Email client</span>
-                  <Mail className="h-4 w-4 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform" />
+                  <Mail className="h-4 w-4 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform active:scale-[0.98]" />
                 </div>
                 <div>
                   <div className="text-xs font-bold text-foreground mb-0.5">Email Sales Packet</div>
@@ -2474,7 +2474,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  </div>
  <button
  onClick={() => setShowPrintModal(false)}
- className="p-1.5 text-default-500 hover:text-white rounded-xl hover:bg-white/10 cursor-pointer"
+ className="p-1.5 text-default-500 hover:text-white rounded-xl hover:bg-white/10 cursor-pointer active:scale-95"
  >
  <XIcon className="h-5 w-5" />
  </button>
@@ -2594,7 +2594,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  </thead>
  <tbody className="divide-y divide-zinc-200 font-sans text-default-800 bg-white">
  {printData.sales && printData.sales.map((sale: any, idx: number) => (
- <tr key={idx} className="hover:bg-content1/50">
+ <tr key={idx} className="hover:bg-content1/50 active:scale-[0.98]">
  <td className="py-2.5 px-3 font-bold text-foreground">{sale.saleNumber}</td>
  <td className="py-2.5 px-3 text-foreground">{sale.customerName || 'Walk-in'}</td>
  <td className="py-2.5 px-3 text-default-700">{sale.cashierName}</td>
@@ -2647,7 +2647,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <button
  type="button"
  onClick={() => setShowPrintModal(false)}
- className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-default-500 hover:text-white rounded-xl transition-all cursor-pointer"
+ className="px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-default-500 hover:text-white rounded-xl transition-all cursor-pointer active:scale-[0.98]"
  >
  Dismiss
  </button>
@@ -2658,7 +2658,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  window.print();
  triggerToast('Sent print job to local browser printer successfully.', 'success');
  }}
- className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+ className="px-6 py-2.5 bg-primary hover:bg-primary/95 text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer flex items-center gap-1.5 active:scale-95"
  >
  <Printer className="h-4 w-4" />
  <span>Trigger System Print / Save PDF</span>

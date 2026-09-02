@@ -334,7 +334,7 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
               type="button"
               onClick={handleExtend}
               disabled={isExtending}
-              className="ml-1 px-2 py-0.5 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground text-[10px] font-semibold rounded-full cursor-pointer transition-colors"
+              className="ml-1 px-2 py-0.5 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground text-[10px] font-semibold rounded-full cursor-pointer transition-all active:scale-95 disabled:opacity-50"
               title="Extend session duration (+60m)"
             >
               {isExtending ? "..." : "+60m"}
@@ -348,7 +348,7 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
         <button
           type="button"
           onClick={() => handleScrollBy(180)}
-          className="absolute right-1 z-40 h-7 w-7 rounded-lg bg-content1/90 border border-divider/40 text-foreground shadow-md flex items-center justify-center hover:bg-content2 transition-all cursor-pointer backdrop-blur-md"
+          className="absolute right-1 z-40 h-7 w-7 rounded-lg bg-content1/90 border border-divider/40 text-foreground shadow-md flex items-center justify-center hover:bg-content2 transition-all cursor-pointer backdrop-blur-md active:scale-95"
           title="Scroll Right"
         >
           <ChevronRight className="h-4 w-4" />

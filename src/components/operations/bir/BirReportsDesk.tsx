@@ -257,7 +257,7 @@ export const BirReportsDesk: React.FC<BirReportsDeskProps> = ({
                   });
                 }
               }}
-              className="w-full py-2.5 bg-primary hover:bg-primary/95 text-primary-foreground rounded-xl font-bold transition flex items-center justify-center gap-1.5 cursor-pointer text-xs"
+              className="w-full py-2.5 bg-primary hover:bg-primary/95 text-primary-foreground rounded-xl font-bold transition flex items-center justify-center gap-1.5 cursor-pointer text-xs active:scale-95"
             >
               <Printer className="h-4 w-4" /> Print Current X-Reading Slip
             </button>
@@ -296,7 +296,7 @@ export const BirReportsDesk: React.FC<BirReportsDeskProps> = ({
               onClick={() => {
                 if (onRequestZReading) onRequestZReading();
               }}
-              className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-black font-extrabold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer text-xs"
+              className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-black font-extrabold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer text-xs active:scale-95"
             >
               <Printer className="h-4 w-4" /> Finalize End-Of-Day Z-Reading
             </button>
@@ -328,7 +328,7 @@ export const BirReportsDesk: React.FC<BirReportsDeskProps> = ({
             <button
               type="button"
               onClick={handleExportCSV}
-              className="px-3.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer transition"
+              className="px-3.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer transition active:scale-95"
             >
               <Download className="h-4 w-4" />
               <span>Export Tax CSV</span>
@@ -368,7 +368,7 @@ export const BirReportsDesk: React.FC<BirReportsDeskProps> = ({
                     </tr>
                   ) : (
                     filteredReportSales.map((s: any) => (
-                      <tr key={s.id} className="hover:bg-content2/40 transition">
+                      <tr key={s.id} className="hover:bg-content2/40 transition active:scale-[0.98]">
                         <td className="p-3 font-semibold text-foreground">
                           <div>{s.saleNumber || s.id}</div>
                           <div className="text-[10px] text-default-400">

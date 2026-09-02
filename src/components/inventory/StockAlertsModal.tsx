@@ -244,7 +244,7 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
                   <button
                     type="button"
                     onClick={() => setSearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-default-400 hover:text-foreground cursor-pointer"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-default-400 hover:text-foreground cursor-pointer active:scale-95"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -289,7 +289,7 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
                     const isPoInCart = (poCart || []).some(c => c?.productId === product.id);
 
                     return (
-                      <tr key={product.id} className="hover:bg-content2/40 transition-colors">
+                      <tr key={product.id} className="hover:bg-content2/40 transition-colors active:scale-[0.98]">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-3">
                             {product.image ? (
@@ -401,7 +401,7 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
                                   onLocateInCatalog(product.productCode, product.id);
                                   onClose();
                                 }}
-                                className="p-1.5 text-default-400 hover:text-primary hover:bg-primary/10 rounded-medium transition-colors cursor-pointer"
+                                className="p-1.5 text-default-400 hover:text-primary hover:bg-primary/10 rounded-medium transition-colors cursor-pointer active:scale-95"
                                 aria-label="Locate in catalog"
                               >
                                 <Eye className="h-4 w-4" />

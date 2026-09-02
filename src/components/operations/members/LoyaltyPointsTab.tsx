@@ -100,7 +100,7 @@ export const LoyaltyPointsTab: React.FC<LoyaltyPointsTabProps> = ({
             <button
               type="button"
               onClick={() => setShowLoyaltySettings(!showLoyaltySettings)}
-              className="px-3 py-1.5 bg-content3 hover:bg-content4 text-foreground text-xs font-bold rounded-xl border border-divider/30 flex items-center gap-1.5 cursor-pointer transition-colors"
+              className="px-3 py-1.5 bg-content3 hover:bg-content4 text-foreground text-xs font-bold rounded-xl border border-divider/30 flex items-center gap-1.5 cursor-pointer transition-colors active:scale-95"
             >
               <Settings className="h-3.5 w-3.5 text-amber-500" />
               <span>{showLoyaltySettings ? "Close Rules Settings" : "Edit Loyalty Rules"}</span>
@@ -217,7 +217,7 @@ export const LoyaltyPointsTab: React.FC<LoyaltyPointsTabProps> = ({
 
               <button
                 type="submit"
-                className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+                className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs active:scale-95"
               >
                 <Save className="h-3.5 w-3.5" />
                 <span>Save Loyalty Rules</span>
@@ -275,7 +275,7 @@ export const LoyaltyPointsTab: React.FC<LoyaltyPointsTabProps> = ({
                 filteredMembers.map((m) => {
                   const ptValue = (m.points || 0) * (config.pointValueInPhp || 1.0);
                   return (
-                    <tr key={m.id} className="hover:bg-primary/5 transition-colors">
+                    <tr key={m.id} className="hover:bg-primary/5 transition-colors active:scale-[0.98]">
                       <td className="p-3 font-semibold text-foreground">
                         <div className="flex items-center gap-2">
                           <div className="h-7 w-7 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-xs shrink-0">
@@ -313,7 +313,7 @@ export const LoyaltyPointsTab: React.FC<LoyaltyPointsTabProps> = ({
                             setAdjustPointsReason("");
                             setShowAdjustPointsModal(true);
                           }}
-                          className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 font-bold text-[10.5px] rounded-lg transition-colors cursor-pointer border border-amber-500/20"
+                          className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 font-bold text-[10.5px] rounded-lg transition-colors cursor-pointer border border-amber-500/20 active:scale-[0.98]"
                         >
                           Manage Points
                         </button>

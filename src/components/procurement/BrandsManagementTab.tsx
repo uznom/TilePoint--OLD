@@ -109,7 +109,7 @@ export const BrandsManagementTab: React.FC<BrandsManagementTabProps> = ({
                 filteredBrands.map((b) => {
                   const supplier = suppliers.find((s) => s.id === b.supplierId);
                   return (
-                    <tr key={b.id} className="hover:bg-content2/40 transition-colors">
+                    <tr key={b.id} className="hover:bg-content2/40 transition-colors active:scale-[0.98]">
                       <td className="p-4 font-black text-foreground">{b.name}</td>
                       <td className="p-4 font-bold text-primary">{supplier?.name || "Direct / Unlinked"}</td>
                       <td className="p-4 text-default-500 truncate max-w-[300px]">{b.description || "General catalog line"}</td>
@@ -119,7 +119,7 @@ export const BrandsManagementTab: React.FC<BrandsManagementTabProps> = ({
                             <button
                               type="button"
                               onClick={() => onOpenEditBrand(b)}
-                              className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer"
+                              className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer active:scale-95"
                               title="Edit Brand"
                             >
                               <Edit2 className="h-4 w-4" />
@@ -127,7 +127,7 @@ export const BrandsManagementTab: React.FC<BrandsManagementTabProps> = ({
                             <button
                               type="button"
                               onClick={() => onDeleteBrand(b)}
-                              className="p-1.5 rounded-xl hover:bg-danger/10 text-default-500 hover:text-danger transition-colors cursor-pointer"
+                              className="p-1.5 rounded-xl hover:bg-danger/10 text-default-500 hover:text-danger transition-colors cursor-pointer active:scale-95"
                               title="Delete Brand"
                             >
                               <Trash2 className="h-4 w-4" />

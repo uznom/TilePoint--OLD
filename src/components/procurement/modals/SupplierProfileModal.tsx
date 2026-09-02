@@ -40,7 +40,7 @@ export const SupplierProfileModal: React.FC<SupplierProfileModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer"
+            className="p-1.5 rounded-full hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer active:scale-95"
           >
             <X className="h-4 w-4" />
           </button>
@@ -88,7 +88,7 @@ export const SupplierProfileModal: React.FC<SupplierProfileModalProps> = ({
             ) : (
               <div className="border border-divider/30 rounded-2xl overflow-hidden divide-y divide-divider/20 max-h-[250px] overflow-y-auto">
                 {supplierProducts.map((p) => (
-                  <div key={p.id} className="p-3 flex justify-between items-center hover:bg-content2/40 transition-colors">
+                  <div key={p.id} className="p-3 flex justify-between items-center hover:bg-content2/40 transition-colors active:scale-[0.98]">
                     <div className="space-y-0.5">
                       <div className="font-bold text-xs text-foreground">{p.productName}</div>
                       <div className="text-[10px] text-default-500 font-mono">SKU: {p.sku} • Stock: {p.stockQuantity} pcs</div>
@@ -107,7 +107,7 @@ export const SupplierProfileModal: React.FC<SupplierProfileModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-full shadow-lg transition-all cursor-pointer"
+            className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-full shadow-lg transition-all cursor-pointer active:scale-95"
           >
             Done
           </button>

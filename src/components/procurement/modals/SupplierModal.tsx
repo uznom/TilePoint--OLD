@@ -56,7 +56,7 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer"
+            className="p-1.5 rounded-full hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer active:scale-95"
           >
             <X className="h-4 w-4" />
           </button>
@@ -141,13 +141,13 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-content2 hover:bg-content3 border border-divider/30 text-xs font-bold text-foreground rounded-full transition-colors cursor-pointer"
+              className="px-4 py-2 bg-content2 hover:bg-content3 border border-divider/30 text-xs font-bold text-foreground rounded-full transition-colors cursor-pointer active:scale-95"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-full shadow-lg transition-all cursor-pointer"
+              className="px-5 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-full shadow-lg transition-all cursor-pointer active:scale-95"
             >
               {isEditingSupplier ? "Update Vendor Profile" : "Register Vendor"}
             </button>

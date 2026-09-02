@@ -657,7 +657,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
               return (
                 <div
                   key={b.id}
-                  className="bg-content1 border border-divider/30 rounded-2xl shadow-sm hover:shadow-md hover:border-primary/40 text-foreground transition-all duration-200 relative overflow-hidden flex flex-col justify-between p-5 space-y-4"
+                  className="bg-content1 border border-divider/30 rounded-2xl shadow-sm hover:shadow-md hover:border-primary/40 text-foreground transition-all duration-200 relative overflow-hidden flex flex-col justify-between p-5 space-y-4 active:scale-[0.98]"
                 >
                   {/* Top outline band */}
                   <div className="flex items-start justify-between border-b border-divider/15 pb-3">
@@ -693,7 +693,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
                       <div className="flex items-center gap-1 shrink-0 ml-2">
                         <button
                           onClick={() => handleOpenEdit(b)}
-                          className="p-1.5 rounded-lg hover:bg-content2 text-primary cursor-pointer transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-content2 text-primary cursor-pointer transition-colors active:scale-95"
                           title="Edit Details"
                         >
                           <Edit2 className="h-4 w-4" />
@@ -701,7 +701,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
                         {!isDeleteForbidden && (
                           <button
                             onClick={() => triggerDelete(b.id, b.name)}
-                            className="p-1.5 rounded-lg hover:bg-rose-500/10 text-default-400 hover:text-rose-500 cursor-pointer transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-rose-500/10 text-default-400 hover:text-rose-500 cursor-pointer transition-colors active:scale-95"
                             title="Archive Outlet"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -739,7 +739,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
         <button
           type="button"
           onClick={() => toggleNetworkSettings(b.id)}
-          className="flex items-center justify-between w-full px-3 py-2 bg-content2/50 hover:bg-content2 rounded-xl border border-divider/10 text-[11px] font-bold text-default-600 transition-all cursor-pointer"
+          className="flex items-center justify-between w-full px-3 py-2 bg-content2/50 hover:bg-content2 rounded-xl border border-divider/10 text-[11px] font-bold text-default-600 transition-all cursor-pointer active:scale-[0.98]"
         >
           <span className="flex items-center gap-1.5">
             <ShieldCheck className="h-3.5 w-3.5 text-primary" />
@@ -797,7 +797,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
         <button
           type="button"
           onClick={() => toggleBranchUsers(b.id)}
-          className="w-full flex items-center justify-between text-xs font-black text-primary hover:text-primary/80 transition-all uppercase tracking-widest select-none cursor-pointer"
+          className="w-full flex items-center justify-between text-xs font-black text-primary hover:text-primary/80 transition-all uppercase tracking-widest select-none cursor-pointer active:scale-[0.98]"
         >
           <span className="flex items-center gap-1.5">
             <Users className="h-3.5 w-3.5 text-primary" />
@@ -827,7 +827,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
                 branchEmployees.map((u) => (
                   <div
                     key={u.id}
-                    className="flex items-center justify-between p-2 rounded-xl bg-content1 border border-divider/10 hover:border-divider/20 transition-all"
+                    className="flex items-center justify-between p-2 rounded-xl bg-content1 border border-divider/10 hover:border-divider/20 transition-all active:scale-[0.98]"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="h-7 w-7 rounded-full bg-primary/10 text-primary text-[9px] font-black flex items-center justify-center shrink-0 border border-primary/15 shadow-inner">
@@ -866,7 +866,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
           <button
             type="button"
             onClick={() => handleOpenEnlistEmployee(b.id)}
-            className="w-full mt-1 py-1.5 px-3 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            className="w-full mt-1 py-1.5 px-3 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer active:scale-95"
           >
             <UserPlus className="h-3.5 w-3.5" />
             <span>Enlist Staff to {b.name}</span>
@@ -952,7 +952,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  value={inlineTin ?? ''}
  onChange={e => setInlineTin(formatTin(e.target.value))}
  placeholder="000-000-000-000"
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg "
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg  active:scale-[0.98]"
  />
  </div>
  </div>
@@ -967,7 +967,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  value={inlineFacebook ?? ''}
  onChange={e => setInlineFacebook(e.target.value)}
  placeholder="Facebook handle"
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans active:scale-[0.98]"
  />
  </div>
 
@@ -980,7 +980,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  value={inlineThankYou ?? ''}
  onChange={e => setInlineThankYou(e.target.value)}
  placeholder="Thank you message"
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans active:scale-[0.98]"
  />
  </div>
  </div>
@@ -995,7 +995,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  value={inlineReturnPolicy ?? ''}
  onChange={e => setInlineReturnPolicy(e.target.value)}
  placeholder="e.g. 7 days return/exchange with receipt in original box"
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans active:scale-[0.98]"
  />
  </div>
 
@@ -1008,7 +1008,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  value={inlineNonReturnablePolicy ?? ''}
  onChange={e => setInlineNonReturnablePolicy(e.target.value)}
  placeholder="e.g. Installed/cut tiles and altered items are non-returnable"
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans active:scale-[0.98]"
  />
  </div>
  </div>
@@ -1022,7 +1022,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  onChange={e => setInlinePromoText(e.target.value)}
  placeholder="Promotional message"
  rows={2}
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans resize-none"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans resize-none active:scale-[0.98]"
  />
  </div>
 
@@ -1048,7 +1048,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  <div className="flex-1 space-y-2">
  <p className="text-[10px] text-default-500 font-medium">Upload a custom PNG logo to print at the very top of thermal branch receipts. Format must be PNG.</p>
  <div className="flex gap-2">
- <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors border border-primary/15 select-none">
+ <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors border border-primary/15 select-none active:scale-95">
  <Upload className="h-3.5 w-3.5" />
  <span>Upload PNG</span>
  <input
@@ -1084,7 +1084,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  setInlineStoreLogo("");
  showToast("Branch logo removed from template.");
  }}
- className="px-3 py-1.5 border border-red-200/40 text-red-500 hover:bg-red-500/10 rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors select-none"
+ className="px-3 py-1.5 border border-red-200/40 text-red-500 hover:bg-red-500/10 rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors select-none active:scale-95"
  >
  Clear Logo
  </button>
@@ -1139,7 +1139,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  <div className="flex-1 space-y-2">
  <p className="text-[10px] text-default-500 font-medium">Upload a QR code linking to your store evaluation page, customer survey, or loyalty discounts.</p>
  <div className="flex gap-2">
- <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors border border-primary/15 select-none">
+ <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors border border-primary/15 select-none active:scale-95">
  <Upload className="h-3.5 w-3.5" />
  <span>Upload QR Image</span>
  <input
@@ -1171,7 +1171,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  setInlineQrBase64("");
  showToast("QR Code template removed.");
  }}
- className="px-3 py-1.5 border border-red-200/40 text-red-500 hover:bg-red-500/10 rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors select-none"
+ className="px-3 py-1.5 border border-red-200/40 text-red-500 hover:bg-red-500/10 rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-colors select-none active:scale-95"
  >
  Clear QR
  </button>
@@ -1404,7 +1404,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  <div className="bg-content1 border border-divider/20 rounded-2xl overflow-hidden shadow-sm mt-8">
  <div 
  onClick={() => setShowAllPersonnel(!showAllPersonnel)}
- className="p-5 border-b border-divider/15 flex justify-between items-center cursor-pointer hover:bg-content1/60 transition-colors select-none"
+ className="p-5 border-b border-divider/15 flex justify-between items-center cursor-pointer hover:bg-content1/60 transition-colors select-none active:scale-[0.98]"
  title="Click to toggle Section Visibility"
  >
  <div>
@@ -1420,7 +1420,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  </div>
  <button 
  type="button" 
- className="p-1.5 text-default-500 hover:text-primary hover:bg-default-100 rounded-full transition-all"
+ className="p-1.5 text-default-500 hover:text-primary hover:bg-default-100 rounded-full transition-all active:scale-95"
  >
  {showAllPersonnel ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
  </button>
@@ -1436,7 +1436,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  value={personnelSearch ?? ''}
  onChange={(e) => setPersonnelSearch(e.target.value)}
  placeholder="Search employees by name, role, email..."
- className="w-full bg-background border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl"
+ className="w-full bg-background border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl active:scale-[0.98]"
  />
  </div>
  <div className="text-[10px] text-default-500 flex items-center gap-1.5">
@@ -1510,7 +1510,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  .map((item) => {
  const assignedB = branches.find(b => b.id === item.branchAssignmentId);
  return (
- <tr key={item.id} className="hover:bg-primary/5 transition-colors">
+ <tr key={item.id} className="hover:bg-primary/5 transition-colors active:scale-[0.98]">
  {/* Profile block */}
  <td className="py-3.5 px-4">
  <div className="flex items-center gap-3">
@@ -1600,7 +1600,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  <Building2 className="h-5 w-5" />
  <span>{isEditMode ? 'Modify Branch Records' : 'Launch New Store Location'}</span>
  </h3>
- <button type="button" onClick={() => setShowModal(false)} className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full hover:bg-default-100">
+ <button type="button" onClick={() => setShowModal(false)} className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full hover:bg-default-100 active:scale-95">
  <X className="h-5 w-5" />
  </button>
  </div>
@@ -1616,7 +1616,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  value={customBranchId ?? ''}
  onChange={e => setCustomBranchId(e.target.value)}
  placeholder="Branch ID (e.g. HQ-MAIN, BR-01)"
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg "
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg  active:scale-[0.98]"
  />
  <p className="text-[9px] text-default-500 italic pl-1">
  {isEditMode 
@@ -1634,7 +1634,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  value={name ?? ''}
  onChange={e => setName(e.target.value)}
  placeholder="Branch Name"
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg active:scale-[0.98]"
  />
  </div>
 
@@ -1646,7 +1646,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  value={address ?? ''}
  onChange={e => setAddress(e.target.value)}
  placeholder="Street, City, Province"
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg active:scale-[0.98]"
  />
  </div>
 
@@ -1658,7 +1658,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  value={phone ?? ''}
  onChange={e => setPhone(e.target.value)}
  placeholder="Phone number"
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg active:scale-[0.98]"
  />
  </div>
 
@@ -1669,7 +1669,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  value={tin ?? ''}
  onChange={e => setTin(formatTin(e.target.value))}
  placeholder="000-000-000-000"
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg active:scale-[0.98]"
  />
  </div>
 
@@ -1681,7 +1681,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  required
  value={staffCount ?? ''}
  onChange={e => setStaffCount(Number(e.target.value))}
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-bold"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-bold active:scale-[0.98]"
  />
  </div>
 
@@ -1692,7 +1692,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  required
  value={activeCashiers ?? ''}
  onChange={e => setActiveCashiers(Number(e.target.value))}
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-bold"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-bold active:scale-[0.98]"
  />
  </div>
  </div>
@@ -1705,7 +1705,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  value={branchCode ?? ''}
  onChange={e => setBranchCode(e.target.value)}
  placeholder="BR-SILAY"
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-bold"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-bold active:scale-[0.98]"
  />
  </div>
 
@@ -1718,7 +1718,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  value={localIp ?? ''}
  onChange={e => setLocalIp(e.target.value)}
  placeholder="192.168.1.50"
- className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-bold"
+ className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-bold active:scale-[0.98]"
  />
  </div>
 
@@ -1750,7 +1750,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
      type="time"
      value={openingTime ?? ''}
      onChange={e => setOpeningTime(e.target.value)}
- className="w-full bg-background border border-divider/60 focus:border-primary px-3 py-1.5 text-xs text-foreground focus:outline-none transition-colors rounded-lg "
+ className="w-full bg-background border border-divider/60 focus:border-primary px-3 py-1.5 text-xs text-foreground focus:outline-none transition-colors rounded-lg  active:scale-[0.98]"
     />
    </div>
    <div className="space-y-1 relative">
@@ -1759,7 +1759,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
      type="time"
      value={closingTime ?? ''}
      onChange={e => setClosingTime(e.target.value)}
- className="w-full bg-background border border-divider/60 focus:border-primary px-3 py-1.5 text-xs text-foreground focus:outline-none transition-colors rounded-lg "
+ className="w-full bg-background border border-divider/60 focus:border-primary px-3 py-1.5 text-xs text-foreground focus:outline-none transition-colors rounded-lg  active:scale-[0.98]"
     />
    </div>
   </div>
@@ -1808,7 +1808,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
      value={receiptReturnPolicy ?? ''}
      onChange={e => setReceiptReturnPolicy(e.target.value)}
      placeholder="e.g. 7 days return/exchange with receipt in original box"
-     className="w-full bg-background border border-divider/60 focus:border-primary px-3 py-1.5 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans"
+     className="w-full bg-background border border-divider/60 focus:border-primary px-3 py-1.5 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans active:scale-[0.98]"
     />
    </div>
 
@@ -1819,7 +1819,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
      value={receiptNonReturnablePolicy ?? ''}
      onChange={e => setReceiptNonReturnablePolicy(e.target.value)}
      placeholder="e.g. Installed/cut tiles and altered items are non-returnable"
-     className="w-full bg-background border border-divider/60 focus:border-primary px-3 py-1.5 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans"
+     className="w-full bg-background border border-divider/60 focus:border-primary px-3 py-1.5 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans active:scale-[0.98]"
     />
    </div>
   </div>
@@ -1831,7 +1831,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
     value={receiptPromoText ?? ''}
     onChange={e => setReceiptPromoText(e.target.value)}
     placeholder="e.g. Follow us on social media for seasonal discount announcements!"
-    className="w-full bg-background border border-divider/60 focus:border-primary px-3 py-1.5 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans"
+    className="w-full bg-background border border-divider/60 focus:border-primary px-3 py-1.5 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans active:scale-[0.98]"
    />
   </div>
 
@@ -1843,7 +1843,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
      value={receiptThankYou ?? ''}
      onChange={e => setReceiptThankYou(e.target.value)}
      placeholder="e.g. Thank you for choosing TilePoint Building Supplies!"
-     className="w-full bg-background border border-divider/60 focus:border-primary px-3 py-1.5 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans"
+     className="w-full bg-background border border-divider/60 focus:border-primary px-3 py-1.5 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans active:scale-[0.98]"
     />
    </div>
 
@@ -1854,7 +1854,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
      value={receiptFacebook ?? ''}
      onChange={e => setReceiptFacebook(e.target.value)}
      placeholder="e.g. facebook.com/tilepoint"
-     className="w-full bg-background border border-divider/60 focus:border-primary px-3 py-1.5 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans"
+     className="w-full bg-background border border-divider/60 focus:border-primary px-3 py-1.5 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-sans active:scale-[0.98]"
     />
    </div>
   </div>
@@ -1896,7 +1896,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
      {users.filter(u => u.status === 'Active' && u.role !== UserRole.ADMIN).map(u => {
       const isAssigned = selectedEmployeeIds.includes(u.id);
       return (
-       <label key={u.id} className="flex items-center gap-2 text-xs font-medium cursor-pointer text-foreground hover:text-primary select-none">
+       <label key={u.id} className="flex items-center gap-2 text-xs font-medium cursor-pointer text-foreground hover:text-primary select-none active:scale-[0.98]">
         <input
          type="checkbox"
          checked={isAssigned}
@@ -1926,7 +1926,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
      <button
       type="button"
       onClick={() => setShowAddInlineStaff(!showAddInlineStaff)}
-      className="text-[9.5px] font-black text-primary hover:text-primary/85 transition-all flex items-center gap-0.5 uppercase tracking-wider"
+      className="text-[9.5px] font-black text-primary hover:text-primary/85 transition-all flex items-center gap-0.5 uppercase tracking-wider active:scale-[0.98]"
      >
       <Plus className="h-3 w-3" /> {showAddInlineStaff ? 'Collapse' : 'Add Staff'}
      </button>
@@ -2012,7 +2012,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
         setShowAddInlineStaff(false);
         showToast(`Staged staff "${newStaff.fullName}" for enrollment.`);
        }}
-       className="w-full py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-bold hover:bg-primary/90 transition-all cursor-pointer text-center"
+       className="w-full py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-bold hover:bg-primary/90 transition-all cursor-pointer text-center active:scale-[0.98]"
       >
        Stage Staff Enrollment
       </button>
@@ -2030,7 +2030,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
          <button
           type="button"
           onClick={() => setInlineStaffList(inlineStaffList.filter((_, i) => i !== idx))}
-          className="text-red-500 hover:text-red-650 cursor-pointer text-[10px] font-bold"
+          className="text-red-500 hover:text-red-650 cursor-pointer text-[10px] font-bold active:scale-[0.98]"
          >
           Remove
          </button>
@@ -2046,7 +2046,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
     <button
       type="button"
       onClick={() => setShowModal(false)}
-      className="px-4 py-2.5 text-xs font-bold rounded-xl cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
+      className="px-4 py-2.5 text-xs font-bold rounded-xl cursor-pointer hover:bg-default-100 text-default-500 transition-colors active:scale-[0.98]"
     >
       Cancel
     </button>
@@ -2080,14 +2080,14 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
       <button
         type="button"
         onClick={() => setConfirmDeleteId(null)}
-        className="px-4 py-2 text-xs font-bold bg-default-100 text-default-500 rounded-full hover:bg-default-200 transition-colors"
+        className="px-4 py-2 text-xs font-bold bg-default-100 text-default-500 rounded-full hover:bg-default-200 transition-colors active:scale-95"
       >
         Cancel
       </button>
       <button
         type="button"
         onClick={proceedWithDelete}
-        className="px-4 py-2 text-xs font-bold bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors shadow-sm"
+        className="px-4 py-2 text-xs font-bold bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors shadow-sm active:scale-95"
       >
         Confirm Delete
       </button>
@@ -2113,7 +2113,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
           <button
             type="button"
             onClick={() => setShowEnlistModal(false)}
-            className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full hover:bg-default-100"
+            className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full hover:bg-default-100 active:scale-95"
           >
             <X className="h-5 w-5" />
           </button>
@@ -2127,7 +2127,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
             value={enlistFullName}
             onChange={e => setEnlistFullName(e.target.value)}
             placeholder="e.g. Maria Santos"
-            className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-semibold"
+            className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-semibold active:scale-[0.98]"
           />
         </div>
 
@@ -2140,7 +2140,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
               value={enlistUsername}
               onChange={e => setEnlistUsername(e.target.value)}
               placeholder="e.g. msantos"
-              className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-semibold"
+              className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg font-semibold active:scale-[0.98]"
             />
           </div>
           <div className="space-y-1 relative">
@@ -2150,7 +2150,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
               value={enlistEmail}
               onChange={e => setEnlistEmail(e.target.value)}
               placeholder="Optional email"
-              className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg"
+              className="w-full bg-content1 border border-divider/60 focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-lg active:scale-[0.98]"
             />
           </div>
         </div>
@@ -2181,7 +2181,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
               value={enlistPin}
               onChange={e => setEnlistPin(e.target.value.replace(/\D/g, ''))}
               placeholder="Enter 4-6 digit PIN"
-              className="w-full bg-content1 border-b-2 border-amber-500 focus:border-amber-500 px-3 py-2 text-xs text-foreground font-semibold focus:outline-none transition-colors rounded-lg"
+              className="w-full bg-content1 border-b-2 border-amber-500 focus:border-amber-500 px-3 py-2 text-xs text-foreground font-semibold focus:outline-none transition-colors rounded-lg active:scale-[0.98]"
             />
             <span className="text-[9px] text-default-400 pl-1 block">Passcode used for supervisor authorizations and discount overrides.</span>
           </div>
@@ -2205,7 +2205,7 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
           <button
             type="button"
             onClick={() => setShowEnlistModal(false)}
-            className="px-4 py-2 text-xs font-bold rounded-xl cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
+            className="px-4 py-2 text-xs font-bold rounded-xl cursor-pointer hover:bg-default-100 text-default-500 transition-colors active:scale-[0.98]"
           >
             Cancel
           </button>

@@ -218,7 +218,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, _d
  <button
  type="button"
  onClick={() => setSelectedProduct(null)}
- className="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-500 dark:text-rose-400 rounded-xl hover:bg-rose-500/20 text-[11px] font-black uppercase transition-colors cursor-pointer"
+ className="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-500 dark:text-rose-400 rounded-xl hover:bg-rose-500/20 text-[11px] font-black uppercase transition-colors cursor-pointer active:scale-[0.98]"
  >
  Reset Choice
  </button>
@@ -238,7 +238,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, _d
  <div
  key={p.id}
  onClick={() => handleSelectProduct(p)}
- className="p-3 hover:bg-primary/10 cursor-pointer transition-colors text-left flex items-center justify-between text-xs"
+ className="p-3 hover:bg-primary/10 cursor-pointer transition-colors text-left flex items-center justify-between text-xs active:scale-[0.98]"
  >
  <div>
  <p className="font-extrabold text-foreground dark:text-foreground">{p.productName}</p>

@@ -231,7 +231,7 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
                   value={transferReasonInput ?? ''}
                   onChange={e => setTransferReasonInput(e.target.value)}
                   placeholder="e.g. Urgent stock replenishment for high-demand showroom order"
-                  className="w-full bg-content2 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-sans"
+                  className="w-full bg-content2 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-sans active:scale-[0.98]"
                 />
               </div>
             </div>
@@ -285,7 +285,7 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
                     min={1}
                     value={tempQty ?? ''}
                     onChange={e => setTempQty(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-full bg-content1 border border-divider focus:border-primary px-3 py-1.5 text-xs text-foreground text-center focus:outline-none transition-colors rounded-xl"
+                    className="w-full bg-content1 border border-divider focus:border-primary px-3 py-1.5 text-xs text-foreground text-center focus:outline-none transition-colors rounded-xl active:scale-[0.98]"
                   />
                 </div>
                 <div className="flex items-end">
@@ -352,7 +352,7 @@ export const CreateTransferModal: React.FC<CreateTransferModalProps> = ({
                             <button
                               type="button"
                               onClick={() => setTransferItems(prev => prev.filter((_, i) => i !== idx))}
-                              className="text-default-400 hover:text-danger p-1 cursor-pointer transition-colors hover:bg-danger/10 rounded-full"
+                              className="text-default-400 hover:text-danger p-1 cursor-pointer transition-colors hover:bg-danger/10 rounded-full active:scale-95"
                               aria-label="Remove item"
                             >
                               <Trash2 className="h-4 w-4" />

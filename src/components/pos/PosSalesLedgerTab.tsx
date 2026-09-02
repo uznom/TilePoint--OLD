@@ -3,6 +3,8 @@ import { Sale, User } from "../../types/db";
 import { formatCurrency } from "../../utils/formatters";
 import { Search, Eye, Printer, ShieldAlert, DollarSign, Receipt, Tag, AlertTriangle, RefreshCw } from "lucide-react";
 import { HeroButton } from "../common/ui/HeroButton";
+import { HeroSelect } from "../common/ui/HeroSelect";
+import { HeroInput } from "../common/ui/HeroInput";
 
 export interface PosSalesLedgerTabProps {
   sales: Sale[];
@@ -124,34 +126,35 @@ export const PosSalesLedgerTab: React.FC<PosSalesLedgerTabProps> = ({
       <div className="bg-content1 p-4 rounded-3xl border border-divider/25 shadow-xs flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[280px]">
           <div className="relative flex-1 min-w-[180px]">
-            <input
-              type="text"
+            <HeroInput
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search invoice #, customer name, cashier..."
-              className="w-full bg-content2 border border-divider/40 rounded-xl pl-9 pr-4 py-2 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              startContent={<Search className="h-4 w-4 text-default-400" />}
+              size="sm"
             />
-            <Search className="h-4 w-4 text-default-400 absolute left-3 top-2.5" />
           </div>
 
-          <select
-            value={filterPaymentMethod}
-            onChange={(e) => setFilterPaymentMethod(e.target.value)}
-            className="bg-content2 border border-divider/40 rounded-xl px-3 py-2 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-          >
-            <option value="ALL">All Tender Types</option>
-            <option value="Cash">Cash</option>
-            <option value="Card">Card</option>
-            <option value="GCash">GCash</option>
-            <option value="Bank Transfer">Bank Transfer</option>
-            <option value="Corporate Credit">Corporate Credit</option>
-          </select>
+          <div className="min-w-[150px]">
+            <HeroSelect
+              value={filterPaymentMethod}
+              onChange={(e) => setFilterPaymentMethod(e.target.value)}
+              size="sm"
+            >
+              <option value="ALL">All Tender Types</option>
+              <option value="Cash">Cash</option>
+              <option value="Card">Card</option>
+              <option value="GCash">GCash</option>
+              <option value="Bank Transfer">Bank Transfer</option>
+              <option value="Corporate Credit">Corporate Credit</option>
+            </HeroSelect>
+          </div>
 
           <input
             type="date"
             value={filterDate}
             onChange={(e) => setFilterDate(e.target.value)}
-            className="bg-content2 border border-divider/40 rounded-xl px-3 py-2 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="h-8 bg-content2 border border-divider/40 rounded-xl px-3 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
 

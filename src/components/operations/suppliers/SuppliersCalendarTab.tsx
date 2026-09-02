@@ -691,7 +691,7 @@ export const SuppliersCalendarTab: React.FC<SuppliersCalendarTabProps> = ({
                           {item.amount > 0 && (
                             <div className="w-full bg-default-200/30 h-1 rounded-full overflow-hidden mt-1">
                               <div
-                                className="bg-emerald-500 h-full rounded-full transition-all duration-300"
+                                className="bg-emerald-500 h-full rounded-full transition-all duration-300 active:scale-95"
                                 style={{ width: `${Math.min(100, (item.totalPaid / item.amount) * 100)}%` }}
                               />
                             </div>
@@ -752,7 +752,7 @@ export const SuppliersCalendarTab: React.FC<SuppliersCalendarTabProps> = ({
                     }
                     setSelectedCalendarDay(null);
                   }}
-                  className="p-1.5 hover:bg-content3 rounded-lg text-default-500 hover:text-primary transition cursor-pointer border-0"
+                  className="p-1.5 hover:bg-content3 rounded-lg text-default-500 hover:text-primary transition cursor-pointer border-0 active:scale-95"
                   title="Previous Month"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -799,7 +799,7 @@ export const SuppliersCalendarTab: React.FC<SuppliersCalendarTabProps> = ({
                     }
                     setSelectedCalendarDay(null);
                   }}
-                  className="p-1.5 hover:bg-content3 rounded-lg text-default-500 hover:text-primary transition cursor-pointer border-0"
+                  className="p-1.5 hover:bg-content3 rounded-lg text-default-500 hover:text-primary transition cursor-pointer border-0 active:scale-95"
                   title="Next Month"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -1029,14 +1029,14 @@ export const SuppliersCalendarTab: React.FC<SuppliersCalendarTabProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => handleInstallmentPayment(payVal, Number(partialPaymentAmount), partialPaymentNotes)}
-                                  className="flex-1 text-center py-1.5 bg-primary/10 text-primary hover:bg-primary/20 text-[9px] font-black uppercase rounded-lg transition cursor-pointer"
+                                  className="flex-1 text-center py-1.5 bg-primary/10 text-primary hover:bg-primary/20 text-[9px] font-black uppercase rounded-lg transition cursor-pointer active:scale-[0.98]"
                                 >
                                   Pay Installment
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleInstallmentPayment(payVal, remaining, "Full Settlement")}
-                                  className="flex-1 text-center py-1.5 bg-primary text-primary-foreground hover:opacity-90 text-[9px] font-black uppercase rounded-lg transition cursor-pointer"
+                                  className="flex-1 text-center py-1.5 bg-primary text-primary-foreground hover:opacity-90 text-[9px] font-black uppercase rounded-lg transition cursor-pointer active:scale-[0.98]"
                                 >
                                   Pay Full
                                 </button>

@@ -150,7 +150,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
                   addAuditLog(logType, logMsg, "Sales", activeReceipt.id);
                   showToast("Sent printing signal to hardware terminal.");
                 }}
-                className="flex-1 py-2.5 px-3 text-xs font-black rounded-full bg-primary text-primary-foreground hover:brightness-110 shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center uppercase tracking-wider"
+                className="flex-1 py-2.5 px-3 text-xs font-black rounded-full bg-primary text-primary-foreground hover:brightness-110 shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer text-center uppercase tracking-wider active:scale-95"
               >
                 <Printer className="h-4 w-4" />
                 <span>
@@ -170,7 +170,7 @@ export const PosReceiptModal: React.FC<PosReceiptModalProps> = ({
                   onClose();
                   setReceiptViewMode("unified");
                 }}
-                className="py-2.5 px-4 text-xs font-bold rounded-full border border-divider/50 hover:bg-default-100 text-foreground transition-colors cursor-pointer text-center uppercase tracking-wider"
+                className="py-2.5 px-4 text-xs font-bold rounded-full border border-divider/50 hover:bg-default-100 text-foreground transition-colors cursor-pointer text-center uppercase tracking-wider active:scale-95"
               >
                 Done
               </button>

@@ -138,7 +138,7 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
                   Selected: {calendarSelectedDay}
                   <button 
                     onClick={() => setCalendarSelectedDay(null)}
-                    className="ml-1 hover:text-rose-500 font-bold cursor-pointer"
+                    className="ml-1 hover:text-rose-500 font-bold cursor-pointer active:scale-[0.98]"
                     title="Clear date filter"
                   >
                     ×
@@ -502,10 +502,10 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
                     <tr 
                       key={b.id} 
                       onClick={() => setSelectedBatchDetail(b)}
-                      className="hover:bg-content2/60 transition-colors cursor-pointer group"
+                      className="hover:bg-content2/60 transition-colors cursor-pointer group active:scale-[0.98]"
                     >
                       <td className="py-3 px-4 font-sans">
-                        <strong className="text-foreground font-black block group-hover:text-primary transition-colors">{pName}</strong>
+                        <strong className="text-foreground font-black block group-hover:text-primary transition-colors active:scale-[0.98]">{pName}</strong>
                         <span className="text-[9px] text-primary font-bold">{pCode}</span>
                       </td>
 
@@ -572,7 +572,7 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
                                   e.stopPropagation();
                                   handleRemoveBatch(b.id);
                                 }}
-                                className="h-7 w-7 min-w-7 p-0 text-default-500 hover:text-danger"
+                                className="h-7 w-7 min-w-7 p-0 text-default-500 hover:text-danger active:scale-95"
                                 aria-label="Remove batch log entry"
                               >
                                 <Trash2 className="h-4 w-4" />

@@ -152,7 +152,7 @@ export const AddExpenseTab: React.FC<AddExpenseTabProps> = ({
 
           <button
             type="submit"
-            className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
           >
             <DollarSign className="h-4 w-4" />
             Confirm Petty Cash Payout
@@ -222,7 +222,7 @@ export const AddExpenseTab: React.FC<AddExpenseTabProps> = ({
                         <button
                           type="button"
                           onClick={() => setExpenseSearch("")}
-                          className="mt-1 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold rounded-lg transition-colors cursor-pointer border-0"
+                          className="mt-1 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold rounded-lg transition-colors cursor-pointer border-0 active:scale-[0.98]"
                         >
                           Clear Expense Filter
                         </button>
@@ -234,7 +234,7 @@ export const AddExpenseTab: React.FC<AddExpenseTabProps> = ({
                 filteredExpenses.map((ex) => (
                   <tr
                     key={ex.id}
-                    className="border-b border-divider/10 hover:bg-primary/5 transition-all"
+                    className="border-b border-divider/10 hover:bg-primary/5 transition-all active:scale-[0.98]"
                   >
                     <td className="p-3 font-semibold text-foreground">
                       <div>{ex.notes}</div>
@@ -258,7 +258,7 @@ export const AddExpenseTab: React.FC<AddExpenseTabProps> = ({
                       <button
                         type="button"
                         onClick={() => onDeleteExpense(ex.id)}
-                        className="p-1 hover:bg-red-500/10 text-red-500 rounded transition border-0 cursor-pointer bg-transparent"
+                        className="p-1 hover:bg-red-500/10 text-red-500 rounded transition border-0 cursor-pointer bg-transparent active:scale-95"
                         title="Delete Expense"
                       >
                         <Trash2 className="h-4 w-4" />

@@ -157,7 +157,7 @@ export const SearchExpensesTab: React.FC<SearchExpensesTabProps> = ({
         <button
           type="button"
           onClick={handleExportCSV}
-          className="px-3.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer transition"
+          className="px-3.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer transition active:scale-95"
         >
           <Download className="h-4 w-4" />
           <span>Export Filtered CSV</span>
@@ -197,7 +197,7 @@ export const SearchExpensesTab: React.FC<SearchExpensesTabProps> = ({
               </tr>
             ) : (
               filteredExpenses.map((ex) => (
-                <tr key={ex.id} className="hover:bg-content2/40 transition">
+                <tr key={ex.id} className="hover:bg-content2/40 transition active:scale-[0.98]">
                   <td className="p-3 font-semibold text-foreground">
                     <div>{ex.notes}</div>
                     <div className="text-[10px] text-default-400 mt-0.5">
@@ -220,7 +220,7 @@ export const SearchExpensesTab: React.FC<SearchExpensesTabProps> = ({
                     <button
                       type="button"
                       onClick={() => onDeleteExpense(ex.id)}
-                      className="p-1 hover:bg-danger/10 text-default-400 hover:text-danger rounded-lg transition cursor-pointer"
+                      className="p-1 hover:bg-danger/10 text-default-400 hover:text-danger rounded-lg transition cursor-pointer active:scale-95"
                       title="Delete Expense"
                     >
                       <Trash2 className="h-4 w-4" />

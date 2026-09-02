@@ -487,12 +487,12 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Search archives by name, code, SKU, email, role..."
-              className="w-full pl-10 pr-4 py-2 text-xs rounded-2xl bg-content1 border border-divider/30 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all placeholder:text-default-500/50"
+              className="w-full pl-10 pr-4 py-2 text-xs rounded-2xl bg-content1 border border-divider/30 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all placeholder:text-default-500/50 active:scale-[0.98]"
             />
             {searchQuery && (
               <button
                 onClick={() => handleSearchChange('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-default-500 hover:text-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-default-500 hover:text-foreground active:scale-95"
               >
                 Clear
               </button>
@@ -507,21 +507,21 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
               </span>
               <button
                 onClick={() => setShowBulkRestoreModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-[11px] font-bold uppercase tracking-wider cursor-pointer shadow-sm transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-[11px] font-bold uppercase tracking-wider cursor-pointer shadow-sm transition-all active:scale-95"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 <span>Restore Selected</span>
               </button>
               <button
                 onClick={() => setShowBulkPurgeModal(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-all active:scale-95"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 <span>Purge Selected</span>
               </button>
               <button
                 onClick={() => setSelectedKeys({})}
-                className="text-[11px] font-bold text-default-500 hover:text-foreground px-2 py-1"
+                className="text-[11px] font-bold text-default-500 hover:text-foreground px-2 py-1 active:scale-[0.98]"
               >
                 Deselect
               </button>
@@ -692,7 +692,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
                           </button>
                           <button
                             onClick={() => setItemToPurge(item)}
-                            className="p-1.5 rounded-xl text-default-500/60 hover:text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all"
+                            className="p-1.5 rounded-xl text-default-500/60 hover:text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all active:scale-95"
                             title="Permanently purge from system"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -776,13 +776,13 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-divider/15">
               <button
                 onClick={() => setItemToPurge(null)}
-                className="px-4 py-2 text-xs font-bold rounded-xl text-default-500 hover:bg-content1"
+                className="px-4 py-2 text-xs font-bold rounded-xl text-default-500 hover:bg-content1 active:scale-[0.98]"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmSinglePurge}
-                className="px-4 py-2 text-xs font-bold rounded-xl bg-rose-600 text-white hover:bg-rose-700 cursor-pointer shadow-sm"
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-rose-600 text-white hover:bg-rose-700 cursor-pointer shadow-sm active:scale-[0.98]"
               >
                 Purge Permanently
               </button>
@@ -814,13 +814,13 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-divider/15">
               <button
                 onClick={() => setShowBulkRestoreModal(false)}
-                className="px-4 py-2 text-xs font-bold rounded-xl text-default-500 hover:bg-content1"
+                className="px-4 py-2 text-xs font-bold rounded-xl text-default-500 hover:bg-content1 active:scale-[0.98]"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmBulkRestore}
-                className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer shadow-sm"
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 cursor-pointer shadow-sm active:scale-[0.98]"
               >
                 Confirm Bulk Restore
               </button>
@@ -851,13 +851,13 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-divider/15">
               <button
                 onClick={() => setShowBulkPurgeModal(false)}
-                className="px-4 py-2 text-xs font-bold rounded-xl text-default-500 hover:bg-content1"
+                className="px-4 py-2 text-xs font-bold rounded-xl text-default-500 hover:bg-content1 active:scale-[0.98]"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmBulkPurge}
-                className="px-4 py-2 text-xs font-bold rounded-xl bg-rose-600 text-white hover:bg-rose-700 cursor-pointer shadow-sm"
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-rose-600 text-white hover:bg-rose-700 cursor-pointer shadow-sm active:scale-[0.98]"
               >
                 Confirm Permanent Purge
               </button>

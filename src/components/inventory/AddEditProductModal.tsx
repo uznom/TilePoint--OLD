@@ -284,7 +284,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       value={productCode ?? ''}
                       onChange={e => setProductCode(e.target.value)}
                       placeholder="e.g. TILE-6060-GR"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold"
+                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
                     />
                   </div>
 
@@ -298,7 +298,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       value={sku ?? ''}
                       onChange={e => setSku(e.target.value)}
                       placeholder="e.g. SKU-10492"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold"
+                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
                     />
                   </div>
 
@@ -327,7 +327,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       value={barcode ?? ''}
                       onChange={e => setBarcode(e.target.value)}
                       placeholder="e.g. 4801122334455"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold"
+                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
                     />
                   </div>
 
@@ -349,7 +349,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                         value={category ?? ''}
                         onChange={e => setCategory(e.target.value)}
                         placeholder="e.g. Electrical Tools, Solar Modules"
-                        className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold"
+                        className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
                       />
                     ) : (
                       <HeroSelect
@@ -379,7 +379,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       value={brand ?? ''}
                       onChange={e => setBrand(e.target.value)}
                       placeholder="Brand name"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold"
+                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
                     />
                   </div>
 
@@ -390,7 +390,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       value={designName ?? ''}
                       onChange={e => setDesignName(e.target.value)}
                       placeholder="Tile design name"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold"
+                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
                     />
                   </div>
 
@@ -404,7 +404,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       value={productName ?? ''}
                       onChange={e => setProductName(e.target.value)}
                       placeholder="Full descriptive product title (e.g. 60x60 Glazed Polished Porcelain Floor Tile)"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2.5 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-sans font-black text-sm"
+                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2.5 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-sans font-black text-sm active:scale-[0.98]"
                     />
                   </div>
                 </div>
@@ -427,7 +427,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       value={unit ?? ''}
                       onChange={e => setUnit(e.target.value)}
                       placeholder="Box / Piece / Bag"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold"
+                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
                     />
                     <datalist id="dynamic-unit-options">
                       {(unitTypes || []).filter(u => u.isActive !== false).map(u => (
@@ -449,7 +449,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       value={size ?? ''}
                       onChange={e => setSize(e.target.value)}
                       placeholder="Dimensions (e.g. 60x60 cm)"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold"
+                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
                     />
                   </div>
 
@@ -463,7 +463,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       value={boxQuantity || ''}
                       placeholder="1"
                       onChange={e => setBoxQuantity(e.target.value === '' ? 0 : Number(e.target.value))}
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold"
+                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
                     />
                   </div>
 
@@ -481,7 +481,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       value={coveragePerBox === 0 ? '' : coveragePerBox ?? ''}
                       placeholder="0.00"
                       onChange={e => setCoveragePerBox(e.target.value === '' ? 0 : Number(e.target.value))}
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold"
+                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
                     />
                   </div>
                 </div>
@@ -579,7 +579,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                             value={newSupplierName ?? ''}
                             onChange={e => setNewSupplierName(e.target.value)}
                             placeholder="Supplier corporate name"
-                            className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold"
+                            className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
                           />
                         </div>
 
@@ -590,7 +590,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                             value={newSupplierContact ?? ''}
                             onChange={e => setNewSupplierContact(e.target.value)}
                             placeholder="Contact agent name"
-                            className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium"
+                            className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium active:scale-[0.98]"
                           />
                         </div>
                       </div>
@@ -603,7 +603,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                             value={newSupplierPhone ?? ''}
                             onChange={e => setNewSupplierPhone(e.target.value)}
                             placeholder="Phone number"
-                            className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium"
+                            className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium active:scale-[0.98]"
                           />
                         </div>
 
@@ -614,7 +614,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                             value={newSupplierEmail ?? ''}
                             onChange={e => setNewSupplierEmail(e.target.value)}
                             placeholder="Corporate email address"
-                            className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium"
+                            className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium active:scale-[0.98]"
                           />
                         </div>
                       </div>
@@ -626,7 +626,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                           value={newSupplierAddress ?? ''}
                           onChange={e => setNewSupplierAddress(e.target.value)}
                           placeholder="Street, City, Province"
-                          className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium"
+                          className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium active:scale-[0.98]"
                         />
                       </div>
                     </div>
@@ -658,7 +658,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       value={costPrice === 0 ? '' : costPrice ?? ''}
                       placeholder="0.00"
                       onChange={e => handleCostPriceChange(e.target.value === '' ? 0 : Number(e.target.value))}
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold"
+                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
                     />
                   </div>
 
@@ -678,7 +678,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       value={markupPercent === 0 ? '' : markupPercent ?? ''}
                       placeholder="0"
                       onChange={e => handleMarkupChange(e.target.value === '' ? 0 : Number(e.target.value))}
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold"
+                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
                     />
                   </div>
 
@@ -698,7 +698,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       value={sellingPrice === 0 ? '' : sellingPrice ?? ''}
                       placeholder="0.00"
                       onChange={e => handleSellingPriceChange(e.target.value === '' ? 0 : Number(e.target.value))}
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-black text-primary"
+                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-black text-primary active:scale-[0.98]"
                     />
                   </div>
 
@@ -768,7 +768,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       value={stockQuantity === 0 ? '' : stockQuantity ?? ''}
                       placeholder="0"
                       onChange={e => setStockQuantity(e.target.value === '' ? 0 : Number(e.target.value))}
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold"
+                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
                     />
                   </div>
 
@@ -780,7 +780,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       value={minimumStock === 0 ? '' : minimumStock ?? ''}
                       placeholder="0"
                       onChange={e => setMinimumStock(e.target.value === '' ? 0 : Number(e.target.value))}
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold"
+                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold active:scale-[0.98]"
                     />
                   </div>
 
@@ -832,7 +832,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                             required={hasExpiration}
                             value={expirationDate ?? ''}
                             onChange={e => setExpirationDate(e.target.value)}
-                            className="w-full bg-content1 border border-divider focus:border-warning px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold cursor-pointer"
+                            className="w-full bg-content1 border border-divider focus:border-warning px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-bold cursor-pointer active:scale-[0.98]"
                           />
                         </div>
                         <div className="bg-content1 p-3 rounded-medium border border-warning/20 text-[11px] text-default-500 flex flex-col justify-center gap-0.5">
@@ -854,7 +854,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                       value={origin ?? ''}
                       onChange={e => setOrigin(e.target.value)}
                       placeholder="Acquired from / Stock source (e.g. Local Import, Direct Factory Mill)"
-                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-sans font-bold"
+                      className="w-full bg-content1 border border-divider focus:border-primary px-3 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-medium font-sans font-bold active:scale-[0.98]"
                     />
                   </div>
                 </div>

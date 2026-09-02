@@ -133,7 +133,7 @@ export const PoRequisitionsCartTab: React.FC<PoRequisitionsCartTabProps> = ({
               <button
                 type="button"
                 onClick={() => syncPoCart([])}
-                className="px-3 py-2 bg-danger-50 dark:bg-danger-500/10 hover:bg-danger-100 text-danger text-xs font-bold rounded-2xl border border-danger-200 dark:border-danger-500/20 transition-colors cursor-pointer"
+                className="px-3 py-2 bg-danger-50 dark:bg-danger-500/10 hover:bg-danger-100 text-danger text-xs font-bold rounded-2xl border border-danger-200 dark:border-danger-500/20 transition-colors cursor-pointer active:scale-[0.98]"
               >
                 Clear Cart
               </button>
@@ -153,7 +153,7 @@ export const PoRequisitionsCartTab: React.FC<PoRequisitionsCartTabProps> = ({
                     <div
                       key={p.id}
                       onClick={() => handleAddItemToCart(p)}
-                      className="p-3 hover:bg-primary/10 cursor-pointer flex justify-between items-center transition-colors"
+                      className="p-3 hover:bg-primary/10 cursor-pointer flex justify-between items-center transition-colors active:scale-[0.98]"
                     >
                       <div className="space-y-0.5 text-left">
                         <div className="font-bold text-xs text-foreground">{p.productName}</div>
@@ -256,7 +256,7 @@ export const PoRequisitionsCartTab: React.FC<PoRequisitionsCartTabProps> = ({
                           <button
                             type="button"
                             onClick={() => handleRemoveCartItem(globalIdx)}
-                            className="p-1 rounded-lg text-default-400 hover:text-danger hover:bg-content2 transition-colors cursor-pointer"
+                            className="p-1 rounded-lg text-default-400 hover:text-danger hover:bg-content2 transition-colors cursor-pointer active:scale-95"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>

@@ -865,7 +865,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  />
  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-default-500" />
  {searchTerm && (
- <button onClick={() => setSearchTerm('')} className="absolute right-2.5 top-2 hover:text-rose-500 p-0.5 text-default-500 font-bold"></button>
+ <button onClick={() => setSearchTerm('')} className="absolute right-2.5 top-2 hover:text-rose-500 p-0.5 text-default-500 font-bold active:scale-[0.98]"></button>
  )}
  </div>
  </div>
@@ -1011,7 +1011,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  setAssignDriver(d.driver || '');
  setAssignHelper(d.helper || '');
  }}
- className="px-2.5 py-1 rounded-xl bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground text-[10px] font-black uppercase tracking-wide transition-all cursor-pointer flex items-center gap-1 shadow-xs"
+ className="px-2.5 py-1 rounded-xl bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground text-[10px] font-black uppercase tracking-wide transition-all cursor-pointer flex items-center gap-1 shadow-xs active:scale-95"
  title="Click to assign Truck Plate & Driver Pilot"
  >
  <Truck className="h-3 w-3" />
@@ -1047,7 +1047,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  setShowDeliveryReceiptModal(true);
  }}
  title="Print Delivery Receipt"
- className="p-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary transition-colors cursor-pointer inline-flex items-center gap-1 text-[10px] font-bold border border-primary/20"
+ className="p-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary transition-colors cursor-pointer inline-flex items-center gap-1 text-[10px] font-bold border border-primary/20 active:scale-95"
  >
  <Printer className="h-3.5 w-3.5" />
  <span className="hidden sm:inline uppercase">DR</span>
@@ -1078,7 +1078,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  type="button"
  disabled={delivPage === 1}
  onClick={() => setDelivPage(prev => Math.max(1, prev - 1))}
- className="px-3 py-1.5 rounded-lg border border-divider/60 hover:border-primary hover:bg-primary/10 text-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
+ className="px-3 py-1.5 rounded-lg border border-divider/60 hover:border-primary hover:bg-primary/10 text-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px] active:scale-[0.98]"
  >
  Prev
  </button>
@@ -1109,7 +1109,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  type="button"
  disabled={delivPage === totalDelivPages}
  onClick={() => setDelivPage(prev => Math.min(totalDelivPages, prev + 1))}
- className="px-3 py-1.5 rounded-lg border border-divider/60 hover:border-primary hover:bg-primary/10 text-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px]"
+ className="px-3 py-1.5 rounded-lg border border-divider/60 hover:border-primary hover:bg-primary/10 text-primary disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-bold uppercase text-[9.5px] active:scale-[0.98]"
  >
  Next
  </button>
@@ -1132,7 +1132,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  {/* Close Detail Button */}
  <button
  onClick={() => setSelectedDeliveryId(null)}
- className="absolute right-3.5 top-3.5 text-default-500 hover:text-foreground p-1 rounded-full bg-content1/70 border border-divider/20 hover:border-divider/50 transition-all cursor-pointer"
+ className="absolute right-3.5 top-3.5 text-default-500 hover:text-foreground p-1 rounded-full bg-content1/70 border border-divider/20 hover:border-divider/50 transition-all cursor-pointer active:scale-95"
  >
  <X className="h-4.5 w-4.5" />
  </button>
@@ -1154,7 +1154,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  <button
  type="button"
  onClick={() => setShowDeliveryReceiptModal(true)}
- className="w-full py-2 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs rounded-xl shadow-sm flex items-center justify-center gap-2 cursor-pointer transition-all uppercase tracking-wider"
+ className="w-full py-2 px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-black text-xs rounded-xl shadow-sm flex items-center justify-center gap-2 cursor-pointer transition-all uppercase tracking-wider active:scale-[0.98]"
  >
  <Printer className="h-4 w-4" />
  <span>Print Delivery Receipt (DR)</span>
@@ -1313,7 +1313,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  {activeDelivery.status === 'Pending Scheduling' && (
  <button
  onClick={() => handlePackCargo(activeDelivery.id)}
- className="w-full py-2 bg-gradient-to-r from-secondary/90 to-secondary hover:from-secondary hover:to-secondary/90 text-white text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm transition-all flex items-center justify-center gap-1"
+ className="w-full py-2 bg-gradient-to-r from-secondary/90 to-secondary hover:from-secondary hover:to-secondary/90 text-white text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm transition-all flex items-center justify-center gap-1 active:scale-95"
  >
  <Package className="h-4 w-4" />
  <span>Allocate & Mark Packed</span>
@@ -1331,7 +1331,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  setAssignDriver(activeDelivery.driver || '');
  setAssignHelper(activeDelivery.helper || '');
  }}
- className="w-full py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm transition-all flex items-center justify-center gap-1.5"
+ className="w-full py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-95"
  >
  <Truck className="h-4 w-4" />
  <span>{activeDelivery.driver ? 'Update Carrier Pilot' : 'Schedule Truck & Driver'}</span>
@@ -1390,7 +1390,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  <button
  type="button"
  onClick={() => setShowAssignForm(false)}
- className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-default-500 hover:bg-default-500/10 cursor-pointer"
+ className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-default-500 hover:bg-default-500/10 cursor-pointer active:scale-[0.98]"
  >
  Cancel
  </button>
@@ -1408,7 +1408,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  {activeDelivery.status === 'Scheduled' && (
  <button
  onClick={() => handleDispatchTransit(activeDelivery.id)}
- className="w-full py-2 bg-gradient-to-r from-purple-650 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm transition-all flex items-center justify-center gap-1"
+ className="w-full py-2 bg-gradient-to-r from-purple-650 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm transition-all flex items-center justify-center gap-1 active:scale-95"
  >
  <Navigation className="h-4 w-4 animate-bounce" />
  <span>Dispatch (Out for Delivery)</span>
@@ -1425,7 +1425,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  setReceiverName(activeDelivery.customerName);
  setSignatureText(`ACK-${Date.now().toString().slice(-6)}`);
  }}
- className="w-full py-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm transition-all flex items-center justify-center gap-1.5"
+ className="w-full py-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer shadow-sm transition-all flex items-center justify-center gap-1.5 active:scale-95"
  >
  <CheckCircle className="h-4 w-4" />
  <span>Log Delivered Success</span>
@@ -1470,7 +1470,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  <button
  type="button"
  onClick={() => setShowCompleteForm(false)}
- className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-default-500 hover:bg-default-500/10 cursor-pointer"
+ className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-default-500 hover:bg-default-500/10 cursor-pointer active:scale-[0.98]"
  >
  Cancel
  </button>
@@ -1493,7 +1493,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  setShowCompleteForm(false);
  setFailReason('');
  }}
- className="w-full py-2 hover:bg-rose-500/10 text-rose-500 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer transition-all flex items-center justify-center gap-1"
+ className="w-full py-2 hover:bg-rose-500/10 text-rose-500 text-xs font-black uppercase tracking-wider rounded-xl cursor-pointer transition-all flex items-center justify-center gap-1 active:scale-95"
  >
  <XCircle className="h-4 w-4" />
  <span>Log Shipment Failure</span>
@@ -1528,7 +1528,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  <button
  type="button"
  onClick={() => setShowFailForm(false)}
- className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-default-500 hover:bg-default-500/10 cursor-pointer"
+ className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-default-500 hover:bg-default-500/10 cursor-pointer active:scale-[0.98]"
  >
  Cancel
  </button>
@@ -1580,7 +1580,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  </div>
  <button
  onClick={() => setShowDeliveryReceiptModal(false)}
- className="p-1.5 rounded-full hover:bg-default-100 text-default-500 cursor-pointer"
+ className="p-1.5 rounded-full hover:bg-default-100 text-default-500 cursor-pointer active:scale-95"
  >
  <X className="h-5 w-5" />
  </button>
@@ -1609,13 +1609,13 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
   window.print();
   addAuditLog("PRINT_DELIVERY_RECEIPT", `Printed Delivery Receipt for ${activeDelivery.saleNumber}`, "Deliveries", activeDelivery.id);
   }}
-  className="flex-1 py-2.5 text-xs font-bold rounded-full bg-primary hover:bg-primary/90 text-primary-foreground transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm uppercase tracking-wider"
+  className="flex-1 py-2.5 text-xs font-bold rounded-full bg-primary hover:bg-primary/90 text-primary-foreground transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm uppercase tracking-wider active:scale-95"
   >
   <Printer className="h-4 w-4" /> Print Delivery Receipt
   </button>
   <button
   onClick={() => setShowDeliveryReceiptModal(false)}
-  className="px-5 py-2.5 text-xs font-bold rounded-full border border-divider hover:bg-default-100 transition-colors cursor-pointer"
+  className="px-5 py-2.5 text-xs font-bold rounded-full border border-divider hover:bg-default-100 transition-colors cursor-pointer active:scale-95"
   >
   Close
   </button>
@@ -1644,7 +1644,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
           </div>
           <button
             onClick={() => setShowSchedulePosModal(false)}
-            className="p-1 rounded-full hover:bg-default-100 text-default-500 cursor-pointer"
+            className="p-1 rounded-full hover:bg-default-100 text-default-500 cursor-pointer active:scale-95"
           >
             <X className="h-5 w-5" />
           </button>
@@ -1837,13 +1837,13 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
             <button
               type="button"
               onClick={() => setShowSchedulePosModal(false)}
-              className="flex-1 py-2.5 text-xs font-bold rounded-xl border border-divider/40 hover:bg-default-100 transition-colors cursor-pointer"
+              className="flex-1 py-2.5 text-xs font-bold rounded-xl border border-divider/40 hover:bg-default-100 transition-colors cursor-pointer active:scale-[0.98]"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 py-2.5 text-xs font-black rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground transition-colors cursor-pointer shadow-sm uppercase tracking-wider"
+              className="flex-1 py-2.5 text-xs font-black rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground transition-colors cursor-pointer shadow-sm uppercase tracking-wider active:scale-[0.98]"
             >
               Confirm Cargo Schedule
             </button>

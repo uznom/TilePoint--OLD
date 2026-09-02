@@ -62,7 +62,7 @@ export const ReceivePoModal: React.FC<ReceivePoModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer"
+            className="p-1.5 rounded-full hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer active:scale-95"
           >
             <X className="h-4 w-4" />
           </button>
@@ -145,7 +145,7 @@ export const ReceivePoModal: React.FC<ReceivePoModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-content2 hover:bg-content3 border border-divider/30 text-xs font-bold text-foreground rounded-full transition-colors cursor-pointer"
+              className="px-4 py-2 bg-content2 hover:bg-content3 border border-divider/30 text-xs font-bold text-foreground rounded-full transition-colors cursor-pointer active:scale-95"
             >
               Cancel
             </button>
@@ -153,7 +153,7 @@ export const ReceivePoModal: React.FC<ReceivePoModalProps> = ({
               type="button"
               disabled={isReceivingPO}
               onClick={onConfirmReceipt}
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase tracking-wider rounded-full shadow-lg transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase tracking-wider rounded-full shadow-lg transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50 active:scale-95"
             >
               <Check className="h-3.5 w-3.5" />
               <span>{isReceivingPO ? "Processing Inbound..." : "Confirm & Ingest Stock"}</span>

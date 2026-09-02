@@ -88,7 +88,7 @@ export const SuppliersCreditsTab: React.FC<SuppliersCreditsTabProps> = ({
                   onClick={() =>
                     alert(`Sent payment dispatch authorization request to accounting for ${sup.name}!`)
                   }
-                  className="w-full py-2 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground text-xs rounded-xl font-bold transition mt-3 cursor-pointer"
+                  className="w-full py-2 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground text-xs rounded-xl font-bold transition mt-3 cursor-pointer active:scale-[0.98]"
                 >
                   Authorize Payment
                 </button>

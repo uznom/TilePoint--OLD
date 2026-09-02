@@ -169,7 +169,7 @@ export const PosDiscountModal: React.FC<PosDiscountModalProps> = ({
                           applyCustomDiscount("FLAT", String(scheme.flatAmount || 0));
                         }
                       }}
-                      className="p-3.5 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between border-divider/20 bg-background hover:bg-default-100"
+                      className="p-3.5 rounded-2xl border text-left transition-colors cursor-pointer flex flex-col justify-between border-divider/20 bg-background hover:bg-default-100 active:scale-[0.98]"
                     >
                       <div className="font-bold text-sm text-primary flex items-center justify-between">
                         <span>{scheme.name}</span>
@@ -199,7 +199,7 @@ export const PosDiscountModal: React.FC<PosDiscountModalProps> = ({
                     value={discountInput}
                     onChange={(e) => setDiscountInput(e.target.value)}
                     placeholder={discountType === "PERCENT" ? "e.g. 15 for 15%" : "e.g. 100 for ₱100"}
-                    className="w-full bg-background border-b-2 border-divider px-3.5 py-2.5 text-sm font-bold text-foreground focus:outline-none focus:border-primary rounded-lg transition-colors"
+                    className="w-full bg-background border-b-2 border-divider px-3.5 py-2.5 text-sm font-bold text-foreground focus:outline-none focus:border-primary rounded-lg transition-colors active:scale-[0.98]"
                   />
                 </div>
 
@@ -208,14 +208,14 @@ export const PosDiscountModal: React.FC<PosDiscountModalProps> = ({
                     <button
                       type="button"
                       onClick={() => applyCustomDiscount("FLAT", discountInput)}
-                      className="px-4 py-2.5 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 text-xs font-bold rounded-lg cursor-pointer transition-colors"
+                      className="px-4 py-2.5 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 text-xs font-bold rounded-lg cursor-pointer transition-colors active:scale-[0.98]"
                     >
                       Apply Flat (₱)
                     </button>
                     <button
                       type="button"
                       onClick={() => applyCustomDiscount("PERCENT", discountInput)}
-                      className="px-4 py-2.5 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 text-xs font-bold rounded-lg cursor-pointer transition-colors"
+                      className="px-4 py-2.5 bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 text-xs font-bold rounded-lg cursor-pointer transition-colors active:scale-[0.98]"
                     >
                       Apply Percent (%)
                     </button>
@@ -228,7 +228,7 @@ export const PosDiscountModal: React.FC<PosDiscountModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors text-center"
+                className="px-5 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors text-center active:scale-95"
               >
                 Close Panel
               </button>

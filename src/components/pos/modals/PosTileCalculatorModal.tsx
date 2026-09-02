@@ -44,7 +44,7 @@ export const PosTileCalculatorModal: React.FC<PosTileCalculatorModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="text-default-500 hover:text-foreground cursor-pointer p-1.5 rounded-full hover:bg-primary/10 transition-colors"
+                className="text-default-500 hover:text-foreground cursor-pointer p-1.5 rounded-full hover:bg-primary/10 transition-colors active:scale-95"
               >
                 <X className="h-5 w-5" />
               </button>

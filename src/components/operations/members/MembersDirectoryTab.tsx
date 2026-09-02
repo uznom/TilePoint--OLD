@@ -117,7 +117,7 @@ export const MembersDirectoryTab: React.FC<MembersDirectoryTabProps> = ({
           </div>
           <button
             type="submit"
-            className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-bold transition hover:opacity-90 cursor-pointer"
+            className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-bold transition hover:opacity-90 cursor-pointer active:scale-[0.98]"
           >
             Submit Customer Info
           </button>
@@ -166,7 +166,7 @@ export const MembersDirectoryTab: React.FC<MembersDirectoryTabProps> = ({
                 </tr>
               ) : (
                 filteredMembers.map((m) => (
-                  <tr key={m.id} className="hover:bg-content2/40 transition">
+                  <tr key={m.id} className="hover:bg-content2/40 transition active:scale-[0.98]">
                     <td className="p-3.5">
                       <div className="font-bold text-foreground">{m.fullName}</div>
                       <div className="text-[10px] text-default-400 font-sans">{m.id}</div>
@@ -190,7 +190,7 @@ export const MembersDirectoryTab: React.FC<MembersDirectoryTabProps> = ({
                       <button
                         type="button"
                         onClick={() => onDeleteMember(m.id)}
-                        className="p-1.5 hover:bg-danger/10 text-default-400 hover:text-danger rounded-lg transition cursor-pointer"
+                        className="p-1.5 hover:bg-danger/10 text-default-400 hover:text-danger rounded-lg transition cursor-pointer active:scale-95"
                         title="Delete Member"
                       >
                         <Trash2 className="h-4 w-4" />

@@ -146,7 +146,7 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
                 const fileInput = document.getElementById('inventory-import-file-input');
                 if (fileInput) fileInput.click();
               }}
-              className="border-2 border-dashed border-divider hover:border-primary p-8 rounded-large text-center cursor-pointer transition-all bg-content2 hover:bg-primary/5 space-y-2 group"
+              className="border-2 border-dashed border-divider hover:border-primary p-8 rounded-large text-center cursor-pointer transition-all bg-content2 hover:bg-primary/5 space-y-2 group active:scale-[0.98]"
             >
               <input
                 id="inventory-import-file-input"
@@ -155,7 +155,7 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              <Database className="h-8 w-8 text-primary mx-auto group-hover:scale-110 transition-transform" />
+              <Database className="h-8 w-8 text-primary mx-auto group-hover:scale-110 transition-transform active:scale-95" />
               <div className="text-xs font-black text-foreground">Click to Browse or Drag &amp; Drop Catalog Files Here</div>
               <div className="text-[10.5px] text-default-500">Supports .CSV spreadsheet tables and .JSON exports</div>
             </div>
@@ -188,7 +188,7 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
                 onChange={(e) => setRawImportText(e.target.value)}
                 rows={5}
                 placeholder="Paste raw JSON array or CSV text content here..."
-                className="w-full bg-content2 border border-divider focus:border-primary p-3.5 text-xs text-foreground rounded-large focus:outline-none transition-colors"
+                className="w-full bg-content2 border border-divider focus:border-primary p-3.5 text-xs text-foreground rounded-large focus:outline-none transition-colors active:scale-[0.98]"
               />
             </div>
 
@@ -237,7 +237,7 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
                       showToast("Product catalog JSON backup downloaded!");
                     });
                 }}
-                className="w-full py-3 px-4 rounded-medium bg-primary hover:bg-primary/95 text-primary-foreground font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-between shadow-md"
+                className="w-full py-3 px-4 rounded-medium bg-primary hover:bg-primary/95 text-primary-foreground font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-between shadow-md active:scale-[0.98]"
               >
                 <span className="flex items-center gap-2"><Download className="h-4 w-4" /> Download JSON Backup</span>
                 <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">{branchProducts.length} Items</span>
@@ -279,7 +279,7 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
                       showToast("Product catalog CSV exported!");
                     });
                 }}
-                className="w-full py-3 px-4 rounded-medium bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-between shadow-md"
+                className="w-full py-3 px-4 rounded-medium bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-between shadow-md active:scale-[0.98]"
               >
                 <span className="flex items-center gap-2"><Download className="h-4 w-4" /> Download CSV Spreadsheet</span>
                 <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">.CSV Table</span>

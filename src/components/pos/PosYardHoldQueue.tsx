@@ -31,7 +31,7 @@ export const PosYardHoldQueue: React.FC<PosYardHoldQueueProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
       <div
-        className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity"
+        className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity active:scale-[0.98]"
         onClick={onClose}
       />
       <div className="relative bg-content1 border border-divider/40 rounded-3xl p-6 sm:p-7 max-w-xl w-full shadow-2xl z-10 text-left space-y-6 max-h-[85vh] flex flex-col">
@@ -50,7 +50,7 @@ export const PosYardHoldQueue: React.FC<PosYardHoldQueueProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer"
+            className="p-1.5 rounded-full hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer active:scale-95"
           >
             <X className="h-4 w-4" />
           </button>
@@ -66,7 +66,7 @@ export const PosYardHoldQueue: React.FC<PosYardHoldQueueProps> = ({
             heldSales.map((sale) => {
               const totalAmount = sale.grandTotal || sale.items.reduce((sum, i) => sum + (i.subtotal || i.unitPrice * i.quantity), 0);
               return (
-                <div key={sale.id} className="p-4 bg-content2/50 border border-divider/30 rounded-2xl flex items-center justify-between gap-3 hover:border-primary/40 transition-colors">
+                <div key={sale.id} className="p-4 bg-content2/50 border border-divider/30 rounded-2xl flex items-center justify-between gap-3 hover:border-primary/40 transition-colors active:scale-[0.98]">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-xs text-foreground">
@@ -85,7 +85,7 @@ export const PosYardHoldQueue: React.FC<PosYardHoldQueueProps> = ({
                     <button
                       type="button"
                       onClick={() => onResumeHeldSale(sale)}
-                      className="px-3.5 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+                      className="px-3.5 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-black uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
                     >
                       <Play className="h-3 w-3" />
                       <span>Resume</span>
@@ -93,7 +93,7 @@ export const PosYardHoldQueue: React.FC<PosYardHoldQueueProps> = ({
                     <button
                       type="button"
                       onClick={() => onDeleteHeldSale(sale.id)}
-                      className="p-1.5 rounded-xl hover:bg-danger/10 text-default-400 hover:text-danger transition-colors cursor-pointer"
+                      className="p-1.5 rounded-xl hover:bg-danger/10 text-default-400 hover:text-danger transition-colors cursor-pointer active:scale-95"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -108,7 +108,7 @@ export const PosYardHoldQueue: React.FC<PosYardHoldQueueProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 bg-content2 hover:bg-content3 border border-divider/30 text-xs font-bold text-foreground rounded-full transition-colors cursor-pointer"
+            className="px-5 py-2 bg-content2 hover:bg-content3 border border-divider/30 text-xs font-bold text-foreground rounded-full transition-colors cursor-pointer active:scale-95"
           >
             Close
           </button>

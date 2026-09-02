@@ -2427,7 +2427,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setCloseShiftCashInput("");
  setShowCloseShiftModal(true);
  }}
- className="py-1.5 px-3.5 bg-rose-500/10 hover:bg-rose-600 hover:text-white border border-rose-500/30 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase tracking-wider rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+ className="py-1.5 px-3.5 bg-rose-500/10 hover:bg-rose-600 hover:text-white border border-rose-500/30 text-rose-600 dark:text-rose-400 text-[10px] font-black uppercase tracking-wider rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5 active:scale-95"
  >
  <LockKeyhole className="h-3 w-3" />
  <span>Close Shift</span>
@@ -2437,7 +2437,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  onClick={() => setShowShiftModal(true)}
- className="py-1.5 px-3.5 bg-amber-500/10 dark:bg-amber-500/15 hover:bg-amber-500 hover:text-white dark:hover:text-black border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5"
+ className="py-1.5 px-3.5 bg-amber-500/10 dark:bg-amber-500/15 hover:bg-amber-500 hover:text-white dark:hover:text-black border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[10px] font-black uppercase tracking-wider rounded-full transition-all shrink-0 cursor-pointer flex items-center gap-1.5 active:scale-95"
  >
  <LockKeyhole className="h-3 w-3" />
  <span>Open Shift</span>
@@ -2478,7 +2478,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 setShowRecoveryBanner(false);
                 showToast("Uncommitted draft session resumed. Ready for settlement.");
               }}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-black text-xs font-black uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-black text-xs font-black uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               <span>Resume Active Cart</span>
@@ -2489,7 +2489,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 handleCancelSale();
                 showToast("Abandoned transaction draft discarded.");
               }}
-              className="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 dark:bg-rose-500/20 dark:hover:bg-rose-500/30 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1"
+              className="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 dark:bg-rose-500/20 dark:hover:bg-rose-500/30 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-500/40 text-xs font-bold uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center gap-1 active:scale-95"
             >
               <X className="h-3.5 w-3.5" />
               <span>Discard Draft</span>
@@ -2596,7 +2596,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
   <div className="absolute top-0 bottom-0 left-0 w-1 bg-primary" />
   <div>
   <div className="flex items-center justify-between gap-1">
-    <div className="text-xs font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
+    <div className="text-xs font-bold text-foreground leading-snug group-hover:text-primary transition-colors active:scale-[0.98]">
       {park.customerName}
     </div>
     {park.heldBy && (
@@ -2646,7 +2646,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
   <button
   type="button"
   onClick={() => setShortcutsCollapsed(!shortcutsCollapsed)}
-  className="flex items-center justify-between w-full hover:bg-content2 p-1.5 rounded-xl transition-all cursor-pointer text-left"
+  className="flex items-center justify-between w-full hover:bg-content2 p-1.5 rounded-xl transition-all cursor-pointer text-left active:scale-95"
   >
   <span className="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1.5 font-sans">
     <Keyboard className="h-3.5 w-3.5 text-primary" />
@@ -2657,9 +2657,9 @@ export const PosModule: React.FC<PosModuleProps> = ({
       Active Speed Dials
     </HeroChip>
     {shortcutsCollapsed ? (
-      <ChevronDown className="h-4 w-4 text-primary transition-transform duration-200" />
+      <ChevronDown className="h-4 w-4 text-primary transition-transform duration-200 active:scale-[0.98]" />
     ) : (
-      <ChevronUp className="h-4 w-4 text-primary transition-transform duration-200" />
+      <ChevronUp className="h-4 w-4 text-primary transition-transform duration-200 active:scale-[0.98]" />
     )}
   </div>
   </button>
@@ -2691,7 +2691,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
     onClick={sh.action}
     className={`flex items-center gap-2 p-2 bg-content2/50 hover:bg-content2 border border-divider/30 hover:border-divider rounded-xl text-left transition-all active:scale-[0.98] group cursor-pointer ${sh.bg}`}
   >
-  <kbd className="px-1.5 py-0.5 text-[9px] font-bold bg-content3 text-foreground border border-divider rounded shadow-2xs group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-colors flex-shrink-0">
+  <kbd className="px-1.5 py-0.5 text-[9px] font-bold bg-content3 text-foreground border border-divider rounded shadow-2xs group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition-colors flex-shrink-0 active:scale-[0.98]">
     {sh.key}
   </kbd>
   <span className="text-[10px] font-semibold text-default-500 leading-tight truncate">
@@ -2791,7 +2791,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
   ) : (
   <form
     onSubmit={handleBarcodeSubmit}
-    className="bg-content2/50 border border-divider p-3 rounded-2xl transition-all relative font-sans"
+    className="bg-content2/50 border border-divider p-3 rounded-2xl transition-all relative font-sans active:scale-[0.98]"
   >
   <div className="flex flex-col md:flex-row gap-2.5 items-end">
     <div className="flex-1 w-full text-left">
@@ -2805,14 +2805,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
           value={barcodeSearchTerm ?? ''}
           onChange={(e) => setBarcodeSearchTerm(e.target.value)}
           placeholder="Type product name, SKU, or custom design and press Enter..."
-          className="w-full bg-content1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 border border-divider/60 focus:border-primary pl-3.5 pr-24 py-2 rounded-xl placeholder-default-400 font-semibold h-10 shadow-inner transition-all"
+          className="w-full bg-content1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 border border-divider/60 focus:border-primary pl-3.5 pr-24 py-2 rounded-xl placeholder-default-400 font-semibold h-10 shadow-inner transition-all active:scale-[0.98]"
         />
         <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-auto">
           {barcodeSearchTerm && (
             <button
               type="button"
               onClick={() => setBarcodeSearchTerm("")}
-              className="text-default-400 hover:text-danger text-xs font-bold p-1 rounded-full hover:bg-content2 transition-colors cursor-pointer"
+              className="text-default-400 hover:text-danger text-xs font-bold p-1 rounded-full hover:bg-content2 transition-colors cursor-pointer active:scale-95"
               title="Clear search"
             >
               ✕
@@ -2843,7 +2843,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                     setBarcodeSearchTerm("");
                     setTimeout(() => setBarcodeAddFeedback(null), 3000);
                   }}
-                  className="p-3 hover:bg-primary/10 cursor-pointer flex justify-between items-center transition-colors text-left"
+                  className="p-3 hover:bg-primary/10 cursor-pointer flex justify-between items-center transition-colors text-left active:scale-[0.98]"
                 >
                   <div className="space-y-0.5">
                     <div className="font-bold text-foreground text-xs">
@@ -2921,7 +2921,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         <button
           type="button"
           onClick={() => handleTriggerPriceOverride(idx)}
-          className="text-[10.5px] font-semibold text-primary hover:bg-primary/15 bg-primary/10 border border-primary/25 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+          className="text-[10.5px] font-semibold text-primary hover:bg-primary/15 bg-primary/10 border border-primary/25 px-2 py-0.5 rounded-lg transition-colors cursor-pointer active:scale-[0.98]"
         >
           Override Price
         </button>
@@ -2932,7 +2932,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
             setSelectedDiscountItemIndex(idx);
             setShowDiscountModal(true);
           }}
-          className="text-[10.5px] font-semibold text-warning-600 dark:text-warning hover:bg-warning/20 bg-warning/10 border border-warning/30 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+          className="text-[10.5px] font-semibold text-warning-600 dark:text-warning hover:bg-warning/20 bg-warning/10 border border-warning/30 px-2 py-0.5 rounded-lg transition-colors cursor-pointer active:scale-[0.98]"
         >
           {item.discountType && item.discountType !== "NONE" ? `Disc: ${item.discountType}` : "Discount"}
         </button>
@@ -2975,7 +2975,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 if (nextQty === 0) nextQty = -1;
                 updateCartQty(item.product.id, nextQty, currentMaxStock);
               }}
-              className="px-2.5 py-1 hover:bg-content2 text-xs font-bold text-foreground cursor-pointer transition-colors"
+              className="px-2.5 py-1 hover:bg-content2 text-xs font-bold text-foreground cursor-pointer transition-colors active:scale-[0.98]"
             >
               -
             </button>
@@ -2994,7 +2994,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                 if (nextQty === 0) nextQty = 1;
                 updateCartQty(item.product.id, nextQty, currentMaxStock);
               }}
-              className="px-2.5 py-1 hover:bg-content2 text-xs font-bold text-foreground cursor-pointer transition-colors"
+              className="px-2.5 py-1 hover:bg-content2 text-xs font-bold text-foreground cursor-pointer transition-colors active:scale-[0.98]"
             >
               +
             </button>
@@ -3027,7 +3027,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         <button
           type="button"
           onClick={() => removeFromCart(item.product.id)}
-          className="text-default-400 hover:text-danger p-1 rounded-full hover:bg-danger/10 transition-colors"
+          className="text-default-400 hover:text-danger p-1 rounded-full hover:bg-danger/10 transition-colors active:scale-95"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
@@ -3194,7 +3194,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                     ? "Enter printed receipt reference or card approval code"
                     : `Enter reference number from ${paymentMethod} payment`
                 }
-                className="w-full bg-content2 border border-divider focus:border-primary rounded-xl px-3.5 py-2 text-xs text-foreground font-semibold focus:outline-none transition-all"
+                className="w-full bg-content2 border border-divider focus:border-primary rounded-xl px-3.5 py-2 text-xs text-foreground font-semibold focus:outline-none transition-all active:scale-[0.98]"
               />
               {paymentRef.trim() && (
                 <HeroChip size="sm" variant="flat" color="success" className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold">
@@ -3371,7 +3371,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                       onClick={() => {
                         setCustomerName(m.fullName);
                       }}
-                      className="w-full text-left p-2 hover:bg-content1 rounded-lg text-xs font-medium text-foreground flex justify-between items-center cursor-pointer transition-colors"
+                      className="w-full text-left p-2 hover:bg-content1 rounded-lg text-xs font-medium text-foreground flex justify-between items-center cursor-pointer transition-colors active:scale-[0.98]"
                     >
                       <span className="font-bold">{m.fullName}</span>
                       <span className="text-[10px] text-warning font-semibold tabular-nums">{m.points || 0} pts | Ceiling: ₱{(Number(m?.creditLimit) || 0).toLocaleString()}</span>
@@ -3558,7 +3558,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  onClick={() => setPendingApproval(null)}
- className="text-default-500 hover:text-foreground cursor-pointer p-0.5 rounded-full"
+ className="text-default-500 hover:text-foreground cursor-pointer p-0.5 rounded-full active:scale-95"
  >
  <X className="h-5 w-5" />
  </button>
@@ -3609,7 +3609,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={approverUsername ?? ''}
  onChange={(e) => setApproverUsername(e.target.value)}
  placeholder="Authorize username"
- className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
+ className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold active:scale-[0.98]"
  />
  </div>
 
@@ -3623,7 +3623,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={approverPassword ?? ''}
  onChange={(e) => setApproverPassword(e.target.value)}
  placeholder="••••••••"
- className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold"
+ className="w-full bg-background border-b-2 border-divider px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold active:scale-[0.98]"
  />
  </div>
  </div>
@@ -3638,7 +3638,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  onClick={() => setPendingApproval(null)}
- className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
+ className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors active:scale-95"
  >
  Decline
  </button>
@@ -3682,7 +3682,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  onClick={() => setOverrideModalOpen(false)}
- className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full hover:bg-default-100 transition-colors"
+ className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full hover:bg-default-100 transition-colors active:scale-95"
  >
  <X className="h-5 w-5" />
  </button>
@@ -3710,7 +3710,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  step="0.01"
  value={overridePriceInput ?? ''}
  onChange={(e) => setOverridePriceInput(e.target.value)}
- className="w-full bg-background border-b-2 border-divider px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold "
+ className="w-full bg-background border-b-2 border-divider px-3.5 py-2.5 text-sm text-foreground focus:outline-none focus:border-primary transition-colors rounded-lg font-bold  active:scale-[0.98]"
  />
  <span className="text-xs text-default-500 pl-1 block mt-1 font-medium">
  {currentUser?.role === UserRole.CASHIER
@@ -3723,7 +3723,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  onClick={() => setOverrideModalOpen(false)}
- className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
+ className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors active:scale-95"
  >
  Cancel
  </button>
@@ -3872,7 +3872,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryCustomerName ?? ''}
  onChange={(e) => setDeliveryCustomerName(e.target.value)}
  placeholder="Recipient name"
- className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg font-bold"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg font-bold active:scale-[0.98]"
  />
  </div>
 
@@ -3886,7 +3886,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryContact ?? ''}
  onChange={(e) => setDeliveryContact(e.target.value)}
  placeholder="Phone number"
- className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg font-bold"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg font-bold active:scale-[0.98]"
  />
  </div>
 
@@ -3899,7 +3899,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryHouseNo ?? ''}
  onChange={(e) => setDeliveryHouseNo(e.target.value)}
  placeholder="House No. / Building / Suite"
- className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg active:scale-[0.98]"
  />
  </div>
 
@@ -3912,7 +3912,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryStreet ?? ''}
  onChange={(e) => setDeliveryStreet(e.target.value)}
  placeholder="Street / Subdivision"
- className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg active:scale-[0.98]"
  />
  </div>
 
@@ -3926,7 +3926,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryBarangay ?? ''}
  onChange={(e) => setDeliveryBarangay(e.target.value)}
  placeholder="Barangay"
- className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg font-bold"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg font-bold active:scale-[0.98]"
  />
  </div>
 
@@ -3940,7 +3940,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryCity ?? ''}
  onChange={(e) => setDeliveryCity(e.target.value)}
  placeholder="City / Municipality"
- className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg font-bold"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg font-bold active:scale-[0.98]"
  />
  </div>
 
@@ -3953,7 +3953,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryLandmark ?? ''}
  onChange={(e) => setDeliveryLandmark(e.target.value)}
  placeholder="Landmarks or special delivery instructions"
- className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg active:scale-[0.98]"
  />
  </div>
 
@@ -3966,7 +3966,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  required
  value={deliveryDate ?? ''}
  onChange={(e) => setDeliveryDate(e.target.value)}
- className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg font-bold cursor-pointer"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg font-bold cursor-pointer active:scale-[0.98]"
  />
  </div>
 
@@ -3979,7 +3979,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryTime ?? ''}
  onChange={(e) => setDeliveryTime(e.target.value)}
  placeholder="Arrival window (e.g. 10:00 AM - 2:00 PM)"
- className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg active:scale-[0.98]"
  />
  </div>
  </div>
@@ -3993,7 +3993,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={deliveryNotes ?? ''}
  onChange={(e) => setDeliveryNotes(e.target.value)}
  placeholder="Special instructions or notes"
- className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg"
+ className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg active:scale-[0.98]"
  />
  </div>
 
@@ -4047,7 +4047,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setPinAction(null);
  setPinTargetSale(null);
  }}
- className="text-default-500 hover:text-foreground cursor-pointer p-0.5 rounded-full"
+ className="text-default-500 hover:text-foreground cursor-pointer p-0.5 rounded-full active:scale-95"
  >
  <X className="h-5 w-5" />
  </button>
@@ -4093,7 +4093,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setSecurityPinError("");
  }}
  placeholder="••••"
- className="w-full bg-background border-b-2 border-divider text-center tracking-[0.5em] text-lg font-black py-2 text-foreground focus:outline-none focus:border-amber-500 transition-colors rounded-lg "
+ className="w-full bg-background border-b-2 border-divider text-center tracking-[0.5em] text-lg font-black py-2 text-foreground focus:outline-none focus:border-amber-500 transition-colors rounded-lg  active:scale-[0.98]"
  autoFocus
  />
  </div>
@@ -4164,7 +4164,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setPinAction(null);
  setPinTargetSale(null);
  }}
- className="w-full py-2 bg-default-100 hover:bg-default-100 rounded-full text-default-500 font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer text-center"
+ className="w-full py-2 bg-default-100 hover:bg-default-100 rounded-full text-default-500 font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer text-center active:scale-95"
  >
  Decline & Close
  </button>
@@ -4188,7 +4188,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </h3>
  <button
  onClick={() => setSelectedSaleDetail(null)}
- className="text-default-500 hover:text-white cursor-pointer p-1 rounded-full hover:bg-content2"
+ className="text-default-500 hover:text-white cursor-pointer p-1 rounded-full hover:bg-content2 active:scale-95"
  >
  <X className="h-4.5 w-4.5" />
  </button>
@@ -4247,7 +4247,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  {saleItems
  .filter((item) => item.saleId === selectedSaleDetail.id)
  .map((item, idx) => (
- <tr key={idx} className="hover:bg-content1/30">
+ <tr key={idx} className="hover:bg-content1/30 active:scale-[0.98]">
  <td className="py-2 px-3 font-sans font-bold text-white">
  {item.productName}
  </td>
@@ -4361,7 +4361,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  <button
  onClick={() => setSelectedSaleDetail(null)}
- className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors"
+ className="px-4 py-2 text-xs font-bold rounded-full cursor-pointer hover:bg-default-100 text-default-500 transition-colors active:scale-95"
  >
  Close Details
  </button>
@@ -4460,7 +4460,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  onClick={() => setShowLoyaltyConfigModal(false)}
- className="text-default-500 hover:text-foreground p-1.5 rounded-full hover:bg-primary/10 transition-colors cursor-pointer"
+ className="text-default-500 hover:text-foreground p-1.5 rounded-full hover:bg-primary/10 transition-colors cursor-pointer active:scale-95"
  >
  <X className="h-5 w-5" />
  </button>
@@ -4506,7 +4506,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={loyaltySpendInput ?? ''}
  onChange={(e) => setLoyaltySpendInput(e.target.value)}
  placeholder="500"
- className="w-full bg-content1 border border-divider/40 rounded-xl pl-7 pr-3 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all"
+ className="w-full bg-content1 border border-divider/40 rounded-xl pl-7 pr-3 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all active:scale-[0.98]"
  />
  </div>
  
@@ -4526,7 +4526,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  value={loyaltyPointValueInput ?? ''}
  onChange={(e) => setLoyaltyPointValueInput(e.target.value)}
  placeholder="1.00"
- className="w-full bg-content1 border border-divider/40 rounded-xl pl-7 pr-3 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all"
+ className="w-full bg-content1 border border-divider/40 rounded-xl pl-7 pr-3 py-2 text-xs font-bold text-foreground focus:outline-none focus:border-primary transition-all active:scale-[0.98]"
  />
  </div>
  
@@ -4536,13 +4536,13 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  onClick={() => setShowLoyaltyConfigModal(false)}
- className="px-4 py-2 border border-divider/40 hover:bg-content3 text-foreground text-xs font-bold rounded-xl cursor-pointer transition-colors"
+ className="px-4 py-2 border border-divider/40 hover:bg-content3 text-foreground text-xs font-bold rounded-xl cursor-pointer transition-colors active:scale-[0.98]"
  >
  Cancel
  </button>
  <button
  type="submit"
- className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-foreground font-extrabold text-xs rounded-xl shadow-md cursor-pointer transition-colors flex items-center gap-1.5"
+ className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-foreground font-extrabold text-xs rounded-xl shadow-md cursor-pointer transition-colors flex items-center gap-1.5 active:scale-95"
  >
  <Sparkles className="h-4 w-4" />
  <span>Save Mechanics</span>
@@ -4580,7 +4580,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  <button
  type="button"
  onClick={() => setShowEscConfirmModal(false)}
- className="w-full py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md cursor-pointer transition-all flex items-center justify-center gap-2"
+ className="w-full py-2.5 bg-primary text-primary-foreground hover:bg-primary/90 font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-md cursor-pointer transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
  >
  <span>Continue Sale (Keep Cart)</span>
  </button>
@@ -4591,7 +4591,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  handleHold();
  setShowEscConfirmModal(false);
  }}
- className="w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer transition-all flex items-center justify-center gap-2"
+ className="w-full py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
  >
  <span>Park Transaction to Hold Register</span>
  </button>
@@ -4603,7 +4603,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setShowEscConfirmModal(false);
  showToast("Active cart order discarded.");
  }}
- className="w-full py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer transition-all flex items-center justify-center gap-2"
+ className="w-full py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
  >
  <span>Clear & Discard Active Cart</span>
  </button>
