@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { HeroInput, HeroInputProps } from './HeroInput';
+import { useFloatingPlacement } from './useFloatingPlacement';
 
 export interface HeroAutocompleteItem {
   key: string | number;
@@ -31,6 +32,12 @@ export const HeroAutocomplete: React.FC<HeroAutocompleteProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [currentKey, setCurrentKey] = useState<string | number | null>(defaultSelectedKey ?? null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const { getPositionClasses } = useFloatingPlacement(containerRef, {
+    popoverWidth: 240,
+    popoverHeight: 240,
+    isOpen,
+  });
 
   const activeKey = selectedKey !== undefined ? selectedKey : currentKey;
   const activeItem = items.find((it) => it.key === activeKey);
@@ -91,7 +98,7 @@ export const HeroAutocomplete: React.FC<HeroAutocompleteProps> = ({
       />
 
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 z-50 max-h-60 overflow-y-auto rounded-2xl bg-content1 border border-divider shadow-2xl p-1.5 animate-scale-in text-foreground backdrop-blur-md font-sans">
+        <div className={`absolute ${getPositionClasses()} z-[9999] min-w-full max-w-[calc(100vw-24px)] max-h-60 overflow-y-auto rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.14)] p-1.5 animate-scale-in text-foreground backdrop-blur-md font-sans`}>
           {filteredItems.length > 0 ? (
             filteredItems.map((item) => (
               <button

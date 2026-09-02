@@ -234,10 +234,10 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode: _d
           {showProductDropdown && (
             <>
               <div 
-                className="fixed inset-0 z-40" 
+                className="fixed inset-0 z-[9998]" 
                 onClick={() => setShowProductDropdown(false)} 
               />
-              <div className="absolute left-0 right-0 mt-2 max-h-56 overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl shadow-elevation-soft z-50 divide-y divide-divider/10">
+              <div className="absolute left-0 right-0 mt-2 max-h-56 overflow-y-auto bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.14)] z-[9999] divide-y divide-divider/10">
                 {tileProducts.length > 0 ? (
                   tileProducts.map((p) => (
                     <div

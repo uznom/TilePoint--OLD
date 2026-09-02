@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { useFloatingPlacement } from './useFloatingPlacement';
 
 export interface HeroDatePickerProps {
   id?: string;
@@ -119,6 +120,12 @@ export const HeroDatePicker = React.forwardRef<HTMLInputElement, HeroDatePickerP
 
     const containerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement | null>(null);
+
+    const { getPositionClasses } = useFloatingPlacement(containerRef, {
+      popoverWidth: 320,
+      popoverHeight: 360,
+      isOpen,
+    });
 
     // Sync controlled value
     useEffect(() => {
@@ -386,7 +393,7 @@ export const HeroDatePicker = React.forwardRef<HTMLInputElement, HeroDatePickerP
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -6, scale: 0.98 }}
               transition={{ duration: 0.15, ease: 'easeOut' }}
-              className={`absolute top-full left-0 mt-2 z-50 bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl p-4 shadow-[0_12px_40px_rgba(0,0,0,0.14)] w-[300px] sm:w-[320px] ${popoverClassName}`}
+              className={`absolute ${getPositionClasses()} z-[9999] bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl p-4 shadow-[0_12px_40px_rgba(0,0,0,0.14)] w-[300px] sm:w-[320px] max-w-[calc(100vw-24px)] ${popoverClassName}`}
             >
               {/* Popover Header */}
               <div className="flex items-center justify-between pb-3 border-b border-zinc-200/60 dark:border-white/10">

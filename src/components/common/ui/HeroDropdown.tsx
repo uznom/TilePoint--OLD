@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, createContext, useContext } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useFloatingPlacement } from './useFloatingPlacement';
 
 export interface HeroDropdownItem {
   key: string;
@@ -47,6 +48,12 @@ export const HeroDropdownSelect: React.FC<HeroDropdownSelectProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const { getPositionClasses } = useFloatingPlacement(dropdownRef, {
+    popoverWidth: 180,
+    popoverHeight: 260,
+    isOpen,
+  });
 
   const selectedItem = items.find((i) => i.key === selectedKey);
 
@@ -141,7 +148,7 @@ export const HeroDropdownSelect: React.FC<HeroDropdownSelectProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -4 }}
             transition={{ duration: 0.12 }}
-            className="absolute top-full left-0 mt-1.5 z-50 min-w-full sm:min-w-[150px] rounded-2xl bg-content1 border border-divider/40 shadow-2xl p-1.5 max-h-64 overflow-y-auto space-y-0.5 text-foreground backdrop-blur-md font-sans"
+            className={`absolute ${getPositionClasses()} z-[9999] min-w-full sm:min-w-[150px] max-w-[calc(100vw-24px)] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.14)] p-1.5 max-h-64 overflow-y-auto space-y-0.5 text-foreground backdrop-blur-md font-sans`}
           >
             {items.map((item) => {
               const isSelected = item.key === selectedKey;
@@ -274,7 +281,7 @@ export const HeroDropdownMenu: React.FC<HeroDropdownMenuProps> = ({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: -4 }}
         transition={{ duration: 0.12 }}
-        className={`absolute top-full mt-1.5 z-50 min-w-48 rounded-2xl bg-content1 border border-divider/50 shadow-2xl p-1.5 space-y-0.5 text-foreground backdrop-blur-md font-sans ${alignClass} ${className}`}
+        className={`absolute top-full mt-1.5 z-[9999] min-w-48 max-w-[calc(100vw-24px)] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.14)] p-1.5 space-y-0.5 text-foreground backdrop-blur-md font-sans ${alignClass} ${className}`}
       >
         {children}
       </motion.div>

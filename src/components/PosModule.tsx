@@ -2824,7 +2824,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         </div>
 
         {barcodeSearchTerm.trim().length > 0 && (
-          <div className="absolute left-0 right-0 top-full mt-2 bg-content1 border border-divider rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-divider/30 text-xs max-h-[220px] overflow-y-auto">
+          <div className="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.14)] z-[9999] overflow-hidden divide-y divide-divider/20 text-xs max-h-[240px] overflow-y-auto">
             {matchedBarcodeProducts.length === 0 ? (
               <div className="p-4 text-center text-default-500 font-medium text-xs italic">
                 No compatible tiles or SKU listings match "{barcodeSearchTerm}"

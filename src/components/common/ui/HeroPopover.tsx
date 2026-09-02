@@ -72,7 +72,7 @@ export const HeroPopover: React.FC<HeroPopoverProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className={`absolute z-50 p-3 rounded-2xl bg-content1 border border-divider/50 shadow-2xl min-w-48 text-foreground backdrop-blur-md ${getPositionClasses()} ${className}`}
+            className={`absolute z-[9999] max-w-[calc(100vw-24px)] p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.14)] min-w-48 text-foreground backdrop-blur-md ${getPositionClasses()} ${className}`}
           >
             {content}
           </motion.div>

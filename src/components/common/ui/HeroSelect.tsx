@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useFloatingPlacement } from './useFloatingPlacement';
 
 export type HeroSelectVariant = 'flat' | 'bordered' | 'faded' | 'underlined' | 'pill';
 export type HeroSelectColor = 'default' | 'primary' | 'secondary' | 'success' | 'warning' | 'danger';
@@ -99,6 +100,12 @@ export const HeroSelect = React.forwardRef<HTMLSelectElement, HeroSelectProps>(
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
     const hiddenSelectRef = useRef<HTMLSelectElement | null>(null);
+
+    const { getPositionClasses } = useFloatingPlacement(containerRef, {
+      popoverWidth: 180,
+      popoverHeight: 260,
+      isOpen,
+    });
 
     const inputId = id || (label ? `hero-select-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined);
     const effectiveDisabled = disabled ?? isDisabled;
@@ -295,7 +302,7 @@ export const HeroSelect = React.forwardRef<HTMLSelectElement, HeroSelectProps>(
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -4 }}
               transition={{ duration: 0.12 }}
-              className="absolute top-full left-0 mt-1.5 z-50 min-w-full sm:min-w-[160px] rounded-2xl bg-content1 border border-divider/40 shadow-2xl p-1.5 max-h-64 overflow-y-auto space-y-0.5 text-foreground backdrop-blur-md font-sans"
+              className={`absolute ${getPositionClasses()} z-[9999] min-w-full sm:min-w-[160px] max-w-[calc(100vw-24px)] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.14)] p-1.5 max-h-64 overflow-y-auto space-y-0.5 text-foreground backdrop-blur-md font-sans`}
             >
               {parsedItems.length > 0 ? (
                 parsedItems.map((item) => {
