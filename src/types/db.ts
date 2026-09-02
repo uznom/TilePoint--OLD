@@ -10,19 +10,42 @@ export enum UserRole {
  STAFF = "Staff",
 }
 
-export type PaymentMethod = string;
-export type ShiftStatus = string;
-export type DeliveryStatus = string;
-export type BillStatus = string;
-export type PaymentFrequency = string;
-export type POStatus = string;
-export type TransmittalDocType = string;
-export type TransmittalStatus = string;
-export type TransferStatus = string;
-export type TransferType = string;
-export type UserStatus = string;
-export type DamageCategory = string;
-export type DamageActionTaken = string;
+export type PaymentMethod = "Cash" | "Card" | "GCash" | "Bank Transfer" | "Check" | "Corporate Credit" | "Split Payment" | (string & {});
+export type ShiftStatus = "OPEN" | "CLOSED" | "Open" | "Closed" | (string & {});
+export type DeliveryStatus = "Pending" | "In Transit" | "Delivered" | "Failed Delivery" | "Cancelled" | (string & {});
+export type BillStatus = "Active" | "Completed" | "Pending" | (string & {});
+export type PaymentFrequency = "WEEKLY" | "MONTHLY" | "SEMI_QUARTERLY" | "QUARTERLY" | "YEARLY" | (string & {});
+export type POStatus = "Draft" | "Pending" | "Approved" | "Completed" | "Cancelled" | (string & {});
+export type TransmittalDocType = "Official Receipt" | "Sales Invoice" | "Collection Receipt" | "Delivery Receipt" | (string & {});
+export type TransmittalStatus = "Draft" | "Transmitted" | "Acknowledged" | "Received" | (string & {});
+export type TransferStatus = "Pending" | "Approved" | "In Transit" | "Received" | "Completed" | "Cancelled" | (string & {});
+export type TransferType = "Outbound" | "Inbound" | (string & {});
+export type UserStatus = "Active" | "Restricted" | "Suspended" | "Inactive" | (string & {});
+export type DamageCategory = "Broken" | "Chipped" | "Factory Defect" | "Water Damage" | "Expired" | (string & {});
+export type DamageActionTaken = "Scrapped" | "Returned to Supplier" | "Discounted Sale" | "Written Off" | (string & {});
+export type DiscountType = "NONE" | "FLAT" | "PERCENT" | "SENIOR" | "SENIOR5" | "PWD" | "CONTRACT" | "SOLO" | "ATHLETES" | (string & {});
+export type AuditLogAction =
+  | "MEMBER_CREATE"
+  | "MEMBER_DELETE"
+  | "MEMBER_PAYMENT"
+  | "LOYALTY_ADJUST"
+  | "EXPENSE_ADD"
+  | "EXPENSE_DELETE"
+  | "RETURN_ADD"
+  | "RETURN_DELETE"
+  | "CUSTOM_BILL_ADD"
+  | "PAYABLE_INSTALLMENT"
+  | "POS_RECEIPT_PRINT"
+  | "POS_UNIFIED_RECEIPT_PRINT"
+  | "PRINT_DELIVERY_RECEIPT"
+  | "SALE_VOID"
+  | "SHIFT_OPEN"
+  | "SHIFT_CLOSE"
+  | "POS_DRAFT_RECOVERY"
+  | "USER_CREATE"
+  | "USER_UPDATE"
+  | "USER_DELETE"
+  | (string & {});
 
 export interface User {
  id: string;

@@ -5,4 +5,4 @@ export * from './productUtils';
 export * from './searchIndex';
 export * from './sanitizers';
 export * from './barcodeGenerator';
-
+export * from './debouncedStorage';

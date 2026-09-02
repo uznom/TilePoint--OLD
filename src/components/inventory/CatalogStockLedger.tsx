@@ -40,7 +40,7 @@ export interface CatalogStockLedgerProps {
   branchStock: InventoryLocationStock[];
   branches: Branch[];
   categories: string[];
-  currentUser: User;
+  currentUser: User | null;
   isAdminUser: boolean;
   allowedToModify: boolean;
   hasActiveShift: boolean;

@@ -101,8 +101,6 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
     shifts,
     createStockTransfer,
     productCategories,
-    poCart = [],
-    syncPoCart,
     isResourceLocked,
     pessimisticLocks,
     acquirePessimisticLock,
@@ -117,7 +115,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
     isRowClearingBlocked,
     getRowClearingBlockedReason,
     importProducts,
-  } = useDb() as any;
+  } = useDb();
 
   const [activeSubTab, setActiveSubTab] = useState<InventorySubTab>(
     (initialSubTab as InventorySubTab) || 'catalog'
@@ -130,11 +128,47 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
   }, [initialSubTab, activeSubTab]);
 
   const [isFetching, setIsFetching] = useState(false);
+
+  // Cross-module synchronized Procurement Requisitions Cart State
+  const [poCart, setPoCart] = useState<
+    {
+      productId: string;
+      quantity: number;
+      notes?: string;
+      requestedByBranchId?: string;
+    }[]
+  >(() => {
+    try {
+      const cached = localStorage.getItem("tp_po_cart");
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const syncPoCart = React.useCallback((newCart: any[]) => {
+    setPoCart(newCart);
+    localStorage.setItem("tp_po_cart", JSON.stringify(newCart));
+    window.dispatchEvent(new Event("tp_po_cart_updated"));
+  }, []);
+
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      try {
+        const cached = localStorage.getItem("tp_po_cart");
+        if (cached) setPoCart(JSON.parse(cached));
+      } catch (err) {
+        console.warn("[PO Cart Sync] Failed to parse updated cart:", err);
+      }
+    };
+    window.addEventListener("tp_po_cart_updated", handleCartUpdate);
+    return () => window.removeEventListener("tp_po_cart_updated", handleCartUpdate);
+  }, []);
   const [expandedProductIds, setExpandedProductIds] = useState<Record<string, boolean>>({});
   const [showDynamicConfigModal, setShowDynamicConfigModal] = useState(false);
   const [dynamicConfigTab] = useState<any>("categories");
 
-  const isAdminUser = currentUser?.role === 'Admin';
+  const isAdminUser = currentUser?.role === UserRole.ADMIN;
   const hasActiveShift = !!(activeShift || (shifts && shifts.some((s: any) => s.userId === currentUser?.id && s.status === 'Open')));
 
   const changeActiveSubTab = React.useCallback((tab: InventorySubTab | string) => {
@@ -444,7 +478,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
  const [sortBy, setSortBy] = useState<'default' | 'qty-desc' | 'qty-asc' | 'alpha-asc' | 'alpha-desc'>('default');
  
 
- const canSeeFinancialCostsAndSources = currentUser.role === 'Admin';
+ const canSeeFinancialCostsAndSources = currentUser?.role === UserRole.ADMIN;
 
  // Branch Specific pricing filter states
 
@@ -487,7 +521,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
 
  // Stock Transfer Creation Form States
  const [showCreateTransfer, setShowCreateTransfer] = useState(false);
- const [transferSource, setTransferSource] = useState(currentUser.branchAssignmentId || 'B1');
+ const [transferSource, setTransferSource] = useState(currentUser?.branchAssignmentId || 'B1');
  const [transferDest, setTransferDest] = useState('');
  const [transferTypeSelect, setTransferTypeSelect] = useState<TransferType>('Replenishment');
  const [transferItems, setTransferItems] = useState<{ productId: string; quantity: number }[]>([]);
@@ -815,7 +849,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
  }, [products, productCategories]);
 
  const allowedToModify = currentUser?.role === UserRole.MANAGER || currentUser?.role === UserRole.ADMIN;
- const allowedToImport = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER;
+ const allowedToImport = currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.MANAGER;
 
  // Auto-coverage calculator effect based on tile dimensions & box contents
  useEffect(() => {

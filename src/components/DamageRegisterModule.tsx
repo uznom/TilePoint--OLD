@@ -46,11 +46,11 @@ export const DamageRegisterModule: React.FC<DamageRegisterModuleProps> = () => {
  const [alertMessage, setAlertMessage] = useState<string | null>(null);
  const [categoryFilter, setCategoryFilter] = useState<string>('All');
  const [branchFilter, setBranchFilter] = useState<string>(
-    (currentUser?.role as any) === 'Admin' || (currentUser?.role as any) === UserRole.ADMIN ? 'All' : (currentUser?.branchAssignmentId || '')
+    currentUser?.role === UserRole.ADMIN ? 'All' : (currentUser?.branchAssignmentId || '')
   );
 
  useEffect(() => {
-   const isAdmin = (currentUser?.role as any) === 'Admin' || (currentUser?.role as any) === UserRole.ADMIN;
+   const isAdmin = currentUser?.role === UserRole.ADMIN;
    if (isAdmin) {
      setBranchFilter('All');
    } else {

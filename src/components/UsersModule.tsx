@@ -134,14 +134,8 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
     }, 4000);
   };
 
-  const isUserAdmin =
-    currentUser?.role === UserRole.ADMIN ||
-    (currentUser?.role as any) === "Admin";
-
-  const isUserAdminOrManager =
-    isUserAdmin ||
-    currentUser?.role === UserRole.MANAGER ||
-    (currentUser?.role as any) === "Manager";
+  const isUserAdmin = currentUser?.role === UserRole.ADMIN;
+  const isUserAdminOrManager = isUserAdmin || currentUser?.role === UserRole.MANAGER;
 
   const userBranchId = currentUser?.branchAssignmentId || "B1";
 
