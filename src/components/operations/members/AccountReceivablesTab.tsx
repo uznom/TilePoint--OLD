@@ -140,7 +140,7 @@ export const AccountReceivablesTab: React.FC<AccountReceivablesTabProps> = ({
 
       <div className="space-y-4">
         <div className="bg-content1 border border-divider/15 p-5 rounded-2xl grid grid-cols-2 gap-4">
-          <div className="p-4 bg-zinc-100 dark:bg-content2/40 rounded-xl border border-divider/10">
+          <div className="p-4 bg-content2 dark:bg-content2/40 rounded-xl border border-divider/10">
             <span className="text-[10px] font-bold text-default-500 block uppercase">
               Total Outstanding A/R
             </span>
@@ -148,7 +148,7 @@ export const AccountReceivablesTab: React.FC<AccountReceivablesTabProps> = ({
               {formatCurrency(totalAR)}
             </span>
           </div>
-          <div className="p-4 bg-zinc-100 dark:bg-content2/40 rounded-xl border border-divider/10">
+          <div className="p-4 bg-content2 dark:bg-content2/40 rounded-xl border border-divider/10">
             <span className="text-[10px] font-bold text-default-500 block uppercase">
               Overdue Accounts Limit
             </span>

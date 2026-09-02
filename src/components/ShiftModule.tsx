@@ -1,10 +1,10 @@
+import { HeroModal } from './common/ui/HeroModal';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useReceiptFontSize } from './ReceiptFontSizeControl';
 import { useDb } from '../context/DbContext';
 import { formatCurrency } from '../utils/formatters';
@@ -213,7 +213,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
 
   <form onSubmit={handleCloseLocalShift} className="space-y-4 pt-3 text-xs text-left">
   <div>
-  <label className="text-xs font-semibold text-foreground dark:text-zinc-200 tracking-tight block mb-1.5 pl-1 font-sans">
+  <label className="text-xs font-semibold text-foreground dark:text-default-200 tracking-tight block mb-1.5 pl-1 font-sans">
   Actual Counted Drawer Cash (PHP)
   </label>
   <input
@@ -222,13 +222,13 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
   value={closingCashInput ?? ''}
   onChange={e => setClosingCashInput(e.target.value)}
   placeholder="3000"
-  className="w-full bg-default-100 dark:bg-zinc-900 border border-divider/40 focus:border-primary px-3.5 py-2.5 text-sm text-center font-semibold tracking-tight text-foreground focus:outline-none transition-colors rounded-xl font-sans tabular-nums"
+  className="w-full bg-default-100 dark:bg-content1 border border-divider/40 focus:border-primary px-3.5 py-2.5 text-sm text-center font-semibold tracking-tight text-foreground focus:outline-none transition-colors rounded-xl font-sans tabular-nums"
   />
   </div>
 
   {/* Informative summary calculation preview */}
   {closingCashInput && (
-  <div className="p-3 bg-default-100/60 dark:bg-zinc-800/40 border border-divider/30 rounded-2xl space-y-1.5 text-xs font-sans">
+  <div className="p-3 bg-default-100/60 dark:bg-content2/40 border border-divider/30 rounded-2xl space-y-1.5 text-xs font-sans">
   <div className="flex justify-between text-default-500 font-normal">
   <span>Expected drawer:</span>
   <span className="tabular-nums font-medium text-foreground">{formatCurrency(expectedEndCash)}</span>
@@ -282,7 +282,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
 
   <form onSubmit={handleOpenLocalShift} className="space-y-4 text-xs text-left">
   {previouslyClosedShift && (
-  <div className="p-3 bg-default-100/60 dark:bg-zinc-800/40 border border-divider/30 rounded-2xl space-y-1.5 text-xs leading-normal font-sans">
+  <div className="p-3 bg-default-100/60 dark:bg-content2/40 border border-divider/30 rounded-2xl space-y-1.5 text-xs leading-normal font-sans">
   <div className="flex justify-between items-center text-amber-600 dark:text-amber-400 font-semibold">
   <span>Previous Close Balance:</span>
   <span className="font-bold text-xs text-foreground tabular-nums">₱{previouslyClosedShift.cashCount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
@@ -305,7 +305,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
 
    <div className="space-y-1.5">
      <div className="flex justify-between items-center pl-1">
-       <label className="text-xs font-semibold text-foreground dark:text-zinc-200 tracking-tight block font-sans">
+       <label className="text-xs font-semibold text-foreground dark:text-default-200 tracking-tight block font-sans">
          Opening Change Float (PHP)
        </label>
        <span className="text-[11px] text-default-400 font-normal">Standard Retail Float</span>
@@ -317,7 +317,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
        placeholder="e.g. 1000.00"
        value={startCashInput ?? ''}
        onChange={e => setStartCashInput(e.target.value)}
-       className="w-full bg-default-100 dark:bg-zinc-900 border border-divider/40 focus:border-primary px-3.5 py-2.5 text-base text-center font-semibold tracking-tight text-foreground focus:outline-none transition-colors rounded-xl font-sans tabular-nums"
+       className="w-full bg-default-100 dark:bg-content1 border border-divider/40 focus:border-primary px-3.5 py-2.5 text-base text-center font-semibold tracking-tight text-foreground focus:outline-none transition-colors rounded-xl font-sans tabular-nums"
      />
      <div className="grid grid-cols-4 gap-1.5 pt-1">
        {[500, 1000, 2000, 3000].map((amt) => (
@@ -328,7 +328,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
            className={`py-1.5 text-xs font-semibold rounded-full border transition-all cursor-pointer active:scale-95 ${
              startCashInput === amt.toString()
                ? 'bg-primary text-primary-foreground border-primary shadow-xs'
-               : 'bg-default-100 dark:bg-zinc-800 hover:bg-default-200 dark:hover:bg-zinc-700 border-divider/40 text-foreground'
+               : 'bg-default-100 dark:bg-content2 hover:bg-default-200 dark:hover:bg-content3 border-divider/40 text-foreground'
            }`}
          >
            ₱{amt.toLocaleString()}
@@ -488,11 +488,14 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
  </div>
  </div>
 
- {/* X Report dialog OVERLAY */}
- {showXReport && activeShift && shiftStats && typeof document !== 'undefined' && createPortal(
- <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
- <div className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" onClick={() => setShowXReport(false)} />
- <div className={`relative w-full max-w-sm rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl space-y-4 text-xs select-none bg-content1 text-foreground bir-receipt-container ${receiptFontClass}`}>
+  {/* X Report dialog OVERLAY */}
+  {showXReport && activeShift && shiftStats && (
+    <HeroModal
+      isOpen={showXReport}
+      onClose={() => setShowXReport(false)}
+      size="sm"
+      className={`p-6 border border-divider/30 space-y-4 text-xs select-none bg-content1 text-foreground bir-receipt-container ${receiptFontClass}`}
+    >
   <div className="text-center pb-2.5 border-b border-dashed border-divider/30">
  <h4 className="font-extrabold text-sm uppercase tracking-widest text-primary">X Report (Terminal Audit Only)</h4>
  
@@ -559,16 +562,17 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
  Dismiss X
  </button>
  </div>
- </div>
- </div>,
- document.body
- )}
+    </HeroModal>
+  )}
 
- {/* Z Report dialog OVERLAY */}
- {showZReport && activeShift && shiftStats && typeof document !== 'undefined' && createPortal(
- <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
- <div className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" onClick={() => setShowZReport(false)} />
- <div className={`relative w-full max-w-sm rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl space-y-4 text-xs font-mono select-none bg-content1 text-foreground bir-receipt-container ${receiptFontClass}`}>
+  {/* Z Report dialog OVERLAY */}
+  {showZReport && activeShift && shiftStats && (
+    <HeroModal
+      isOpen={showZReport}
+      onClose={() => setShowZReport(false)}
+      size="sm"
+      className={`p-6 border border-divider/30 space-y-4 text-xs font-mono select-none bg-content1 text-foreground bir-receipt-container ${receiptFontClass}`}
+    >
   <div className="text-center pb-2.5 border-b border-dashed border-divider/30">
  <h4 className="font-extrabold text-sm uppercase tracking-widest text-secondary">Z Report (Terminal Seal)</h4>
  
@@ -621,10 +625,9 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
  Accept and Seal Z-Report Close
  </button>
  </div>
- </div>
- </div>,
- document.body
- )}
+    </HeroModal>
+  )}
+
 
  {/* Success notification popup */}
  <ToastNotification

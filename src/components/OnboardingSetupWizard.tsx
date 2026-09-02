@@ -1,10 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { useDb } from '../context/DbContext';
 import { Sparkles, Upload, CheckCircle, ArrowRight, X } from 'lucide-react';
 import { Product } from '../types/db';
 import Papa from 'papaparse';
-import { HeroButton } from './common/ui';
+import { HeroButton, HeroModal } from './common/ui';
 
 interface OnboardingSetupWizardProps {
   onClose?: () => void;
@@ -380,14 +379,14 @@ export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ on
     }
   };
 
-  const content = (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 font-sans select-none text-left animate-fade-in">
-      {/* Full-Screen Uniform Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
-        onClick={onClose} 
-      />
-      <div className="relative w-full max-w-2xl bg-content1 border border-divider/30 rounded-2xl p-6 sm:p-8 shadow-2xl text-foreground max-h-[90vh] overflow-y-auto z-10">
+  return (
+    <HeroModal
+      isOpen={true}
+      onClose={onClose || (() => {})}
+      size="2xl"
+      zIndex={9999}
+      className="p-6 sm:p-8 border border-divider/30 max-h-[90vh] overflow-y-auto text-left select-none"
+    >
         
         {onClose && (
           <button
@@ -679,9 +678,6 @@ export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ on
           </div>
         )}
 
-      </div>
-    </div>
+    </HeroModal>
   );
-
-  return typeof document !== 'undefined' ? createPortal(content, document.body) : null;
 };

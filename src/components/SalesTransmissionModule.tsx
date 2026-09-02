@@ -1409,7 +1409,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
  {usedNoncesList.map((id, index) => {
  let typeLabel = "Signature Identifier";
- let badgeColor = "bg-content2 text-default-500 border-zinc-750";
+ let badgeColor = "bg-content2 text-default-500 border-divider/30";
  if (id.startsWith("TRANS-")) {
  typeLabel = "Deterministic Transmission";
  badgeColor = "bg-primary/10 text-primary border-primary/20";
@@ -1454,7 +1454,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <AnimatePresence>
  {selectedReport && (
  <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in text-left font-sans">
- <div className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm shadow-xl" onClick={() => setSelectedReport(null)} />
+ <div className="absolute inset-0 bg-black/75 backdrop-blur-sm shadow-xl" onClick={() => setSelectedReport(null)} />
  <motion.div
  initial={{ opacity: 0, scale: 0.95, y: 30 }}
  animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1977,14 +1977,14 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <AnimatePresence>
  {selectedSale && selectedReport && (
  <div className="fixed inset-0 bg-transparent flex items-center justify-center z-55 p-4 animate-fade-in text-left">
- <div className="absolute inset-0 bg-gray-950/60 backdrop-blur-md" onClick={() => setSelectedSale(null)} />
+ <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setSelectedSale(null)} />
  <motion.div
  initial={{ scale: 0.95, opacity: 0 }}
  animate={{ scale: 1, opacity: 1 }}
  exit={{ scale: 0.95, opacity: 0 }}
  className="bg-content1 border border-divider/30 rounded-2xl max-w-lg w-full text-left overflow-hidden shadow-2xl relative z-60 font-sans"
  >
- <div className="px-6 py-4.5 bg-gradient-to-r from-zinc-900 to-zinc-800 border-b border-divider/20 flex items-center justify-between">
+ <div className="px-6 py-4.5 bg-gradient-to-r from-content1 to-content2 border-b border-divider/20 flex items-center justify-between">
  <div>
  <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
  <FileText className="h-4.5 w-4.5 text-primary" />
@@ -2096,7 +2096,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  {/* POPUP: MANUAL JSON IMPORT DIALOG */}
  <AnimatePresence>
  {showJsonImport && (
- <div className="fixed inset-0 bg-gray-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+ <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
  <motion.div
  initial={{ scale: 0.95, opacity: 0 }}
  animate={{ scale: 1, opacity: 1 }}
@@ -2266,7 +2266,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
   {/* POPUP: SALES REPORT SHARE DIALOGUE */}
   <AnimatePresence>
   {showShareModal && (
-    <div className="fixed inset-0 bg-gray-950/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -2410,7 +2410,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
         <div className="px-6 py-4 bg-background border-t border-divider/15 flex justify-end">
           <button
             onClick={() => setShowShareModal(false)}
-            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-500 dark:hover:bg-emerald-600 dark:text-zinc-950 font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer active:scale-97"
+            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white dark:bg-emerald-500 dark:hover:bg-emerald-600 dark:text-foreground font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md cursor-pointer active:scale-97"
           >
             Done & Close
           </button>
@@ -2458,7 +2458,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  }
  `}</style>
 
- <div className="px-6 py-4.5 bg-gradient-to-r from-zinc-900 to-zinc-800 border-b border-divider/20 flex items-center justify-between no-print">
+ <div className="px-6 py-4.5 bg-gradient-to-r from-content1 to-content2 border-b border-divider/20 flex items-center justify-between no-print">
  <div className="flex items-center gap-2">
  <span className="p-1.5 bg-amber-500/10 text-amber-500 rounded-lg">
  <Printer className="h-4.5 w-4.5" />
@@ -2495,17 +2495,17 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  {/* actual printable white sheet of paper */}
  <div 
  id="tilepoint-printable-area" 
- className="p-8 sm:p-12 bg-white text-zinc-900 rounded-2xl shadow-lg border border-zinc-200 font-sans relative overflow-hidden"
+ className="p-8 sm:p-12 bg-white text-foreground rounded-2xl shadow-lg border border-divider/30 font-sans relative overflow-hidden"
  >
  {/* Watermark/Accent */}
- <div className="absolute top-0 left-0 right-0 h-2 bg-zinc-955 bg-primary" />
+ <div className="absolute top-0 left-0 right-0 h-2 bg-primary bg-primary" />
  
- <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b-2 border-zinc-900">
+ <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b-2 border-divider">
  <div className="space-y-1">
  <span className="text-[9.5px] font-bold uppercase tracking-widest text-default-500 ">
  Official Corporate Audit Record
  </span>
- <h1 className="text-2xl font-black uppercase text-zinc-950 font-sans">
+ <h1 className="text-2xl font-black uppercase text-foreground font-sans">
  {localStorage.getItem('tilepoint_company_name_v1') || branches[0]?.name || 'Main Enterprise'}
  </h1>
  <p className="text-xs text-default-500 font-medium max-w-sm">
@@ -2517,21 +2517,21 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <div className="px-2.5 py-1 bg-content1 text-white rounded font-bold inline-block text-[10px] uppercase tracking-wider">
  DAILY REVENUE STATEMENT
  </div>
- <p className="text-default-600 pt-1 font-sans">Report Date: <strong className="text-zinc-900 font-black">{printData.reportingDate}</strong></p>
+ <p className="text-default-600 pt-1 font-sans">Report Date: <strong className="text-foreground font-black">{printData.reportingDate}</strong></p>
  <p className="text-[10px] text-default-500 ">REPORT ID: {printData.id}</p>
  </div>
  </div>
 
  {/* Metadata grids */}
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 py-6 border-b border-zinc-200 text-xs">
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 py-6 border-b border-divider/30 text-xs">
  <div className="space-y-1.5 text-left">
  <h4 className="text-[10px] font-black uppercase tracking-widest text-default-500 ">
  Branch Origin & Metadata
  </h4>
  <div className="space-y-1">
- <p className="text-default-500">Branch Name: <strong className="text-zinc-900 font-bold">{printData.branchName}</strong></p>
- <p className="text-default-500">Security Signature: <span className=" text-[10.5px] text-default-700 bg-zinc-100 rounded px-1.5 py-0.5">{printData.id}</span></p>
- <p className="text-default-500">Transmission Channel: <strong className="text-zinc-800">{printData.transmissionType || 'Manual Data Packet'}</strong></p>
+ <p className="text-default-500">Branch Name: <strong className="text-foreground font-bold">{printData.branchName}</strong></p>
+ <p className="text-default-500">Security Signature: <span className=" text-[10.5px] text-default-700 bg-content2 rounded px-1.5 py-0.5">{printData.id}</span></p>
+ <p className="text-default-500">Transmission Channel: <strong className="text-default-800">{printData.transmissionType || 'Manual Data Packet'}</strong></p>
  </div>
  </div>
 
@@ -2540,32 +2540,32 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  Generation Profile
  </h4>
  <div className="space-y-1">
- <p className="text-default-500">Prepared By: <strong className="text-zinc-950">{currentUser?.fullName || 'SYSTEM'} ({currentUser?.role || 'ADMIN'})</strong></p>
- <p className="text-default-500">Status: <span className="px-2 py-0.5 bg-semibold text-[10px] rounded uppercase font-black bg-zinc-100 text-zinc-800">{printData.status}</span></p>
+ <p className="text-default-500">Prepared By: <strong className="text-foreground">{currentUser?.fullName || 'SYSTEM'} ({currentUser?.role || 'ADMIN'})</strong></p>
+ <p className="text-default-500">Status: <span className="px-2 py-0.5 bg-semibold text-[10px] rounded uppercase font-black bg-content2 text-default-800">{printData.status}</span></p>
  <p className="text-default-500 text-[10px]">TIMESTAMP: {new Date().toLocaleString()}</p>
  </div>
  </div>
  </div>
 
  {/* Summary statistics matrix grids */}
- <div className="py-6 border-b border-zinc-200 text-left">
+ <div className="py-6 border-b border-divider/30 text-left">
  <h4 className="text-[10px] font-black uppercase tracking-widest text-default-500 mb-3">
  AGGREGATED FINANCIAL MATRIX
  </h4>
  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
- <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 space-y-0.5 text-left">
+ <div className="p-3 bg-content1 rounded-xl border border-divider/30 space-y-0.5 text-left">
  <span className="text-[9px] uppercase font-bold text-default-500 tracking-wider ">Sales Issued</span>
- <p className="text-lg font-black text-zinc-950">{printData.totalSalesCount} receipts</p>
+ <p className="text-lg font-black text-foreground">{printData.totalSalesCount} receipts</p>
  </div>
 
- <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 space-y-0.5 text-left">
+ <div className="p-3 bg-content1 rounded-xl border border-divider/30 space-y-0.5 text-left">
  <span className="text-[9px] uppercase font-bold text-default-500 tracking-wider ">Total Discounts</span>
- <p className="text-lg font-bold text-zinc-800">₱{printData.totalDiscountAmount.toLocaleString()}</p>
+ <p className="text-lg font-bold text-default-800">₱{printData.totalDiscountAmount.toLocaleString()}</p>
  </div>
 
- <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 space-y-0.5 text-left">
+ <div className="p-3 bg-content1 rounded-xl border border-divider/30 space-y-0.5 text-left">
  <span className="text-[9px] uppercase font-bold text-default-500 tracking-wider ">12% VAT Collected</span>
- <p className="text-lg font-bold text-zinc-800">₱{printData.totalVatAmount.toLocaleString()}</p>
+ <p className="text-lg font-bold text-default-800">₱{printData.totalVatAmount.toLocaleString()}</p>
  </div>
 
  <div className="p-3 bg-background text-white rounded-xl space-y-0.5 text-left">
@@ -2580,9 +2580,9 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <h4 className="text-[10px] font-black uppercase tracking-widest text-default-500 ">
  ENCLOSED DETAILED TRANSACTION INVOICES
  </h4>
- <div className="border border-zinc-300 rounded-xl overflow-hidden">
+ <div className="border border-divider/40 rounded-xl overflow-hidden">
  <table className="w-full text-left text-[11px] border-collapse">
- <thead className="bg-zinc-100 text-default-700 text-[9px] uppercase tracking-wider border-b border-zinc-300">
+ <thead className="bg-content2 text-default-700 text-[9px] uppercase tracking-wider border-b border-divider/40">
  <tr>
  <th className="py-2.5 px-3">INVOICE NUMBER</th>
  <th className="py-2.5 px-3">CUSTOMER NAME</th>
@@ -2592,19 +2592,19 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  <th className="py-2.5 px-3 text-right font-bold">GRAND TOTAL</th>
  </tr>
  </thead>
- <tbody className="divide-y divide-zinc-200 font-sans text-zinc-800 bg-white">
+ <tbody className="divide-y divide-zinc-200 font-sans text-default-800 bg-white">
  {printData.sales && printData.sales.map((sale: any, idx: number) => (
- <tr key={idx} className="hover:bg-zinc-50/50">
- <td className="py-2.5 px-3 font-bold text-zinc-950">{sale.saleNumber}</td>
- <td className="py-2.5 px-3 text-zinc-900">{sale.customerName || 'Walk-in'}</td>
+ <tr key={idx} className="hover:bg-content1/50">
+ <td className="py-2.5 px-3 font-bold text-foreground">{sale.saleNumber}</td>
+ <td className="py-2.5 px-3 text-foreground">{sale.customerName || 'Walk-in'}</td>
  <td className="py-2.5 px-3 text-default-700">{sale.cashierName}</td>
  <td className="py-2.5 px-3">
- <span className="px-1.5 py-0.5 bg-zinc-100 text-zinc-800 rounded text-[9px] font-bold uppercase ">
+ <span className="px-1.5 py-0.5 bg-content2 text-default-800 rounded text-[9px] font-bold uppercase ">
  {sale.paymentMethod}
  </span>
  </td>
  <td className="py-2.5 px-3 text-right text-default-500 ">₱{sale.discount.toLocaleString()}</td>
- <td className="py-2.5 px-3 text-right font-bold text-zinc-950">₱{sale.grandTotal.toLocaleString()}</td>
+ <td className="py-2.5 px-3 text-right font-bold text-foreground">₱{sale.grandTotal.toLocaleString()}</td>
  </tr>
  ))}
  {(!printData.sales || printData.sales.length === 0) && (
@@ -2624,7 +2624,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  PREPARED BY OPERATOR
  </p>
  <div className="border-t border-zinc-400 pt-1.5 w-48 text-left">
- <p className="font-bold text-zinc-900">{currentUser?.fullName || 'SYSTEM'}</p>
+ <p className="font-bold text-foreground">{currentUser?.fullName || 'SYSTEM'}</p>
  <p className="text-[10px] text-default-500">{currentUser?.role || 'ADMIN'} Signatures</p>
  </div>
  </div>
@@ -2634,7 +2634,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  HEAD AUDITOR / BRANCH MANAGER OK
  </p>
  <div className="border-t border-zinc-400 pt-1.5 w-48 text-right">
- <p className="font-bold text-zinc-900">{printData.status === 'Verified' ? (printData.auditedBy || 'Verified Auditor') : '_______________________'}</p>
+ <p className="font-bold text-foreground">{printData.status === 'Verified' ? (printData.auditedBy || 'Verified Auditor') : '_______________________'}</p>
  <p className="text-[10px] text-default-500">Authorized Signature & Verification Stamp</p>
  </div>
  </div>

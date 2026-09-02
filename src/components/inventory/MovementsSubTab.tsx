@@ -119,7 +119,7 @@ export const MovementsSubTab: React.FC<MovementsSubTabProps> = ({
             value={movementSearch ?? ''}
             onChange={(e) => setMovementSearch(e.target.value)}
             placeholder="Search log by notes, ref #, or operator..."
-            className="w-full pl-9 pr-3.5 py-2 text-xs rounded-full bg-default-100 dark:bg-zinc-800/80 border border-divider/40 focus:border-primary focus:outline-none text-foreground font-sans font-medium"
+            className="w-full pl-9 pr-3.5 py-2 text-xs rounded-full bg-default-100 dark:bg-content2/80 border border-divider/40 focus:border-primary focus:outline-none text-foreground font-sans font-medium"
           />
         </div>
 

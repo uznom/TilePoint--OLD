@@ -272,7 +272,7 @@ export const HeroTooltip: React.FC<HeroTooltipProps> = ({
         return 'bg-foreground text-background shadow-2xl border border-divider/40';
       case 'default':
       default:
-        return 'bg-zinc-900 text-zinc-100 dark:bg-zinc-800 dark:text-zinc-100 shadow-2xl border border-zinc-700/60';
+        return 'bg-content1 text-default-100 dark:bg-content2 dark:text-default-100 shadow-2xl border border-divider/30/60';
     }
   };
 

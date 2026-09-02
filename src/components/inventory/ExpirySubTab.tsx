@@ -157,7 +157,7 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
               >
                 Today
               </HeroButton>
-              <div className="flex items-center gap-1 bg-default-100 dark:bg-zinc-800/80 rounded-full p-1 border border-divider/40 shadow-xs">
+              <div className="flex items-center gap-1 bg-default-100 dark:bg-content2/80 rounded-full p-1 border border-divider/40 shadow-xs">
                 <HeroButton
                   size="sm"
                   variant="light"

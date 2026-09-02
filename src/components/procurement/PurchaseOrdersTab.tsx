@@ -84,7 +84,7 @@ export const PurchaseOrdersTab: React.FC<PurchaseOrdersTabProps> = ({
       case "Cancelled":
         return "bg-rose-500/10 text-rose-500 border-rose-500/20";
       default:
-        return "bg-zinc-500/10 text-zinc-400 border-zinc-500/20";
+        return "bg-default-500/10 text-default-400 border-divider/20";
     }
   };
 

@@ -63,7 +63,7 @@ export const HeroTable: React.FC<HeroTableProps> & {
 
 HeroTable.Header = ({ children, className = '', ...props }) => (
   <thead
-    className={`bg-default-100/60 dark:bg-zinc-800/40 border-b border-divider font-semibold text-xs text-default-500 select-none font-sans tracking-tight ${className}`}
+    className={`bg-default-100/60 dark:bg-content2/40 border-b border-divider font-semibold text-xs text-default-500 select-none font-sans tracking-tight ${className}`}
     {...props}
   >
     {children}
@@ -82,7 +82,7 @@ HeroTable.Row = ({ children, isSelected = false, isHoverable = true, className =
       isSelected
         ? 'bg-primary-50/60 dark:bg-primary/20 text-primary font-medium'
         : isHoverable
-        ? 'hover:bg-default-100/50 dark:hover:bg-zinc-800/40'
+        ? 'hover:bg-default-100/50 dark:hover:bg-content2/40'
         : ''
     } ${className}`}
     {...props}

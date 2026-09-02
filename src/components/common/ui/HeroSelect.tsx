@@ -185,12 +185,12 @@ export const HeroSelect = React.forwardRef<HTMLSelectElement, HeroSelectProps>(
     const getSizeClasses = () => {
       switch (size) {
         case 'sm':
-          return 'py-1.5 pl-3 pr-2 text-xs';
+          return 'h-8 py-1.5 pl-3 pr-2 text-xs';
         case 'lg':
-          return 'py-3 pl-4 pr-3 text-base';
+          return 'h-12 py-3 pl-4 pr-3 text-base';
         case 'md':
         default:
-          return 'py-2 pl-3.5 pr-2.5 text-xs sm:text-sm';
+          return 'h-10 py-2 pl-3.5 pr-2.5 text-xs sm:text-sm';
       }
     };
 
@@ -212,15 +212,15 @@ export const HeroSelect = React.forwardRef<HTMLSelectElement, HeroSelectProps>(
       }
       switch (variant) {
         case 'flat':
-          return 'bg-default-100 dark:bg-zinc-800/80 border border-transparent text-foreground hover:bg-default-200/70';
+          return 'bg-default-100 dark:bg-content2/80 border border-transparent text-foreground hover:bg-default-200/70';
         case 'faded':
-          return 'bg-default-100 dark:bg-zinc-800/90 border border-divider dark:border-white/10 text-foreground hover:border-default-400';
+          return 'bg-default-100 dark:bg-content2/90 border border-divider dark:border-white/10 text-foreground hover:border-default-400';
         case 'underlined':
           return 'bg-transparent border-b-2 border-divider rounded-none px-0 text-foreground hover:border-default-400';
         case 'bordered':
         case 'pill':
         default:
-          return 'bg-default-100/90 hover:bg-default-200/70 dark:bg-zinc-800/90 dark:hover:bg-zinc-700/80 border border-divider/40 dark:border-white/10 text-foreground shadow-xs';
+          return 'bg-default-100/90 hover:bg-default-200/70 dark:bg-content2/90 dark:hover:bg-content3/80 border border-divider/40 dark:border-white/10 text-foreground shadow-xs';
       }
     };
 
@@ -229,7 +229,7 @@ export const HeroSelect = React.forwardRef<HTMLSelectElement, HeroSelectProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-xs font-semibold text-foreground dark:text-zinc-200 select-none flex items-center gap-1 font-sans tracking-tight"
+            className="text-xs font-semibold text-foreground dark:text-default-200 select-none flex items-center gap-1 font-sans tracking-tight"
           >
             <span>{label}</span>
             {isRequired && <span className="text-rose-500">*</span>}
@@ -278,7 +278,7 @@ export const HeroSelect = React.forwardRef<HTMLSelectElement, HeroSelectProps>(
           </span>
 
           {/* Right section: Shaded Chevron Segment with Hairline Divider */}
-          <span className={`flex items-center justify-center bg-default-200/50 dark:bg-zinc-700/50 border-l border-divider/40 dark:border-white/10 text-default-500 group-hover:text-foreground transition-colors ${getChevronPadding()}`}>
+          <span className={`flex items-center justify-center bg-default-200/50 dark:bg-content3/50 border-l border-divider/40 dark:border-white/10 text-default-500 group-hover:text-foreground transition-colors ${getChevronPadding()}`}>
             <ChevronDown
               className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
                 isOpen ? 'rotate-180 text-foreground' : ''
@@ -310,8 +310,8 @@ export const HeroSelect = React.forwardRef<HTMLSelectElement, HeroSelectProps>(
                         item.disabled ? 'opacity-40 cursor-not-allowed' : ''
                       } ${
                         isSelected
-                          ? 'bg-default-100 dark:bg-zinc-800 text-foreground font-semibold shadow-xs'
-                          : 'text-foreground hover:bg-default-100/70 dark:hover:bg-zinc-800/70'
+                          ? 'bg-default-100 dark:bg-content2 text-foreground font-semibold shadow-xs'
+                          : 'text-foreground hover:bg-default-100/70 dark:hover:bg-content2/70'
                       }`}
                     >
                       <span className="truncate">{item.label}</span>

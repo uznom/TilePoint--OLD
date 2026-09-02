@@ -45,7 +45,7 @@ export const HeroAlert: React.FC<HeroAlertProps> = ({
       case 'secondary':
         return <Info className={`${iconClass} text-secondary`} />;
       case 'default':
-        return <Info className={`${iconClass} text-zinc-400`} />;
+        return <Info className={`${iconClass} text-default-400`} />;
       case 'primary':
       default:
         return <Info className={`${iconClass} text-primary`} />;
@@ -65,7 +65,7 @@ export const HeroAlert: React.FC<HeroAlertProps> = ({
           case 'secondary':
             return 'bg-secondary text-secondary-foreground';
           case 'default':
-            return 'bg-zinc-700 text-white';
+            return 'bg-content3 text-white';
           case 'primary':
           default:
             return 'bg-primary text-primary-foreground';
@@ -81,7 +81,7 @@ export const HeroAlert: React.FC<HeroAlertProps> = ({
           case 'secondary':
             return 'border border-secondary/40 bg-secondary/5 text-secondary';
           case 'default':
-            return 'border border-zinc-500/30 bg-zinc-500/5 text-zinc-300';
+            return 'border border-zinc-500/30 bg-default-500/5 text-default-300';
           case 'primary':
           default:
             return 'border border-primary/40 bg-primary/5 text-primary';
@@ -97,7 +97,7 @@ export const HeroAlert: React.FC<HeroAlertProps> = ({
           case 'secondary':
             return 'border border-secondary/20 bg-secondary/10 text-secondary';
           case 'default':
-            return 'border border-zinc-500/20 bg-zinc-500/10 text-zinc-300';
+            return 'border border-divider/20 bg-default-500/10 text-default-300';
           case 'primary':
           default:
             return 'border border-primary/20 bg-primary/10 text-primary';
@@ -114,7 +114,7 @@ export const HeroAlert: React.FC<HeroAlertProps> = ({
           case 'secondary':
             return 'bg-secondary/10 text-secondary border border-secondary/20';
           case 'default':
-            return 'bg-zinc-500/10 text-zinc-300 border border-zinc-500/20';
+            return 'bg-default-500/10 text-default-300 border border-divider/20';
           case 'primary':
           default:
             return 'bg-primary/10 text-foreground border border-primary/20';

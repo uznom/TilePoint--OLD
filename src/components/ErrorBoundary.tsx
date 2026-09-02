@@ -84,12 +84,12 @@ export class ErrorBoundary extends React.Component<Props, State> {
  </div>
  </div>
 
- <p className="text-xs text-zinc-400 leading-relaxed">
+ <p className="text-xs text-default-400 leading-relaxed">
  An unexpected error occurred while loading this page. This could be caused by browser storage limitations or a temporary connection problem.
  </p>
 
- <div className="p-4 rounded-xl bg-black/40 border border-zinc-800 space-y-2.5">
- <span className="text-[10px] text-zinc-500 block uppercase font-bold">
+ <div className="p-4 rounded-xl bg-black/40 border border-divider/40 space-y-2.5">
+ <span className="text-[10px] text-default-500 block uppercase font-bold">
  Error Details
  </span>
  <div className="max-h-[140px] overflow-y-auto text-[10.5px] text-red-300 leading-relaxed pr-1 space-y-1.5 scrollbar-thin">
@@ -97,11 +97,11 @@ export class ErrorBoundary extends React.Component<Props, State> {
  Error: {this.state.error?.message || 'Unknown Exception'}
  </div>
  {this.state.error?.stack && (
- <pre className="whitespace-pre-wrap text-zinc-500 text-[10px] select-all leading-normal">
+ <pre className="whitespace-pre-wrap text-default-500 text-[10px] select-all leading-normal">
  {this.state.error.stack}
  </pre>
  )}
- <div className="text-zinc-600 block text-[9.5px] mt-2 border-t border-zinc-800/60 pt-1.5">
+ <div className="text-default-600 block text-[9.5px] mt-2 border-t border-divider/40/60 pt-1.5">
  UserAgent: {navigator.userAgent}
  </div>
  </div>
@@ -125,7 +125,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
  variant="flat"
  size="md"
  startIcon={<Trash2 className="h-4 w-4" />}
- className="font-bold text-xs uppercase tracking-wider rounded-xl border border-zinc-800 text-zinc-400 hover:text-red-400 hover:border-red-900/45"
+ className="font-bold text-xs uppercase tracking-wider rounded-xl border border-divider/40 text-default-400 hover:text-red-400 hover:border-red-900/45"
  title="Clear app cache and start fresh if the page does not reload"
  >
  Clear App Cache
@@ -133,7 +133,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
  </div>
 
  <div className="text-center">
- <span className="text-[9px] text-zinc-600">
+ <span className="text-[9px] text-default-600">
  TilePoint Recovery Service
  </span>
  </div>

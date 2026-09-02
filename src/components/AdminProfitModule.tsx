@@ -984,7 +984,7 @@ export function AdminProfitModule({
                         <button
                           type="button"
                           onClick={() => handleModifierSave(b.id)}
-                          className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 text-[10px] font-black uppercase rounded-lg cursor-pointer shrink-0 transition-colors"
+                          className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-foreground text-[10px] font-black uppercase rounded-lg cursor-pointer shrink-0 transition-colors"
                         >
                           Save
                         </button>

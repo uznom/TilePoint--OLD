@@ -149,7 +149,7 @@ export const HeroTabs: React.FC<HeroTabsProps> = ({
         return 'p-0 bg-transparent border-b border-divider rounded-none gap-4';
       case 'solid':
       default:
-        return 'p-1 bg-default-100 dark:bg-zinc-800/80 border border-divider/40 dark:border-white/5';
+        return 'p-1 bg-default-100 dark:bg-content2/80 border border-divider/40 dark:border-white/5';
     }
   };
 
@@ -182,7 +182,7 @@ export const HeroTabs: React.FC<HeroTabsProps> = ({
         return 'bg-danger text-danger-foreground shadow-sm shadow-danger/20 font-semibold';
       case 'default':
       default:
-        return 'bg-white text-zinc-900 dark:bg-zinc-700 dark:text-white shadow-xs font-semibold';
+        return 'bg-white text-foreground dark:bg-content3 dark:text-white shadow-xs font-semibold';
     }
   };
 
@@ -190,7 +190,7 @@ export const HeroTabs: React.FC<HeroTabsProps> = ({
     if (variant === 'underlined') {
       return 'text-default-500 hover:text-foreground font-medium';
     }
-    return 'text-default-600 dark:text-zinc-400 hover:text-foreground hover:bg-default-200/50 dark:hover:bg-zinc-700/50 font-medium';
+    return 'text-default-600 dark:text-default-400 hover:text-foreground hover:bg-default-200/50 dark:hover:bg-content3/50 font-medium';
   };
 
   return (

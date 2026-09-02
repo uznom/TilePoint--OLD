@@ -160,20 +160,20 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
       </HeroModal.Header>
 
         {/* Modal Filter Tabs Bar */}
-        <div className="px-5 pt-3 pb-3 border-b border-divider dark:border-white/10 bg-default-50/50 dark:bg-zinc-900/50 flex flex-wrap items-center justify-between gap-3 font-sans">
+        <div className="px-5 pt-3 pb-3 border-b border-divider dark:border-white/10 bg-default-50/50 dark:bg-content1/50 flex flex-wrap items-center justify-between gap-3 font-sans">
           {/* Status Tabs */}
-          <div className="flex items-center gap-1 bg-default-100 dark:bg-zinc-800/80 p-1 rounded-full border border-divider/40 dark:border-white/5 overflow-x-auto shadow-xs">
+          <div className="flex items-center gap-1 bg-default-100 dark:bg-content2/80 p-1 rounded-full border border-divider/40 dark:border-white/5 overflow-x-auto shadow-xs">
             <button
               type="button"
               onClick={() => setFilter('ALL')}
               className={`px-3.5 py-1 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97] ${
                 filter === 'ALL'
-                  ? 'bg-white text-zinc-900 dark:bg-zinc-700 dark:text-white shadow-xs'
-                  : 'text-default-500 dark:text-zinc-400 hover:text-foreground'
+                  ? 'bg-white text-foreground dark:bg-content3 dark:text-white shadow-xs'
+                  : 'text-default-500 dark:text-default-400 hover:text-foreground'
               }`}
             >
               <span>All Alerts</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-semibold ${filter === 'ALL' ? 'bg-default-200 text-zinc-900 dark:bg-zinc-600 dark:text-white' : 'bg-default-200/60 text-default-600'}`}>
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-semibold ${filter === 'ALL' ? 'bg-default-200 text-foreground dark:bg-zinc-600 dark:text-white' : 'bg-default-200/60 text-default-600'}`}>
                 {alertProductsList.length}
               </span>
             </button>

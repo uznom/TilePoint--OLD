@@ -685,7 +685,7 @@ export const TutorialOnboarding: React.FC = () => {
  
  {/* Left Topics selector rail */}
  <div className="lg:col-span-4 space-y-3">
- <span className="text-[9.5px] font-black uppercase tracking-widest text-zinc-400 pl-1 block mb-1">Browse Procedures</span>
+ <span className="text-[9.5px] font-black uppercase tracking-widest text-default-400 pl-1 block mb-1">Browse Procedures</span>
  <div className="space-y-2">
  {TUTORIALS_DATA.map((topic) => {
  const Icon = topic.icon;

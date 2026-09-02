@@ -39,7 +39,7 @@ export const PosAddMemberModal: React.FC<PosAddMemberModalProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/75 backdrop-blur-sm"
             onClick={onClose}
           />
           <motion.div

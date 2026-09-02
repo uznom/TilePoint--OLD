@@ -89,7 +89,7 @@ export const HeroDropdownSelect: React.FC<HeroDropdownSelectProps> = ({
   return (
     <div ref={dropdownRef} className={`relative flex flex-col gap-1.5 ${className}`} id={id}>
       {label && (
-        <label className="text-xs font-semibold text-foreground dark:text-zinc-200 flex items-center gap-1 font-sans tracking-tight">
+        <label className="text-xs font-semibold text-foreground dark:text-default-200 flex items-center gap-1 font-sans tracking-tight">
           {label}
           {isRequired && <span className="text-rose-500">*</span>}
         </label>
@@ -104,8 +104,8 @@ export const HeroDropdownSelect: React.FC<HeroDropdownSelectProps> = ({
           ${isPill ? 'rounded-full' : 'rounded-xl'}
           ${
             variant === 'flat'
-              ? 'bg-default-100 dark:bg-zinc-800/80 border border-transparent text-foreground'
-              : 'bg-default-100/90 hover:bg-default-200/70 dark:bg-zinc-800/90 dark:hover:bg-zinc-700/80 border border-divider/40 dark:border-white/10 text-foreground shadow-xs'
+              ? 'bg-default-100 dark:bg-content2/80 border border-transparent text-foreground'
+              : 'bg-default-100/90 hover:bg-default-200/70 dark:bg-content2/90 dark:hover:bg-content3/80 border border-divider/40 dark:border-white/10 text-foreground shadow-xs'
           }
           ${isInvalid ? '!border-rose-500 !bg-rose-500/5' : ''}
           ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}
@@ -124,7 +124,7 @@ export const HeroDropdownSelect: React.FC<HeroDropdownSelectProps> = ({
         </span>
 
         {/* Right segmented chevron block with divider and tint */}
-        <span className={`flex items-center justify-center bg-default-200/50 dark:bg-zinc-700/50 border-l border-divider/40 dark:border-white/10 text-default-500 group-hover:text-foreground transition-colors ${getChevronPadding()}`}>
+        <span className={`flex items-center justify-center bg-default-200/50 dark:bg-content3/50 border-l border-divider/40 dark:border-white/10 text-default-500 group-hover:text-foreground transition-colors ${getChevronPadding()}`}>
           <ChevronDown
             className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
               isOpen ? 'rotate-180 text-foreground' : ''
@@ -161,8 +161,8 @@ export const HeroDropdownSelect: React.FC<HeroDropdownSelectProps> = ({
                       item.isDanger
                         ? 'text-rose-500 hover:bg-rose-500/10'
                         : isSelected
-                        ? 'bg-default-100 dark:bg-zinc-800 text-foreground font-semibold shadow-xs'
-                        : 'text-foreground hover:bg-default-100/70 dark:hover:bg-zinc-800/70'
+                        ? 'bg-default-100 dark:bg-content2 text-foreground font-semibold shadow-xs'
+                        : 'text-foreground hover:bg-default-100/70 dark:hover:bg-content2/70'
                     }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">

@@ -1,5 +1,5 @@
 import React from "react";
-import { createPortal } from "react-dom";
+import { HeroModal } from "../../common/ui/HeroModal";
 import { Branch, PurchaseOrder, PurchaseOrderItem, Supplier, User } from "../../../types/db";
 import { X, Check, Truck } from "lucide-react";
 
@@ -40,14 +40,9 @@ export const ReceivePoModal: React.FC<ReceivePoModalProps> = ({
   const items = poItems.filter((i) => i.poId === activePo.id);
   const destBranch = branches.find((b) => b.id === activePo.branchId);
 
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
-      <div
-        className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity"
-        onClick={onClose}
-      />
-      <div className="relative bg-content1 border border-divider/40 rounded-3xl p-6 sm:p-7 max-w-3xl w-full shadow-2xl z-10 text-left space-y-6 max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between border-b border-divider/20 pb-4 shrink-0">
+  return (
+    <HeroModal isOpen={isOpen} onClose={onClose} size="3xl" className="p-6 sm:p-7 space-y-6 border border-divider/40">
+      <div className="flex items-center justify-between border-b border-divider/20 pb-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-emerald-500/10 text-emerald-500 shrink-0 border border-emerald-500/20">
               <Truck className="h-5 w-5" />
@@ -165,8 +160,6 @@ export const ReceivePoModal: React.FC<ReceivePoModalProps> = ({
             </button>
           </div>
         </div>
-      </div>
-    </div>,
-    document.body
+    </HeroModal>
   );
 };

@@ -421,13 +421,13 @@ export default function StoreOperationsModule({
 
       {/* Slip / Receipt Print Modal */}
       {printReceiptData && (
-        <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center bg-gray-950/60 backdrop-blur-sm p-4 md:items-center">
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center bg-black/60 backdrop-blur-sm p-4 md:items-center">
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className={`w-full max-w-sm bg-white text-zinc-900 rounded-2xl shadow-2xl p-5 text-xs border border-zinc-200 relative max-h-[85vh] overflow-y-auto bir-receipt-container scrollbar-thin ${receiptFontClass}`}
+            className={`w-full max-w-sm bg-white text-foreground rounded-2xl shadow-2xl p-5 text-xs border border-divider/30 relative max-h-[85vh] overflow-y-auto bir-receipt-container scrollbar-thin ${receiptFontClass}`}
           >
-            <div className="text-center pb-3 border-b-2 border-dashed border-zinc-300">
+            <div className="text-center pb-3 border-b-2 border-dashed border-divider/40">
               <h3 className="font-extrabold text-sm tracking-wide">
                 {branches.find((b) => b.id === printReceiptData.branchId)?.name || localStorage.getItem("tilepoint_company_name_v1") || branches[0]?.name || "STORE RECEIPT"}
               </h3>
@@ -443,7 +443,7 @@ export default function StoreOperationsModule({
               </p>
             </div>
 
-            <div className="py-4 space-y-1.5 border-b-2 border-dashed border-zinc-300 text-[11px]">
+            <div className="py-4 space-y-1.5 border-b-2 border-dashed border-divider/40 text-[11px]">
               <div className="flex justify-between">
                 <span>Receipt No:</span>
                 <span className="font-bold">{printReceiptData.receiptNo}</span>
@@ -456,7 +456,7 @@ export default function StoreOperationsModule({
                 <span>Client Name:</span>
                 <span className="font-bold">{printReceiptData.customer}</span>
               </div>
-              <div className="h-px bg-zinc-200 my-2" />
+              <div className="h-px bg-content2 my-2" />
               {printReceiptData.prevBalance !== undefined && (
                 <div className="flex justify-between">
                   <span>Previous A/R Bal:</span>
@@ -468,7 +468,7 @@ export default function StoreOperationsModule({
                 <span>₱{printReceiptData.paid.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
               </div>
               {printReceiptData.newBalance !== undefined && (
-                <div className="flex justify-between font-bold border-t border-zinc-200 pt-1">
+                <div className="flex justify-between font-bold border-t border-divider/30 pt-1">
                   <span>New Balance Due:</span>
                   <span>₱{printReceiptData.newBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
                 </div>
@@ -489,7 +489,7 @@ export default function StoreOperationsModule({
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="flex-1 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                  className="flex-1 py-1.5 rounded-lg bg-content2 hover:bg-content2 font-bold transition flex items-center justify-center gap-1 cursor-pointer"
                 >
                   <Printer className="h-3 w-3" /> Print
                 </button>

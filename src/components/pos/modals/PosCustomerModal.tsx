@@ -48,7 +48,7 @@ export const PosCustomerModal: React.FC<PosCustomerModalProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/65 backdrop-blur-sm"
             onClick={onClose}
           />
           <motion.form

@@ -1,3 +1,4 @@
+import { HeroModal } from './common/ui/HeroModal';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -24,7 +25,6 @@ X,
 XCircle
 } from 'lucide-react';
 import React, { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useDb } from '../context/DbContext';
 import { UserRole } from '../types/db';
 import { formatCurrency } from '../utils/formatters';
@@ -467,7 +467,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  };
 
   const renderDeliveryReceiptCopy = (copyType: "STORE COPY" | "CUSTOMER COPY") => (
-    <div key={copyType} className="border border-gray-300 rounded-lg p-4 bg-white text-black text-xs leading-relaxed space-y-3 shadow-xs">
+    <div key={copyType} className="border border-divider/40 rounded-lg p-4 bg-white text-black text-xs leading-relaxed space-y-3 shadow-xs">
       {/* DR Header */}
       <div className="text-center pb-2 border-b-2 border-black space-y-1">
         {deliveryBranch?.storeLogo ? (
@@ -484,17 +484,17 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
             {deliveryBranch?.name || branches[0]?.name || "MAIN STORE"}
           </h2>
         )}
-        <p className="text-[9.5px] font-semibold text-gray-700">
+        <p className="text-[9.5px] font-semibold text-default-700">
           {deliveryBranch?.address || branches[0]?.address || "Store Address"}
         </p>
- <p className="text-[8.5px] text-gray-600">
+ <p className="text-[8.5px] text-default-600">
           Contact: {deliveryBranch?.phone || "0000"} | TIN: {deliveryBranch?.tin || "000-000-000"}
         </p>
         <div className="flex items-center justify-between pt-1">
  <span className="bg-black text-white px-2.5 py-0.5 rounded font-black text-[10px] uppercase tracking-widest">
             DELIVERY RECEIPT
           </span>
- <span className=" font-black text-[9px] uppercase tracking-wider px-2 py-0.5 bg-gray-200 text-gray-800 rounded border border-gray-400">
+ <span className=" font-black text-[9px] uppercase tracking-wider px-2 py-0.5 bg-gray-200 text-default-800 rounded border border-gray-400">
             [{copyType} - {copyType === "STORE COPY" ? "WAREHOUSE AUDIT FILE" : "CUSTOMER RECIPIENT COPY"}]
           </span>
         </div>
@@ -510,12 +510,12 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
         <div className="text-right">
           <span className="text-[8px] font-black uppercase text-default-500 block">Scheduled Date</span>
           <span className="font-bold text-black">{activeDelivery?.deliveryDate || new Date().toLocaleDateString()}</span>
-          <span className="text-[8.5px] font-medium text-gray-600 block">{activeDelivery?.deliveryTime || "Standard Slot"}</span>
+          <span className="text-[8.5px] font-medium text-default-600 block">{activeDelivery?.deliveryTime || "Standard Slot"}</span>
         </div>
       </div>
 
       {/* Customer & Address */}
-      <div className="bg-gray-50 p-2 rounded border border-gray-200 text-[10px] space-y-1">
+      <div className="bg-content1 p-2 rounded border border-divider/30 text-[10px] space-y-1">
         <div className="grid grid-cols-2 gap-2">
           <div>
             <span className="text-[8px] font-extrabold uppercase text-default-500 block">Customer Name</span>
@@ -527,13 +527,13 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
           </div>
         </div>
         {activeDeliverySale?.customerAddress && (
-          <div className="pt-1 border-t border-gray-200">
+          <div className="pt-1 border-t border-divider/30">
             <span className="text-[8px] font-extrabold uppercase text-default-500 block">Billing / Invoice Address</span>
-            <span className="font-semibold text-gray-900 block truncate">{activeDeliverySale.customerAddress}</span>
+            <span className="font-semibold text-foreground block truncate">{activeDeliverySale.customerAddress}</span>
           </div>
         )}
         {(activeDeliverySale?.customerTin || activeDeliverySale?.businessStyle) && (
-          <div className="pt-1 border-t border-gray-200 grid grid-cols-2 gap-2">
+          <div className="pt-1 border-t border-divider/30 grid grid-cols-2 gap-2">
             {activeDeliverySale?.customerTin && (
               <div>
                 <span className="text-[8px] font-extrabold uppercase text-default-500 block">Buyer TIN</span>
@@ -543,18 +543,18 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
             {activeDeliverySale?.businessStyle && (
               <div>
                 <span className="text-[8px] font-extrabold uppercase text-default-500 block">Business Style</span>
-                <span className="font-semibold text-gray-900">{activeDeliverySale.businessStyle}</span>
+                <span className="font-semibold text-foreground">{activeDeliverySale.businessStyle}</span>
               </div>
             )}
           </div>
         )}
-        <div className="pt-1 border-t border-gray-200">
+        <div className="pt-1 border-t border-divider/30">
           <span className="text-[8px] font-extrabold uppercase text-default-500 block">Unloading Address</span>
-          <span className="font-semibold text-gray-900 block">
+          <span className="font-semibold text-foreground block">
             {[activeDelivery?.houseNo, activeDelivery?.street, activeDelivery?.barangay, activeDelivery?.cityMunicipality].filter(Boolean).join(", ")}
           </span>
           {activeDelivery?.landmark && (
-            <span className="text-[8.5px] italic text-gray-600 block mt-0.5">
+            <span className="text-[8.5px] italic text-default-600 block mt-0.5">
               Landmark: {activeDelivery.landmark}
             </span>
           )}
@@ -563,11 +563,11 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
 
       {/* Carrier & Payment Summary */}
  <div className="grid grid-cols-2 gap-2 text-[9px] ">
-        <div className="bg-gray-100 p-1.5 rounded border border-gray-300">
+        <div className="bg-content2 p-1.5 rounded border border-divider/40">
           <span className="text-[7.5px] uppercase text-default-500 font-bold block">Logistics Personnel</span>
           <span className="font-extrabold text-black block">Truck: {activeDelivery?.truck || "Unassigned"}</span>
-          <span className="text-gray-700 block">Driver: {activeDelivery?.driver || "Unassigned"}</span>
-          <span className="text-gray-600 block">Helpers: {activeDelivery?.helper || "N/A"}</span>
+          <span className="text-default-700 block">Driver: {activeDelivery?.driver || "Unassigned"}</span>
+          <span className="text-default-600 block">Helpers: {activeDelivery?.helper || "N/A"}</span>
         </div>
 
         {activeDeliverySale && (() => {
@@ -577,11 +577,11 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
           return (
             <div className="bg-emerald-50/90 p-1.5 rounded border border-emerald-300">
               <span className="text-[7.5px] uppercase text-emerald-800 font-extrabold block">Bill & Payment Summary</span>
-              <div className="flex justify-between text-gray-800">
+              <div className="flex justify-between text-default-800">
                 <span>Bill Total:</span>
                 <span className="font-bold">{formatCurrency(grandTotal)}</span>
               </div>
-              <div className="flex justify-between text-gray-800">
+              <div className="flex justify-between text-default-800">
                 <span>Paid ({activeDeliverySale.paymentMethod || "Cash"}):</span>
                 <span className="font-bold">{formatCurrency(amountTendered)}</span>
               </div>
@@ -596,14 +596,14 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
 
       {/* Items Table */}
       <div className="space-y-1">
-        <div className="text-[8.5px] font-black uppercase tracking-wider text-gray-700 flex justify-between border-b-2 border-black pb-0.5">
+        <div className="text-[8.5px] font-black uppercase tracking-wider text-default-700 flex justify-between border-b-2 border-black pb-0.5">
           <span>Items to be Delivered</span>
           <span>Verification Checklist</span>
         </div>
 
         <table className="w-full text-left text-[9.5px] border-collapse">
           <thead>
-            <tr className="border-b border-gray-300 text-[8px] uppercase text-gray-600 font-extrabold">
+            <tr className="border-b border-divider/40 text-[8px] uppercase text-default-600 font-extrabold">
               <th className="py-0.5 pr-1">#</th>
               <th className="py-0.5">Description / Product</th>
               <th className="py-0.5 text-right">Qty</th>
@@ -637,15 +637,15 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
 
       {/* Cargo Handling Notes */}
       {activeDelivery?.notes && (
-        <div className="text-[9px] border-t border-gray-300 pt-1 text-gray-700">
-          <strong className="uppercase text-[8px] text-gray-600 block">Handling Notes:</strong>
+        <div className="text-[9px] border-t border-divider/40 pt-1 text-default-700">
+          <strong className="uppercase text-[8px] text-default-600 block">Handling Notes:</strong>
           <p className="italic leading-snug">{activeDelivery.notes}</p>
         </div>
       )}
 
       {/* Branch Policies */}
       {(deliveryBranch?.receiptReturnPolicy || deliveryBranch?.receiptNonReturnablePolicy) && (
-        <div className="text-center text-[7.5px] border-t border-dashed border-gray-300 pt-1.5 space-y-0.5 font-sans text-gray-600">
+        <div className="text-center text-[7.5px] border-t border-dashed border-divider/40 pt-1.5 space-y-0.5 font-sans text-default-600">
           {deliveryBranch.receiptReturnPolicy && (
             <div>
               <span className="font-extrabold uppercase text-black text-[7px] block">Return & Exchange Policy:</span>
@@ -654,7 +654,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
           )}
           {deliveryBranch.receiptNonReturnablePolicy && (
             <div className="italic text-default-500">
-              <span className="font-extrabold not-italic text-gray-700 text-[7px] uppercase block">Notice:</span>
+              <span className="font-extrabold not-italic text-default-700 text-[7px] uppercase block">Notice:</span>
               <span>{deliveryBranch.receiptNonReturnablePolicy}</span>
             </div>
           )}
@@ -663,25 +663,25 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
 
       {/* Receiver Confirmation & Signature Section */}
       <div className="border-t-2 border-black pt-2 mt-2 space-y-2">
-        <div className="bg-gray-100 p-1.5 rounded border border-gray-300 text-[8px] font-bold text-center text-gray-800 leading-tight">
+        <div className="bg-content2 p-1.5 rounded border border-divider/40 text-[8px] font-bold text-center text-default-800 leading-tight">
           DELIVERY CONFIRMATION: I hereby acknowledge receipt of the merchandise listed above in complete quantity, correct specifications, and good order & condition. Delivery Confirmed & Successful.
         </div>
 
         <div className="grid grid-cols-3 gap-2 text-center text-[8px] font-sans pt-1">
           <div className="space-y-4">
             <div className="border-b border-black h-5"></div>
-            <span className="font-extrabold uppercase text-gray-800 block">Released By (Warehouse)</span>
+            <span className="font-extrabold uppercase text-default-800 block">Released By (Warehouse)</span>
           </div>
           <div className="space-y-4">
             <div className="border-b border-black h-5"></div>
-            <span className="font-extrabold uppercase text-gray-800 block">Delivered By (Driver)</span>
+            <span className="font-extrabold uppercase text-default-800 block">Delivered By (Driver)</span>
           </div>
           <div className="space-y-1">
             <div className="border-b border-black h-5"></div>
             <span className="font-extrabold uppercase text-black block">Received By (Signature)</span>
- <span className="text-[7.5px] text-gray-600 block ">Printed Name: _________________</span>
- <span className="text-[7.5px] text-gray-600 block ">Date & Time: __________________</span>
- <span className="text-[7.5px] text-gray-600 block ">ID / Relation: _________________</span>
+ <span className="text-[7.5px] text-default-600 block ">Printed Name: _________________</span>
+ <span className="text-[7.5px] text-default-600 block ">Date & Time: __________________</span>
+ <span className="text-[7.5px] text-default-600 block ">ID / Relation: _________________</span>
           </div>
         </div>
       </div>
@@ -861,7 +861,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  value={searchTerm ?? ''}
  onChange={e => setSearchTerm(e.target.value)}
  placeholder="Search ref #, client, address, pilot..."
- className="w-full bg-content1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary border border-divider/30 pl-8 pr-4 py-2 rounded-xl placeholder-zinc-500 font-bold"
+ className="w-full bg-content1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary border border-divider/30 pl-8 pr-4 py-2 rounded-xl placeholder:text-default-500 font-bold"
  />
  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-default-500" />
  {searchTerm && (
@@ -1390,7 +1390,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  <button
  type="button"
  onClick={() => setShowAssignForm(false)}
- className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-default-500 hover:bg-zinc-500/10 cursor-pointer"
+ className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-default-500 hover:bg-default-500/10 cursor-pointer"
  >
  Cancel
  </button>
@@ -1470,7 +1470,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  <button
  type="button"
  onClick={() => setShowCompleteForm(false)}
- className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-default-500 hover:bg-zinc-500/10 cursor-pointer"
+ className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-default-500 hover:bg-default-500/10 cursor-pointer"
  >
  Cancel
  </button>
@@ -1528,7 +1528,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  <button
  type="button"
  onClick={() => setShowFailForm(false)}
- className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-default-500 hover:bg-zinc-500/10 cursor-pointer"
+ className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-default-500 hover:bg-default-500/10 cursor-pointer"
  >
  Cancel
  </button>
@@ -1558,13 +1558,14 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
 
  </div>
 
- {/* DELIVERY RECEIPT PRINT MODAL */}
- {showDeliveryReceiptModal && activeDelivery && typeof document !== 'undefined' && createPortal(
- <div className="fixed inset-0 overflow-y-auto flex items-center justify-center z-50 p-4 font-sans">
- <div
- className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity bir-report-no-print"
- onClick={() => setShowDeliveryReceiptModal(false)}
- />
+  {/* DELIVERY RECEIPT PRINT MODAL */}
+  {showDeliveryReceiptModal && activeDelivery && (
+    <HeroModal
+      isOpen={showDeliveryReceiptModal}
+      onClose={() => setShowDeliveryReceiptModal(false)}
+      size="lg"
+      className="p-6 border border-divider/30 max-h-[90vh] overflow-y-auto flex flex-col justify-between"
+    >
  <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground flex flex-col justify-between shrink-0 my-auto">
  
  <div className="flex items-center justify-between pb-3 border-b border-divider/20 bir-report-no-print">
@@ -1592,7 +1593,7 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
 
     <div className="relative flex py-2 items-center">
       <div className="flex-grow border-t-2 border-dashed border-gray-400"></div>
- <span className="flex-shrink mx-4 text-gray-600 text-[9px] font-black uppercase tracking-wider bg-gray-100 px-3 py-1 rounded-full border border-gray-300 shadow-xs">
+ <span className="flex-shrink mx-4 text-default-600 text-[9px] font-black uppercase tracking-wider bg-content2 px-3 py-1 rounded-full border border-divider/40 shadow-xs">
         CUT HERE • STORE COPY ABOVE / CUSTOMER COPY BELOW
       </span>
       <div className="flex-grow border-t-2 border-dashed border-gray-400"></div>
@@ -1621,18 +1622,16 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
   </div>
 
   </div>
-  </div>,
-  document.body
+    </HeroModal>
   )}
 
   {/* SCHEDULE POS DELIVERY MODAL */}
-  {showSchedulePosModal && typeof document !== 'undefined' && createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 font-sans">
-      <div
-        className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity"
-        onClick={() => setShowSchedulePosModal(false)}
-      />
-      <div className="relative w-full max-w-lg rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground text-left space-y-4 max-h-[90vh] overflow-y-auto">
+  <HeroModal
+    isOpen={showSchedulePosModal}
+    onClose={() => setShowSchedulePosModal(false)}
+    size="lg"
+    className="p-6 border border-divider/30 text-left space-y-4 max-h-[90vh] overflow-y-auto"
+  >
         <div className="flex justify-between items-center border-b border-divider/20 pb-3">
           <div>
             <h3 className="text-base font-black text-foreground uppercase flex items-center gap-2">
@@ -1850,10 +1849,8 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
             </button>
           </div>
         </form>
-      </div>
-    </div>,
-    document.body
-  )}
+  </HeroModal>
+
 
   </div>
   );

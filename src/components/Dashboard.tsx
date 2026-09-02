@@ -627,7 +627,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 setIsRefreshing(true);
                 setTimeout(() => setIsRefreshing(false), 500);
               }}
-              className="bg-default-100 hover:bg-default-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-foreground"
+              className="bg-default-100 hover:bg-default-200 dark:bg-content2 dark:hover:bg-content3 text-foreground"
               aria-label="Refresh Metrics"
             >
               <RotateCw className={`h-4 w-4 text-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -754,21 +754,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
             <div
               onClick={() => onNavigate('deliveries-panel')}
-              className="p-2 rounded-xl bg-default-100/70 dark:bg-zinc-800/60 hover:bg-default-200/70 cursor-pointer transition-colors"
+              className="p-2 rounded-xl bg-default-100/70 dark:bg-content2/60 hover:bg-default-200/70 cursor-pointer transition-colors"
             >
               <div className="text-sm font-bold text-sky-500 tabular-nums">{pendingDeliveriesCount}</div>
               <div className="text-[10px] text-default-400 font-medium">Cargo</div>
             </div>
             <div
               onClick={() => onNavigate('pos')}
-              className="p-2 rounded-xl bg-default-100/70 dark:bg-zinc-800/60 hover:bg-default-200/70 cursor-pointer transition-colors"
+              className="p-2 rounded-xl bg-default-100/70 dark:bg-content2/60 hover:bg-default-200/70 cursor-pointer transition-colors"
             >
               <div className="text-sm font-bold text-amber-500 tabular-nums">{parkedSalesCount}</div>
               <div className="text-[10px] text-default-400 font-medium">Parked</div>
             </div>
             <div
               onClick={() => onNavigate('inventory-stocks')}
-              className="p-2 rounded-xl bg-default-100/70 dark:bg-zinc-800/60 hover:bg-default-200/70 cursor-pointer transition-colors"
+              className="p-2 rounded-xl bg-default-100/70 dark:bg-content2/60 hover:bg-default-200/70 cursor-pointer transition-colors"
             >
               <div className="text-sm font-bold text-rose-500 tabular-nums">{lowStockCount}</div>
               <div className="text-[10px] text-default-400 font-medium">Low Stock</div>
@@ -799,7 +799,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </div>
 
               {/* Time Range Pills (HeroUI Style Segmented Pill) */}
-              <div className="flex items-center bg-default-100 dark:bg-zinc-800/80 p-1 rounded-full border border-divider/40 dark:border-white/5 self-start sm:self-auto shadow-xs">
+              <div className="flex items-center bg-default-100 dark:bg-content2/80 p-1 rounded-full border border-divider/40 dark:border-white/5 self-start sm:self-auto shadow-xs">
                 {(['1D', '1W', '1M', '3M', '1Y', 'All'] as const).map((r) => (
                   <button
                     key={r}
@@ -807,8 +807,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     onClick={() => setTimeRange(r)}
                     className={`px-3 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer font-sans active:scale-[0.97] ${
                       timeRange === r
-                        ? 'bg-white text-zinc-900 dark:bg-zinc-700 dark:text-white shadow-xs'
-                        : 'text-default-500 dark:text-zinc-400 hover:text-foreground'
+                        ? 'bg-white text-foreground dark:bg-content3 dark:text-white shadow-xs'
+                        : 'text-default-500 dark:text-default-400 hover:text-foreground'
                     }`}
                   >
                     {r}
@@ -924,7 +924,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                       setTablePage(1);
                     }}
                     placeholder="Search invoice or customer..."
-                    className="w-full bg-default-100 dark:bg-zinc-800/80 border border-divider/40 text-foreground text-xs rounded-full pl-9 pr-3.5 py-2 outline-none focus:border-primary/50 transition-colors font-sans"
+                    className="w-full bg-default-100 dark:bg-content2/80 border border-divider/40 text-foreground text-xs rounded-full pl-9 pr-3.5 py-2 outline-none focus:border-primary/50 transition-colors font-sans"
                   />
                 </div>
 
@@ -1078,7 +1078,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                             e.stopPropagation();
                             setSelectedSale(sale);
                           }}
-                          className="w-7 h-7 rounded-full bg-default-100 hover:bg-default-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-default-400 hover:text-foreground transition-all flex items-center justify-center cursor-pointer active:scale-95 mx-auto"
+                          className="w-7 h-7 rounded-full bg-default-100 hover:bg-default-200 dark:bg-content2 dark:hover:bg-content3 text-default-400 hover:text-foreground transition-all flex items-center justify-center cursor-pointer active:scale-95 mx-auto"
                           title="View Receipt Details"
                         >
                           <Eye className="h-3.5 w-3.5" />

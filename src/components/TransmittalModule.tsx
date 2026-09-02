@@ -1,10 +1,10 @@
+import { HeroModal } from './common/ui/HeroModal';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 
 import React, { useState } from "react";
-import { createPortal } from "react-dom";
 import { useDb } from "../context/DbContext";
 import { isProductInBranch } from "../lib/branchUtils";
 import { formatCurrency } from "../utils/formatters";
@@ -1345,16 +1345,8 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  </div>
 
  {/* MODAL 1: Create dispatch document form */}
- {showModal && typeof document !== 'undefined' && createPortal(
- <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
- <div
- className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity"
- onClick={() => setShowModal(false)}
- />
- <form
- onSubmit={handleCreateTrans}
- className="relative w-full max-w-sm rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4 text-left"
- >
+  <HeroModal isOpen={showModal} onClose={() => setShowModal(false)} size="sm" className="p-6 border border-divider/30 space-y-4 text-left">
+    <form onSubmit={handleCreateTrans} className="space-y-4 text-left">
  <div className="flex justify-between items-center border-b border-divider/20 pb-2.5 flex-shrink-0">
  <h3 className="text-base font-bold text-primary flex items-center gap-2">
  <Send className="h-4.5 w-4.5" />
@@ -1459,19 +1451,12 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  Dispatch Packet
  </button>
  </div>
- </form>
- </div>,
- document.body
- )}
+    </form>
+  </HeroModal>
 
  {/* MODAL 2: Inspect Payload contents details & Printable interactive slip */}
- {activeTrans && typeof document !== 'undefined' && createPortal(
- <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in no-print font-sans">
- <div
- className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity"
- onClick={() => setActiveTrans(null)}
- />
- <div className="relative w-full max-w-md rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4 text-left flex flex-col max-h-[90vh]">
+  {activeTrans && (
+    <HeroModal isOpen={Boolean(activeTrans)} onClose={() => setActiveTrans(null)} size="md" className="p-6 border border-divider/30 space-y-4 text-left flex flex-col max-h-[90vh]">
  <div className="flex justify-between items-center border-b border-divider/20 pb-2.5">
  <h3 className="text-base font-black text-primary flex items-center gap-2">
  <FileCheck className="h-5 w-5" />
@@ -1663,10 +1648,8 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  Close
  </button>
  </div>
- </div>
- </div>,
- document.body
- )}
+  </HeroModal>
+  )}
 
  {/* EXCLUSIVELY FOR PHYSICAL PRINT / PDF COMPILATION */}
  {activeTrans && (
@@ -1835,13 +1818,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  />
 
  {/* MODAL 3: Visual JSON import form (replacing prompt window popup) */}
- {showImportModal && typeof document !== 'undefined' && createPortal(
- <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
- <div
- className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity"
- onClick={() => setShowImportModal(false)}
- />
- <div className="relative w-full max-w-sm rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground text-left space-y-4">
+  <HeroModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} size="sm" className="p-6 border border-divider/30 text-left space-y-4">
  <div className="flex justify-between items-center border-b border-divider/20 pb-2.5">
  <h3 className="text-base font-bold text-primary flex items-center gap-2">
  <Upload className="h-5 w-5" /> Import JSON Slip
@@ -1883,10 +1860,7 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  Process Slip
  </button>
  </div>
- </div>
- </div>,
- document.body
- )}
+  </HeroModal>
 
  {/* Success toast alert bar */}
  <ToastNotification

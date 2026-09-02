@@ -76,7 +76,7 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
         </div>
 
         {/* Tab Switcher: Import vs Export */}
-        <div className="flex bg-default-100 dark:bg-zinc-800/80 p-1 rounded-full border border-divider/40 dark:border-white/5 shrink-0 shadow-xs">
+        <div className="flex bg-default-100 dark:bg-content2/80 p-1 rounded-full border border-divider/40 dark:border-white/5 shrink-0 shadow-xs">
           <HeroButton
             size="sm"
             variant={migrationSubTab === 'import' ? 'solid' : 'light'}

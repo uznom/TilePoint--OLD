@@ -1,5 +1,5 @@
 import React from "react";
-import { createPortal } from "react-dom";
+import { HeroModal } from "../../common/ui/HeroModal";
 import { Building2, X } from "lucide-react";
 
 export interface SupplierModalProps {
@@ -37,16 +37,9 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
   supplierError,
   onSave,
 }) => {
-  if (!isOpen || typeof document === "undefined") return null;
-
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
-      <div
-        className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity"
-        onClick={onClose}
-      />
-      <div className="relative bg-content1 border border-divider/40 rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl z-10 text-left space-y-6">
-        <div className="flex items-center justify-between border-b border-divider/20 pb-4">
+  return (
+    <HeroModal isOpen={isOpen} onClose={onClose} size="md" className="p-6 sm:p-7 space-y-6 border border-divider/40">
+      <div className="flex items-center justify-between border-b border-divider/20 pb-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shrink-0 border border-primary/20">
               <Building2 className="h-5 w-5" />
@@ -160,8 +153,6 @@ export const SupplierModal: React.FC<SupplierModalProps> = ({
             </button>
           </div>
         </form>
-      </div>
-    </div>,
-    document.body
+    </HeroModal>
   );
 };

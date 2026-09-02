@@ -403,13 +403,13 @@ export function ProfitAnalytics({
 
  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
  {/* Timeframe filter buttons */}
- <div className="flex bg-zinc-200/50 dark:bg-background/40 p-1 rounded-xl border border-divider/15 text-xs font-bold gap-1">
+ <div className="flex bg-content2/50 dark:bg-background/40 p-1 rounded-xl border border-divider/15 text-xs font-bold gap-1">
  <button
  onClick={() => handlePeriodChange("7d")}
  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
  selectedPeriod === "7d"
  ? "bg-primary text-primary-foreground font-black shadow"
- : "text-default-500 dark:text-default-500 hover:text-zinc-800 dark:hover:text-foreground"
+ : "text-default-500 dark:text-default-500 hover:text-default-800 dark:hover:text-foreground"
  }`}
  >
  7 Days
@@ -419,7 +419,7 @@ export function ProfitAnalytics({
  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
  selectedPeriod === "15d"
  ? "bg-primary text-primary-foreground font-black shadow"
- : "text-default-500 dark:text-default-500 hover:text-zinc-800 dark:hover:text-foreground"
+ : "text-default-500 dark:text-default-500 hover:text-default-800 dark:hover:text-foreground"
  }`}
  >
  15 Days
@@ -429,7 +429,7 @@ export function ProfitAnalytics({
  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
  selectedPeriod === "30d"
  ? "bg-primary text-primary-foreground font-black shadow"
- : "text-default-500 dark:text-default-500 hover:text-zinc-800 dark:hover:text-foreground"
+ : "text-default-500 dark:text-default-500 hover:text-default-800 dark:hover:text-foreground"
  }`}
  >
  30 Days
@@ -439,7 +439,7 @@ export function ProfitAnalytics({
  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
  selectedPeriod === "monthly"
  ? "bg-primary text-primary-foreground font-black shadow"
- : "text-default-500 dark:text-default-500 hover:text-zinc-800 dark:hover:text-foreground"
+ : "text-default-500 dark:text-default-500 hover:text-default-800 dark:hover:text-foreground"
  }`}
  >
  6 Months
@@ -449,7 +449,7 @@ export function ProfitAnalytics({
  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
  selectedPeriod === "all-time"
  ? "bg-primary text-primary-foreground font-black shadow"
- : "text-default-500 dark:text-default-500 hover:text-zinc-800 dark:hover:text-foreground"
+ : "text-default-500 dark:text-default-500 hover:text-default-800 dark:hover:text-foreground"
  }`}
  >
  All-Time (12M)
@@ -457,11 +457,11 @@ export function ProfitAnalytics({
  </div>
 
  {/* Chart visual type toggle */}
- <div className="flex bg-zinc-200/50 dark:bg-background/40 p-1 rounded-xl border border-divider/15 text-xs font-bold gap-1">
+ <div className="flex bg-content2/50 dark:bg-background/40 p-1 rounded-xl border border-divider/15 text-xs font-bold gap-1">
  <button
  onClick={() => setChartType("area")}
  className={`px-2.5 py-1.5 rounded-lg cursor-pointer transition-all ${
- chartType === "area" ? "bg-primary text-primary-foreground font-black shadow-sm" : "text-default-500 dark:text-default-500 hover:text-zinc-800 dark:hover:text-foreground"
+ chartType === "area" ? "bg-primary text-primary-foreground font-black shadow-sm" : "text-default-500 dark:text-default-500 hover:text-default-800 dark:hover:text-foreground"
  }`}
  title="Area Chart"
  >
@@ -470,7 +470,7 @@ export function ProfitAnalytics({
  <button
  onClick={() => setChartType("bar")}
  className={`px-2.5 py-1.5 rounded-lg cursor-pointer transition-all ${
- chartType === "bar" ? "bg-primary text-primary-foreground font-black shadow-sm" : "text-default-500 dark:text-default-500 hover:text-zinc-800 dark:hover:text-foreground"
+ chartType === "bar" ? "bg-primary text-primary-foreground font-black shadow-sm" : "text-default-500 dark:text-default-500 hover:text-default-800 dark:hover:text-foreground"
  }`}
  title="Bar Chart"
  >

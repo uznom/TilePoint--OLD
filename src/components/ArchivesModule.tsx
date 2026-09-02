@@ -1,5 +1,5 @@
+import { HeroModal } from './common/ui/HeroModal';
 import React, { useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import {
   AlertOctagon,
   AlertTriangle,
@@ -607,7 +607,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
                         getSelectedItems().length === filteredItems.length
                       }
                       onChange={handleToggleSelectAll}
-                      className="rounded border-zinc-300 dark:border-zinc-700 text-primary focus:ring-primary cursor-pointer h-3.5 w-3.5"
+                      className="rounded border-divider/40 dark:border-divider/30 text-primary focus:ring-primary cursor-pointer h-3.5 w-3.5"
                     />
                   </th>
                   <th className="py-3 px-3 w-28">Category</th>
@@ -635,7 +635,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => handleToggleSelectOne(key)}
-                          className="rounded border-zinc-300 dark:border-zinc-700 text-primary focus:ring-primary cursor-pointer h-3.5 w-3.5"
+                          className="rounded border-divider/40 dark:border-divider/30 text-primary focus:ring-primary cursor-pointer h-3.5 w-3.5"
                         />
                       </td>
 
@@ -751,14 +751,13 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
       </div>
 
       {/* MODAL: SINGLE PURGE CONFIRMATION */}
-      {itemToPurge && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
-          {/* Full-Screen Uniform Backdrop */}
-          <div 
-            className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
-            onClick={() => setItemToPurge(null)} 
-          />
-          <div className="relative bg-content1 rounded-2xl p-6 max-w-md w-full border border-divider/30 shadow-2xl space-y-4 z-10">
+      {itemToPurge && (
+        <HeroModal
+          isOpen={Boolean(itemToPurge)}
+          onClose={() => setItemToPurge(null)}
+          size="sm"
+          className="p-6 border border-divider/30 space-y-4"
+        >
             <div className="flex items-center gap-3 text-rose-500">
               <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20">
                 <AlertTriangle className="h-6 w-6" />
@@ -788,20 +787,16 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
                 Purge Permanently
               </button>
             </div>
-          </div>
-        </div>,
-        document.body
+      </HeroModal>
       )}
 
       {/* MODAL: BULK RESTORE CONFIRMATION */}
-      {showBulkRestoreModal && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
-          {/* Full-Screen Uniform Backdrop */}
-          <div 
-            className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
-            onClick={() => setShowBulkRestoreModal(false)} 
-          />
-          <div className="relative bg-content1 rounded-2xl p-6 max-w-md w-full border border-divider/30 shadow-2xl space-y-4 z-10">
+      <HeroModal
+        isOpen={showBulkRestoreModal}
+        onClose={() => setShowBulkRestoreModal(false)}
+        size="sm"
+        className="p-6 border border-divider/30 space-y-4"
+      >
             <div className="flex items-center gap-3 text-emerald-500">
               <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
                 <RotateCcw className="h-6 w-6" />
@@ -830,20 +825,15 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
                 Confirm Bulk Restore
               </button>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      </HeroModal>
 
       {/* MODAL: BULK PURGE CONFIRMATION */}
-      {showBulkPurgeModal && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
-          {/* Full-Screen Uniform Backdrop */}
-          <div 
-            className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
-            onClick={() => setShowBulkPurgeModal(false)} 
-          />
-          <div className="relative bg-content1 rounded-2xl p-6 max-w-md w-full border border-divider/30 shadow-2xl space-y-4 z-10">
+      <HeroModal
+        isOpen={showBulkPurgeModal}
+        onClose={() => setShowBulkPurgeModal(false)}
+        size="sm"
+        className="p-6 border border-divider/30 space-y-4"
+      >
             <div className="flex items-center gap-3 text-rose-500">
               <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20">
                 <AlertOctagon className="h-6 w-6" />
@@ -872,10 +862,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
                 Confirm Permanent Purge
               </button>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      </HeroModal>
     </div>
   );
 };

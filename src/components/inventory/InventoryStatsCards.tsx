@@ -70,7 +70,7 @@ export const InventoryStatsCards: React.FC<InventoryStatsCardsProps> = ({
         <div className={`p-2.5 rounded-xl shrink-0 ${
           stats.lowStockCount > 0 
             ? 'bg-amber-500/15 text-amber-500' 
-            : 'bg-default-100 dark:bg-zinc-800 text-default-500'
+            : 'bg-default-100 dark:bg-content2 text-default-500'
         }`}>
           <AlertTriangle className="h-5 w-5" />
         </div>
@@ -95,7 +95,7 @@ export const InventoryStatsCards: React.FC<InventoryStatsCardsProps> = ({
         <div className={`p-2.5 rounded-xl shrink-0 ${
           stats.criticalStockCount > 0 
             ? 'bg-rose-500/15 text-rose-500 animate-pulse' 
-            : 'bg-default-100 dark:bg-zinc-800 text-default-500'
+            : 'bg-default-100 dark:bg-content2 text-default-500'
         }`}>
           <AlertCircle className="h-5 w-5" />
         </div>
@@ -117,7 +117,7 @@ export const InventoryStatsCards: React.FC<InventoryStatsCardsProps> = ({
         }`}
         title="Click to view all Out of Stock items in Stock Alert Diagnostics Modal"
       >
-        <div className="p-2.5 rounded-xl bg-default-100 dark:bg-zinc-800 text-default-500 shrink-0">
+        <div className="p-2.5 rounded-xl bg-default-100 dark:bg-content2 text-default-500 shrink-0">
           <X className="h-5 w-5" />
         </div>
         <div className="min-w-0">

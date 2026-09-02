@@ -383,7 +383,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
               disabled={!(branchProducts || []).some(p => p && !p.isDeleted)}
               value={term}
               onChange={e => setTerm(e.target.value)}
-              className="w-full bg-default-100 dark:bg-zinc-800/80 border border-divider/40 focus:border-primary px-3.5 py-2 pl-10 pr-8 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all rounded-full font-sans font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-default-100 dark:bg-content2/80 border border-divider/40 focus:border-primary px-3.5 py-2 pl-10 pr-8 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all rounded-full font-sans font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             />
             {term && (
               <HeroTooltip content="Clear search">

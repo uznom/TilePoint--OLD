@@ -341,7 +341,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, _d
  className={`py-1.5 px-2 rounded-lg border text-[10px] font-bold text-center cursor-pointer transition-all ${
  isActive
  ? 'bg-primary/10 border-primary text-primary font-black shadow-inner'
- : 'bg-background dark:bg-content1/40 border-divider/25 text-default-500 dark:text-default-500 hover:text-foreground dark:hover:text-zinc-100 hover:border-divider/45'
+ : 'bg-background dark:bg-content1/40 border-divider/25 text-default-500 dark:text-default-500 hover:text-foreground dark:hover:text-default-100 hover:border-divider/45'
  }`}
  >
  {sc.label}
@@ -388,7 +388,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, _d
  {/* Waste Margin Override Toggle */}
           <div className="pt-3 border-t border-divider/15 flex items-center justify-between">
             <div>
-              <span className="text-[10px] font-black uppercase text-foreground dark:text-zinc-300 block">Waste Margin Override</span>
+              <span className="text-[10px] font-black uppercase text-foreground dark:text-default-300 block">Waste Margin Override</span>
               <span className="text-[9px] text-default-500 dark:text-default-500">Append +10% standard reserve for corner trims & shards</span>
             </div>
 
@@ -426,7 +426,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, _d
  <div className="text-2xl font-black text-primary mt-1 ">
  {calculations.areaSqm} <span className="text-xs">m²</span>
  </div>
- <span className="text-[9px] text-default-500/70 dark:text-zinc-500 font-medium block mt-0.5">Floor plane size</span>
+ <span className="text-[9px] text-default-500/70 dark:text-default-500 font-medium block mt-0.5">Floor plane size</span>
  </div>
 
  {/* Total Boxes Required */}
@@ -447,7 +447,7 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, _d
  <div className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 ">
  {calculations.looseBreakage} <span className="text-xs">pcs</span>
  </div>
- <span className="text-[9px] text-default-500/70 dark:text-zinc-500 font-medium block mt-0.5">~3% standard loss</span>
+ <span className="text-[9px] text-default-500/70 dark:text-default-500 font-medium block mt-0.5">~3% standard loss</span>
  </div>
  </div>
 
@@ -455,15 +455,15 @@ export const CalculatorModule: React.FC<CalculatorModuleProps> = ({ darkMode, _d
  <div className="bg-content2/60 dark:bg-content1/50 rounded-xl p-3 border border-divider/20 space-y-1.5 text-xs">
  <div className="flex justify-between items-center text-[10.5px] text-default-500 dark:text-default-500">
  <span>Single tile layout surface:</span>
- <span className=" font-bold text-foreground dark:text-zinc-200">{calculations.tileAreaSqm.toFixed(4)} m² ({tileLength}x{tileWidth} cm)</span>
+ <span className=" font-bold text-foreground dark:text-default-200">{calculations.tileAreaSqm.toFixed(4)} m² ({tileLength}x{tileWidth} cm)</span>
  </div>
  <div className="flex justify-between items-center text-[10.5px] text-default-500 dark:text-default-500">
  <span>Net tile count required (Perfect layout):</span>
- <span className=" font-bold text-foreground dark:text-zinc-200">{calculations.perfectTilesCount} pcs</span>
+ <span className=" font-bold text-foreground dark:text-default-200">{calculations.perfectTilesCount} pcs</span>
  </div>
  <div className="flex justify-between items-center text-[10.5px] text-default-500 dark:text-default-500">
  <span>Gross tiles required (With {isWasteOverride ? '10%' : '0%'} waste):</span>
- <span className=" font-bold text-foreground dark:text-zinc-200">{calculations.tilesWithWaste} pcs</span>
+ <span className=" font-bold text-foreground dark:text-default-200">{calculations.tilesWithWaste} pcs</span>
  </div>
  {selectedProduct && (
  <div className="pt-2 border-t border-divider/15 flex justify-between items-center text-[11px] font-bold text-primary">

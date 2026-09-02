@@ -1,3 +1,4 @@
+import { HeroModal } from './common/ui/HeroModal';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -50,9 +51,7 @@ WifiOff,
 CheckCircle2,
 X
 } from 'lucide-react';
-import { motion } from 'motion/react';
 import React, { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { ToastNotification } from './ToastNotification';
 import { DbSnapshot,useDb } from '../context/DbContext';
 import { exportMasterDatabaseToXLSX } from '../lib/excelExportHelper';
@@ -558,14 +557,13 @@ export function PrivacyAccessibilityHub({
  )}
 
   {/* INTERACTIVE HUB MODAL */}
-  {isOpen && typeof document !== 'undefined' && createPortal(
-  <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-  <div 
-  className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity animate-fade-in" 
-  onClick={() => setIsOpen(false)} 
-  />
-  
-  <div className="relative w-full max-w-[95vw] md:max-w-7xl h-[90vh] md:h-[740px] md:max-h-[85vh] flex flex-col bg-content1 border border-divider rounded-large shadow-small text-foreground rounded-2xl p-0 overflow-hidden border-divider/40 shadow-2xl animate-scale-up z-10">
+  <HeroModal
+    isOpen={isOpen}
+    onClose={() => setIsOpen(false)}
+    size="5xl"
+    zIndex={110}
+    className="w-full max-w-[95vw] md:max-w-7xl h-[90vh] md:h-[740px] md:max-h-[85vh] flex flex-col bg-content1 border border-divider/40 rounded-2xl p-0 overflow-hidden shadow-2xl text-foreground"
+  >
   {/* Header banner */}
   <div className="p-5 border-b border-divider/20 flex justify-between items-center bg-background shrink-0">
   <div className="flex items-center gap-3">
@@ -2804,13 +2802,13 @@ startxref
  </div>
 
  {/* Confirmation Modal */}
- {isArchiveConfirmOpen && typeof document !== 'undefined' && createPortal(
- <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 animate-fade-in">
- <div 
- className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
- onClick={() => setIsArchiveConfirmOpen(false)} 
- />
- <div className="relative bg-zinc-900 border border-amber-500/40 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl z-10">
+  <HeroModal
+    isOpen={isArchiveConfirmOpen}
+    onClose={() => setIsArchiveConfirmOpen(false)}
+    size="sm"
+    zIndex={300}
+    className="bg-content1 border border-amber-500/40 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl"
+  >
  <div className="flex items-center gap-2.5 text-amber-400">
  <AlertTriangle className="h-5 w-5 shrink-0" />
  <h4 className="text-sm font-extrabold uppercase tracking-wider">
@@ -2879,19 +2877,16 @@ startxref
  {isProcessingArchive ? 'Processing...' : 'Confirm & Purge'}
  </button>
  </div>
- </div>
- </div>,
- document.body
- )}
+  </HeroModal>
 
  {/* Batch Automated Policy Cleanup Modal */}
- {isBatchCleanupConfirmOpen && typeof document !== 'undefined' && createPortal(
- <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 animate-fade-in">
- <div 
- className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
- onClick={() => setIsBatchCleanupConfirmOpen(false)} 
- />
- <div className="relative bg-zinc-900 border border-primary/40 rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl z-10">
+  <HeroModal
+    isOpen={isBatchCleanupConfirmOpen}
+    onClose={() => setIsBatchCleanupConfirmOpen(false)}
+    size="md"
+    zIndex={300}
+    className="bg-content1 border border-primary/40 rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl"
+  >
  <div className="flex items-center gap-2.5 text-emerald-400">
  <ShieldCheck className="h-5 w-5 shrink-0" />
  <h4 className="text-sm font-extrabold uppercase tracking-wider">
@@ -2966,36 +2961,23 @@ startxref
  {isProcessingBatchCleanup ? 'Executing Policy Cleanup...' : 'Confirm & Run Policy Cleanup'}
  </button>
  </div>
- </div>
- </div>,
- document.body
- )}
+  </HeroModal>
  </div>
  )}
  </div>
  )}
  </div>
  </div>
- </div>
- </div>,
- document.body
- )}
+  </HeroModal>
 
- {isShowingHandbook && typeof document !== 'undefined' && createPortal(
- <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 animate-fade-in font-sans">
- <div 
- className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" 
- onClick={() => { setIsShowingHandbook(false); setIsOpen(true); }} 
- />
- <motion.div
- initial={{ scale: 0.95, opacity: 0 }}
- animate={{ scale: 1, opacity: 1 }}
- exit={{ scale: 0.95, opacity: 0 }}
- id="tilepoint-printable-handbook"
- className="relative w-full max-w-4xl rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground text-left space-y-5 max-h-[90vh] overflow-hidden flex flex-col"
- >
- {/* Header Block */}
- <div className="flex justify-between items-center border-b border-divider/15 pb-4 shrink-0">
+  <HeroModal
+    isOpen={isShowingHandbook}
+    onClose={() => { setIsShowingHandbook(false); setIsOpen(true); }}
+    size="4xl"
+    zIndex={200}
+    className="p-6 border border-divider/30 space-y-5 max-h-[90vh] overflow-hidden flex flex-col text-left"
+  >
+    <div className="flex justify-between items-center border-b border-divider/15 pb-4 shrink-0">
  <div className="flex items-center gap-2.5">
  <div className="p-2 bg-primary/10 text-primary rounded-xl">
  <BookOpen className="h-5 w-5" />
@@ -3329,11 +3311,8 @@ startxref
  <span>Print Reference Manual</span>
  </button>
  </div>
- </div>
- </motion.div>
- </div>,
- document.body
- )}
+  </div>
+  </HeroModal>
  <ToastNotification
  message={toastMessage}
  onClose={() => setToastMessage(null)}

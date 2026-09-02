@@ -2231,7 +2231,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
    const renderPosDeliveryReceiptCopy = (copyType: "STORE COPY" | "CUSTOMER COPY") => {
      if (!activeReceipt) return null;
      return (
-       <div key={copyType} className="border border-gray-300 rounded-lg p-3 bg-white text-black text-[11px] leading-relaxed space-y-2 shadow-xs text-left">
+       <div key={copyType} className="border border-divider/40 rounded-lg p-3 bg-white text-black text-[11px] leading-relaxed space-y-2 shadow-xs text-left">
       <div className="text-center pb-2 border-b-2 border-black space-y-1">
         {receiptBranch?.storeLogo ? (
           <div className="mb-1 flex items-center justify-center h-8">
@@ -2247,17 +2247,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
             {receiptBranch?.name || branches[0]?.name || localStorage.getItem("tilepoint_company_name_v1") || "MAIN STORE"}
           </h4>
         )}
-        <p className="text-[9px] font-semibold text-gray-700">
+        <p className="text-[9px] font-semibold text-default-700">
           {receiptBranch?.address || branches[0]?.address || "Store Address"}
         </p>
-        <p className="text-[8px] font-mono text-gray-600">
+        <p className="text-[8px] font-mono text-default-600">
           Contact: {receiptBranch?.phone || "0000"} | TIN: {receiptBranch?.tin || "000-000-000"}
         </p>
         <div className="flex items-center justify-between pt-1">
           <span className="bg-black text-white px-2 py-0.5 rounded font-mono font-black text-[9px] uppercase tracking-widest">
             DELIVERY RECEIPT
           </span>
-          <span className="font-mono font-black text-[8.5px] uppercase tracking-wider px-2 py-0.5 bg-gray-200 text-gray-800 rounded border border-gray-400">
+          <span className="font-mono font-black text-[8.5px] uppercase tracking-wider px-2 py-0.5 bg-gray-200 text-default-800 rounded border border-gray-400">
             [{copyType}]
           </span>
         </div>
@@ -2265,42 +2265,42 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
       <div className="grid grid-cols-2 gap-2 text-[9.5px] border-b border-dashed border-gray-400 pb-1.5 font-sans">
         <div>
-          <span className="text-[7.5px] font-black uppercase text-gray-500 block">DR Ref / Invoice</span>
+          <span className="text-[7.5px] font-black uppercase text-default-500 block">DR Ref / Invoice</span>
           <span className="font-mono font-bold text-black">{activeReceipt.saleNumber}</span>
         </div>
         <div className="text-right">
-          <span className="text-[7.5px] font-black uppercase text-gray-500 block">Cashier / Date</span>
+          <span className="text-[7.5px] font-black uppercase text-default-500 block">Cashier / Date</span>
           <span className="font-bold text-black">{getCleanCashierName(activeReceipt.cashierName, activeReceipt.cashierId)} • {new Date(activeReceipt.createdAt).toLocaleDateString()}</span>
         </div>
       </div>
 
-      <div className="bg-gray-50 p-2 rounded border border-gray-200 text-[9.5px] space-y-1">
+      <div className="bg-content1 p-2 rounded border border-divider/30 text-[9.5px] space-y-1">
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <span className="text-[7.5px] font-extrabold uppercase text-gray-500 block">Customer Name</span>
+            <span className="text-[7.5px] font-extrabold uppercase text-default-500 block">Customer Name</span>
             <span className="font-extrabold text-black uppercase">{activeReceipt.customerName || "Walk-in Customer"}</span>
           </div>
           <div>
-            <span className="text-[7.5px] font-extrabold uppercase text-gray-500 block">Contact</span>
+            <span className="text-[7.5px] font-extrabold uppercase text-default-500 block">Contact</span>
             <span className="font-mono font-bold text-black">{activeReceiptDelivery?.contactNumber || "N/A"}</span>
           </div>
         </div>
         {activeReceipt.customerAddress && (
-          <div className="pt-1 border-t border-gray-200">
-            <span className="text-[7.5px] font-extrabold uppercase text-gray-500 block">Billing Address</span>
-            <span className="font-semibold text-gray-900 block truncate">{activeReceipt.customerAddress}</span>
+          <div className="pt-1 border-t border-divider/30">
+            <span className="text-[7.5px] font-extrabold uppercase text-default-500 block">Billing Address</span>
+            <span className="font-semibold text-foreground block truncate">{activeReceipt.customerAddress}</span>
           </div>
         )}
         {activeReceipt.customerTin && (
-          <div className="pt-1 border-t border-gray-200 flex justify-between">
-            <span className="text-[7.5px] font-extrabold uppercase text-gray-500">Buyer TIN:</span>
+          <div className="pt-1 border-t border-divider/30 flex justify-between">
+            <span className="text-[7.5px] font-extrabold uppercase text-default-500">Buyer TIN:</span>
             <span className="font-mono font-bold text-black">{activeReceipt.customerTin}</span>
           </div>
         )}
         {activeReceiptDelivery && (
-          <div className="pt-1 border-t border-gray-200">
-            <span className="text-[7.5px] font-extrabold uppercase text-gray-500 block">Unloading Destination</span>
-            <span className="font-semibold text-gray-900 block">
+          <div className="pt-1 border-t border-divider/30">
+            <span className="text-[7.5px] font-extrabold uppercase text-default-500 block">Unloading Destination</span>
+            <span className="font-semibold text-foreground block">
               {[activeReceiptDelivery.houseNo, activeReceiptDelivery.street, activeReceiptDelivery.barangay, activeReceiptDelivery.cityMunicipality].filter(Boolean).join(", ")}
             </span>
           </div>
@@ -2309,13 +2309,13 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
       {/* Items */}
       <div className="space-y-1">
-        <div className="text-[8px] font-black uppercase text-gray-700 flex justify-between border-b border-black pb-0.5">
+        <div className="text-[8px] font-black uppercase text-default-700 flex justify-between border-b border-black pb-0.5">
           <span>Deliverable Items</span>
           <span>Checklist</span>
         </div>
         <table className="w-full text-left text-[9px]">
           <thead>
-            <tr className="border-b border-gray-300 text-[7.5px] uppercase text-gray-600 font-bold">
+            <tr className="border-b border-divider/40 text-[7.5px] uppercase text-default-600 font-bold">
               <th className="py-0.5">Product</th>
               <th className="py-0.5 text-right">Qty</th>
               <th className="py-0.5 text-center pl-2">Chk</th>
@@ -2353,18 +2353,18 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
       {/* Receiver Sign-Off */}
       <div className="border-t-2 border-black pt-1.5 space-y-1.5">
-        <div className="bg-gray-100 p-1 rounded border border-gray-300 text-[7.5px] font-bold text-center text-gray-800">
+        <div className="bg-content2 p-1 rounded border border-divider/40 text-[7.5px] font-bold text-center text-default-800">
           DELIVERY CONFIRMATION: I acknowledge receipt of items in complete quantity and good condition.
         </div>
         <div className="grid grid-cols-2 gap-2 text-center text-[7.5px] pt-1">
           <div>
             <div className="border-b border-black h-4"></div>
-            <span className="font-extrabold uppercase text-gray-800 block mt-0.5">Released By (Warehouse)</span>
+            <span className="font-extrabold uppercase text-default-800 block mt-0.5">Released By (Warehouse)</span>
           </div>
           <div>
             <div className="border-b border-black h-4"></div>
             <span className="font-extrabold uppercase text-black block mt-0.5">Received By (Signature)</span>
-            <span className="text-[7px] text-gray-600 block font-mono">Date/Time: ________________</span>
+            <span className="text-[7px] text-default-600 block font-mono">Date/Time: ________________</span>
           </div>
         </div>
       </div>
@@ -3539,7 +3539,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  animate={{ opacity: 1 }}
  exit={{ opacity: 0 }}
  transition={{ duration: 0.25 }}
- className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm"
+ className="absolute inset-0 bg-black/70 backdrop-blur-sm"
  onClick={() => setPendingApproval(null)}
  />
  <motion.form
@@ -3664,7 +3664,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  animate={{ opacity: 1 }}
  exit={{ opacity: 0 }}
  transition={{ duration: 0.25 }}
- className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm"
+ className="absolute inset-0 bg-black/70 backdrop-blur-sm"
  onClick={() => setOverrideModalOpen(false)}
  />
  <motion.form
@@ -3747,7 +3747,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  animate={{ opacity: 1 }}
  exit={{ opacity: 0 }}
  transition={{ duration: 0.25 }}
- className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
+ className="absolute inset-0 bg-black/75 backdrop-blur-sm"
  onClick={() => setShowFulfillmentModal(false)}
  />
  <motion.div
@@ -4020,7 +4020,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  animate={{ opacity: 1 }}
  exit={{ opacity: 0 }}
  transition={{ duration: 0.25 }}
- className="absolute inset-0 bg-gray-950/70 backdrop-blur-sm"
+ className="absolute inset-0 bg-black/70 backdrop-blur-sm"
  onClick={() => {
  setPinModalOpen(false);
  setPinAction(null);
@@ -4177,7 +4177,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  {selectedSaleDetail && (
  <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4 animate-fade-in text-left">
  <div
- className="absolute inset-0 bg-gray-950/65 backdrop-blur-sm"
+ className="absolute inset-0 bg-black/65 backdrop-blur-sm"
  onClick={() => setSelectedSaleDetail(null)}
  />
  <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground space-y-4">
@@ -4188,7 +4188,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </h3>
  <button
  onClick={() => setSelectedSaleDetail(null)}
- className="text-default-500 hover:text-white cursor-pointer p-1 rounded-full hover:bg-zinc-800"
+ className="text-default-500 hover:text-white cursor-pointer p-1 rounded-full hover:bg-content2"
  >
  <X className="h-4.5 w-4.5" />
  </button>
@@ -4196,7 +4196,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  <div className="grid grid-cols-2 gap-3 bg-content1/70 p-3.5 rounded-2xl border border-divider/10 text-xs font-sans">
  <div>
- <span className="block text-[10px] uppercase font-bold text-zinc-450 tracking-wider">
+ <span className="block text-[10px] uppercase font-bold text-default-500 tracking-wider">
  Buyer Name
  </span>
  <span className="font-extrabold text-sm text-primary mt-0.5 block">
@@ -4204,7 +4204,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </span>
  </div>
  <div>
- <span className="block text-[10px] uppercase font-bold text-zinc-450 tracking-wider">
+ <span className="block text-[10px] uppercase font-bold text-default-500 tracking-wider">
  Settled Timestamp
  </span>
  <span className=" mt-0.5 block">
@@ -4212,7 +4212,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </span>
  </div>
  <div>
- <span className="block text-[10px] uppercase font-bold text-zinc-450 tracking-wider">
+ <span className="block text-[10px] uppercase font-bold text-default-500 tracking-wider">
  Cashier Agent
  </span>
  <span className="font-bold mt-0.5 block">
@@ -4220,7 +4220,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </span>
  </div>
  <div>
- <span className="block text-[10px] uppercase font-bold text-zinc-450 tracking-wider">
+ <span className="block text-[10px] uppercase font-bold text-default-500 tracking-wider">
  Settlement Type
  </span>
  <span className="font-bold mt-0.5 block text-[#10B981]">
@@ -4438,7 +4438,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  initial={{ opacity: 0 }}
  animate={{ opacity: 1 }}
  exit={{ opacity: 0 }}
- className="absolute inset-0 bg-gray-950/75 backdrop-blur-sm"
+ className="absolute inset-0 bg-black/75 backdrop-blur-sm"
  onClick={() => setShowLoyaltyConfigModal(false)}
  />
  <motion.div
@@ -4542,7 +4542,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </button>
  <button
  type="submit"
- className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-extrabold text-xs rounded-xl shadow-md cursor-pointer transition-colors flex items-center gap-1.5"
+ className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-foreground font-extrabold text-xs rounded-xl shadow-md cursor-pointer transition-colors flex items-center gap-1.5"
  >
  <Sparkles className="h-4 w-4" />
  <span>Save Mechanics</span>

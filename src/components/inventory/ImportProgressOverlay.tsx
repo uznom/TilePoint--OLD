@@ -29,7 +29,7 @@ export const ImportProgressOverlay: React.FC<ImportProgressOverlayProps> = ({
       onKeyDown={(e) => e.preventDefault()}
     >
       <div className="bg-content1 border border-divider/30 rounded-2xl p-8 shadow-2xl w-full max-w-md text-center space-y-6 animate-scale-up border-t-4 border-t-zinc-700 dark:border-t-zinc-300">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-default-100 border border-divider/30 text-zinc-800 dark:text-zinc-200 shadow-inner">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-default-100 border border-divider/30 text-default-800 dark:text-default-200 shadow-inner">
           <RefreshCw className="h-8 w-8 animate-spin text-primary" />
         </div>
 
@@ -49,12 +49,12 @@ export const ImportProgressOverlay: React.FC<ImportProgressOverlayProps> = ({
         <div className="space-y-2 px-1">
           <div className="flex justify-between items-center text-xs font-extrabold">
             <span className="text-default-500 uppercase tracking-wider text-[11px]">CSV Migration Status</span>
-            <span className="text-zinc-800 dark:text-zinc-200 text-sm font-black">{Math.min(100, Math.max(0, importProgressPercent))}%</span>
+            <span className="text-default-800 dark:text-default-200 text-sm font-black">{Math.min(100, Math.max(0, importProgressPercent))}%</span>
           </div>
 
           <div className="h-4 w-full bg-default-100/40 rounded-full overflow-hidden p-[2px] border border-divider/25 shadow-inner">
             <div
-              className="h-full rounded-full bg-zinc-800 dark:bg-zinc-200 transition-all duration-300 shadow-sm"
+              className="h-full rounded-full bg-content2 dark:bg-content2 transition-all duration-300 shadow-sm"
               style={{ width: `${Math.min(100, Math.max(0, importProgressPercent))}%` }}
             />
           </div>

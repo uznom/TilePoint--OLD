@@ -125,7 +125,7 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
             return 'bg-danger text-danger-foreground hover:brightness-105 active:brightness-95 shadow-sm shadow-danger/20';
           case 'default':
           default:
-            return 'bg-default-200 text-default-foreground hover:bg-default-300 active:bg-default-400 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-100 shadow-xs';
+            return 'bg-default-200 text-default-foreground hover:bg-default-300 active:bg-default-400 dark:bg-content2 dark:hover:bg-content3 dark:text-default-100 shadow-xs';
         }
       case 'flat':
         switch (resolvedColor) {
@@ -141,7 +141,7 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
             return 'bg-danger/10 text-danger hover:bg-danger/20 active:bg-danger/25 dark:bg-danger/20 dark:text-danger dark:hover:bg-danger/30';
           case 'default':
           default:
-            return 'bg-default-100 text-default-700 hover:bg-default-200 active:bg-default-300 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 dark:text-zinc-200';
+            return 'bg-default-100 text-default-700 hover:bg-default-200 active:bg-default-300 dark:bg-content2/80 dark:hover:bg-content3 dark:text-default-200';
         }
       case 'bordered':
         switch (resolvedColor) {
@@ -157,7 +157,7 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
             return 'border border-danger text-danger hover:bg-danger/10 active:bg-danger/20';
           case 'default':
           default:
-            return 'border border-divider dark:border-white/10 text-default-700 hover:bg-default-100 active:bg-default-200 dark:text-zinc-200 dark:hover:bg-zinc-800';
+            return 'border border-divider dark:border-white/10 text-default-700 hover:bg-default-100 active:bg-default-200 dark:text-default-200 dark:hover:bg-content2';
         }
       case 'light':
         switch (resolvedColor) {
@@ -173,14 +173,14 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
             return 'bg-transparent text-danger hover:bg-danger/10 active:bg-danger/20';
           case 'default':
           default:
-            return 'bg-transparent text-default-600 hover:bg-default-100 active:bg-default-200 dark:text-zinc-400 dark:hover:bg-zinc-800/60 dark:hover:text-zinc-200';
+            return 'bg-transparent text-default-600 hover:bg-default-100 active:bg-default-200 dark:text-default-400 dark:hover:bg-content2/60 dark:hover:text-default-200';
         }
       case 'ghost':
-        return 'border border-transparent hover:border-divider bg-transparent text-default-700 dark:text-zinc-300 hover:bg-default-100/50 dark:hover:bg-zinc-800/50';
+        return 'border border-transparent hover:border-divider bg-transparent text-default-700 dark:text-default-300 hover:bg-default-100/50 dark:hover:bg-content2/50';
       case 'shadow':
         return 'bg-primary text-primary-foreground shadow-md shadow-primary/30 hover:brightness-105 active:brightness-95';
       case 'faded':
-        return 'border border-divider bg-default-100 text-default-700 hover:bg-default-200 dark:bg-zinc-800/60 dark:text-zinc-300';
+        return 'border border-divider bg-default-100 text-default-700 hover:bg-default-200 dark:bg-content2/60 dark:text-default-300';
       default:
         return 'bg-primary text-primary-foreground hover:brightness-105';
     }
@@ -223,7 +223,7 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
   };
 
   const baseClasses =
-    'relative inline-flex items-center justify-center font-sans tracking-tight transition-all duration-200 ease-out outline-none select-none cursor-pointer active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100';
+    'relative inline-flex items-center justify-center font-sans tracking-tight transition-all duration-200 ease-out outline-none select-none cursor-pointer active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-content1 disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:active:scale-100';
 
   const widthClass = fullWidth ? 'w-full' : '';
 

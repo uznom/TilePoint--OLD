@@ -119,7 +119,7 @@ export const HeroModal: React.FC<HeroModalProps> & {
               <button
                 type="button"
                 onClick={onClose}
-                className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-default-100 dark:bg-zinc-800/80 text-default-400 hover:text-foreground dark:hover:text-white transition-all flex items-center justify-center cursor-pointer active:scale-95"
+                className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-default-100 dark:bg-content2/80 text-default-400 hover:text-foreground dark:hover:text-white transition-all flex items-center justify-center cursor-pointer active:scale-95"
                 title="Close"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -156,7 +156,7 @@ HeroModal.Body = ({ children, className = '', ...props }) => (
 
 HeroModal.Footer = ({ children, className = '', ...props }) => (
   <div
-    className={`px-6 py-4 border-t border-divider bg-content1 dark:bg-zinc-900/60 flex items-center justify-end gap-3 font-sans ${className}`}
+    className={`px-6 py-4 border-t border-divider bg-content1 dark:bg-content1/60 flex items-center justify-end gap-3 font-sans ${className}`}
     {...props}
   >
     {children}

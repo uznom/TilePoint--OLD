@@ -29,7 +29,6 @@ X
 } from 'lucide-react';
 import { AnimatePresence,motion } from 'motion/react';
 import React,{ useEffect,useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useDb } from '../context/DbContext';
 import { Branch,UserRole } from '../types/db';
 import { useReceiptFontSize } from './ReceiptFontSizeControl';
@@ -37,6 +36,7 @@ import { TablePagination,useResponsivePageSize } from './TablePagination';
 import { ToastNotification } from './ToastNotification';
 
 import { formatTin } from '../utils/formatters';
+import { HeroModal } from './common/ui/HeroModal';
 import { HeroTable } from './common/ui/HeroTable';
 import { HeroButton } from './common/ui/HeroButton';
 import { HeroChip } from './common/ui/HeroChip';
@@ -1593,15 +1593,10 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  </div>
 
  {/* MODAL: Edit / Add Corporate Branch dialog */}
- {showModal && typeof document !== 'undefined' && createPortal(
- <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in font-sans">
- <div className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" onClick={() => setShowModal(false)} />
- <form
- onSubmit={handleSubmit}
- className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl space-y-4 bg-content1 text-foreground"
- >
- <div className="flex justify-between items-center border-b border-divider/20 pb-2.5 flex-shrink-0">
- <h3 className="text-base font-bold text-primary flex items-center gap-2">
+  <HeroModal isOpen={showModal} onClose={() => setShowModal(false)} size="xl" className="p-6 border border-divider/30 max-h-[90vh] overflow-y-auto">
+    <form onSubmit={handleSubmit} className="space-y-4 bg-content1 text-foreground text-left">
+      <div className="flex justify-between items-center border-b border-divider/20 pb-2.5 flex-shrink-0">
+        <h3 className="text-base font-bold text-primary flex items-center gap-2">
  <Building2 className="h-5 w-5" />
  <span>{isEditMode ? 'Modify Branch Records' : 'Launch New Store Location'}</span>
  </h3>
@@ -2063,51 +2058,53 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
     </button>
   </div>
  </form>
- </div>,
- document.body
- )}
+ </HeroModal>
 
- {/* CUSTOM HEROUI ALERT DIALOG: Confirmation before delete to avoid blocking browser popups */}
- {confirmDeleteId && typeof document !== 'undefined' && createPortal(
- <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 animate-fade-in font-sans">
- <div className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" onClick={() => setConfirmDeleteId(null)} />
- <div className="relative w-full max-w-xs max-h-[90vh] overflow-y-auto rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-content1 text-foreground text-center space-y-4">
- <div className="mx-auto h-12 w-12 rounded-full bg-primary-50 text-primary-700 flex items-center justify-center">
- <AlertTriangle className="h-6 w-6" />
- </div>
- <div>
- <h4 className="text-sm font-black text-primary">Archive Store Location?</h4>
- <p className="text-xs text-default-500/80 mt-2 leading-relaxed">
- Are you sure you want to soft-delete <span className="font-extrabold text-foreground">{confirmDeleteName}</span>? This item can be restored by DB administrators later.
- </p>
- </div>
- <div className="flex gap-2 justify-center pt-2">
- <button
- onClick={() => setConfirmDeleteId(null)}
- className="px-4 py-2 text-xs font-bold bg-default-100 text-default-500 rounded-full hover:bg-default-100 transition-colors"
- >
- Cancel
- </button>
- <button
- onClick={proceedWithDelete}
- className="px-4 py-2 text-xs font-bold bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors shadow-sm"
- >
- Confirm Delete
- </button>
- </div>
- </div>
- </div>,
- document.body
- )}
+  {/* CUSTOM HEROUI ALERT DIALOG: Confirmation before delete to avoid blocking browser popups */}
+  <HeroModal
+    isOpen={Boolean(confirmDeleteId)}
+    onClose={() => setConfirmDeleteId(null)}
+    size="xs"
+    className="p-6 text-center space-y-4 border border-divider/30"
+  >
+    <div className="mx-auto h-12 w-12 rounded-full bg-primary-50 text-primary-700 flex items-center justify-center">
+      <AlertTriangle className="h-6 w-6" />
+    </div>
+    <div>
+      <h4 className="text-sm font-black text-primary">Archive Store Location?</h4>
+      <p className="text-xs text-default-500/80 mt-2 leading-relaxed">
+        Are you sure you want to soft-delete <span className="font-extrabold text-foreground">{confirmDeleteName}</span>? This item can be restored by DB administrators later.
+      </p>
+    </div>
+    <div className="flex gap-2 justify-center pt-2">
+      <button
+        type="button"
+        onClick={() => setConfirmDeleteId(null)}
+        className="px-4 py-2 text-xs font-bold bg-default-100 text-default-500 rounded-full hover:bg-default-200 transition-colors"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        onClick={proceedWithDelete}
+        className="px-4 py-2 text-xs font-bold bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors shadow-sm"
+      >
+        Confirm Delete
+      </button>
+    </div>
+  </HeroModal>
 
   {/* MODAL: DIRECT ENLIST EMPLOYEE */}
-  {showEnlistModal && typeof document !== 'undefined' && createPortal(
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-fade-in font-sans">
-      <div className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity" onClick={() => setShowEnlistModal(false)} />
-      <form
-        onSubmit={handleEnlistEmployeeSubmit}
-        className="relative w-full max-w-sm rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl space-y-4 bg-content1 text-foreground"
-      >
+  <HeroModal
+    isOpen={showEnlistModal}
+    onClose={() => setShowEnlistModal(false)}
+    size="sm"
+    className="p-6 border border-divider/30 space-y-4"
+  >
+    <form
+      onSubmit={handleEnlistEmployeeSubmit}
+      className="space-y-4 bg-content1 text-foreground text-left"
+    >
         <div className="flex justify-between items-center border-b border-divider/20 pb-2.5">
           <h3 className="text-base font-bold text-primary flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
@@ -2219,10 +2216,8 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
             Enlist Employee
           </button>
         </div>
-      </form>
-    </div>,
-    document.body
-  )}
+    </form>
+  </HeroModal>
 
 
   {/* Success toast alert bar */}

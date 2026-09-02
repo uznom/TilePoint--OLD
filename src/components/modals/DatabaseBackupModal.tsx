@@ -136,14 +136,14 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
                   <div className="font-extrabold text-primary uppercase text-[10px] tracking-wide">
                     Optimization Status
                   </div>
-                  <div className="text-zinc-400 mt-1 font-sans">
+                  <div className="text-default-400 mt-1 font-sans">
                     Debounce cache buffer operates at{" "}
                     <span className="font-bold text-foreground">{debounceDelay}ms</span>.
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-emerald-400 font-extrabold">{writeStatsCount.toLocaleString()}</div>
-                  <div className="text-[9px] text-zinc-500 uppercase mt-0.5">Database Writes Saved</div>
+                  <div className="text-[9px] text-default-500 uppercase mt-0.5">Database Writes Saved</div>
                 </div>
               </div>
 
@@ -152,7 +152,7 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-xs font-bold">Hourly Data Preservation</div>
-                    <div className="text-[10px] text-zinc-400 mt-0.5">Protect inventory journals and sales invoices against localStorage eviction.</div>
+                    <div className="text-[10px] text-default-400 mt-0.5">Protect inventory journals and sales invoices against localStorage eviction.</div>
                   </div>
                   <button
                     type="button"
@@ -165,7 +165,7 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
                       setAutoBackupEnabled(!autoBackupEnabled);
                       showToastMsg(`Automated backup scheduler is now ${autoBackupEnabled ? "DISABLED" : "ENABLED"}`);
                     }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${autoBackupEnabled ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-zinc-800 text-zinc-400"}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${autoBackupEnabled ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-content2 text-default-400"}`}
                   >
                     {autoBackupEnabled ? "Enabled" : "Disabled"}
                   </button>
@@ -174,7 +174,7 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
                 <div className="flex items-center justify-between pt-3 border-t border-divider/10">
                   <div>
                     <div className="text-xs font-bold">Preservation Frequency Interval</div>
-                    <div className="text-[10px] text-zinc-400 mt-0.5">Frequency for background state snapshots.</div>
+                    <div className="text-[10px] text-default-400 mt-0.5">Frequency for background state snapshots.</div>
                   </div>
                   <HeroDropdownSelect
                     isDisabled={currentUser?.role !== UserRole.ADMIN}
@@ -203,11 +203,11 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
                     <div>
                       <h4 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-2">
                         Database Maintenance
-                        <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${dbMaintenanceEnabled ? "bg-emerald-500/10 text-emerald-400" : "bg-zinc-800 text-zinc-400"}`}>
+                        <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${dbMaintenanceEnabled ? "bg-emerald-500/10 text-emerald-400" : "bg-content2 text-default-400"}`}>
                           {dbMaintenanceEnabled ? "● Active Idle Sweep" : "● Disabled"}
                         </span>
                       </h4>
-                      <p className="text-[10px] text-zinc-400 mt-0.5">
+                      <p className="text-[10px] text-default-400 mt-0.5">
                         Daily index re-indexing and garbage collection sweep during idle periods to improve long-term system performance.
                       </p>
                     </div>
@@ -223,7 +223,7 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
                       setDbMaintenanceEnabled(!dbMaintenanceEnabled);
                       showToastMsg(`Idle maintenance is now ${dbMaintenanceEnabled ? "DISABLED" : "ENABLED"}`);
                     }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${dbMaintenanceEnabled ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-zinc-800 text-zinc-400"}`}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${dbMaintenanceEnabled ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-content2 text-default-400"}`}
                   >
                     {dbMaintenanceEnabled ? "Enabled" : "Disabled"}
                   </button>
@@ -232,7 +232,7 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
                 <div className="flex items-center justify-between pt-3 border-t border-divider/10">
                   <div>
                     <div className="text-xs font-bold">Last Database Sweep</div>
-                    <div className="text-[10px] text-zinc-400 mt-0.5">
+                    <div className="text-[10px] text-default-400 mt-0.5">
                       {lastMaintenanceTime ? new Date(lastMaintenanceTime).toLocaleString() : "Never executed on this client"}
                     </div>
                   </div>
@@ -263,7 +263,7 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
                     value={manualSnapshotName}
                     onChange={(e) => setManualSnapshotName(e.target.value)}
                     placeholder="Snapshot label (e.g. Pre-Audit Backup)"
-                    className="flex-1 bg-content1 text-xs text-foreground border border-divider/30 px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder-zinc-500 font-bold"
+                    className="flex-1 bg-content1 text-xs text-foreground border border-divider/30 px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary/40 placeholder:text-default-500 font-bold"
                   />
                   <button
                     type="button"
@@ -283,9 +283,9 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
 
               {dbSnapshots.length === 0 ? (
                 <div className="p-8 text-center bg-content1/40 rounded-2xl border border-dashed border-divider/20 space-y-2">
-                  <HardDrive className="h-8 w-8 text-zinc-600 mx-auto" />
-                  <p className="text-xs text-zinc-400 font-bold">No Database Snapshots Found</p>
-                  <p className="text-[10px] text-zinc-500">Automated and manual snapshots will register here.</p>
+                  <HardDrive className="h-8 w-8 text-default-600 mx-auto" />
+                  <p className="text-xs text-default-400 font-bold">No Database Snapshots Found</p>
+                  <p className="text-[10px] text-default-500">Automated and manual snapshots will register here.</p>
                 </div>
               ) : (
                 <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
@@ -296,12 +296,12 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
                     >
                       <div className="space-y-1">
                         <div className="text-xs font-black text-foreground">{snap.name}</div>
-                        <div className="text-[9.5px] text-zinc-400 font-bold flex items-center gap-2 flex-wrap">
+                        <div className="text-[9.5px] text-default-400 font-bold flex items-center gap-2 flex-wrap">
                           <span className="text-primary text-[10px]">{snap.creator}</span>
                           <span>•</span>
                           <span>{new Date(snap.timestamp).toLocaleString()}</span>
                           <span>•</span>
-                          <span className="text-zinc-500 bg-content1/55 px-1.5 rounded">
+                          <span className="text-default-500 bg-content1/55 px-1.5 rounded">
                             {((snap.sizeBytes || 0) / 1024).toFixed(1)} KB
                           </span>
                         </div>
@@ -317,7 +317,7 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
                         <button
                           type="button"
                           onClick={() => deleteDbSnapshot(snap.id)}
-                          className="p-1.5 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg cursor-pointer transition-all"
+                          className="p-1.5 text-default-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg cursor-pointer transition-all"
                           title="Delete Snapshot"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -334,7 +334,7 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
             <div className="space-y-4">
               <div className="rounded-2xl border border-divider/20 p-4 space-y-3 bg-content1">
                 <h4 className="text-xs font-black uppercase tracking-wider text-primary">Full Database JSON Export</h4>
-                <p className="text-[10px] text-zinc-400 leading-relaxed">
+                <p className="text-[10px] text-default-400 leading-relaxed">
                   Download a complete, offline snapshot containing all branch catalogs, member logs, transmittals, and historical sales transactions.
                 </p>
                 <button
@@ -376,7 +376,7 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
 
               <div className="rounded-2xl border border-divider/20 p-4 space-y-3 bg-content1">
                 <h4 className="text-xs font-black uppercase tracking-wider text-primary">Import Database Snapshot File</h4>
-                <p className="text-[10px] text-zinc-400 leading-relaxed">
+                <p className="text-[10px] text-default-400 leading-relaxed">
                   Upload a previously generated `.json` or `.backup` schema file to restore full database records.
                 </p>
                 <label className="w-full py-2.5 bg-background hover:bg-default-100 text-foreground text-xs font-extrabold uppercase tracking-wider rounded-xl border border-divider/20 flex items-center justify-center gap-1.5 cursor-pointer transition-colors">

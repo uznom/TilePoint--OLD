@@ -175,7 +175,7 @@ export const HeroChip: React.FC<HeroChipProps> = ({
             return { container: 'bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400 border border-rose-500/20', dot: 'bg-rose-500' };
           case 'default':
           default:
-            return { container: 'bg-default-100 text-default-700 dark:bg-zinc-800/80 dark:text-zinc-300 border border-divider/60 dark:border-white/5', dot: 'bg-default-500' };
+            return { container: 'bg-default-100 text-default-700 dark:bg-content2/80 dark:text-default-300 border border-divider/60 dark:border-white/5', dot: 'bg-default-500' };
         }
     }
   };

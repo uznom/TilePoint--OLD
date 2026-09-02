@@ -112,7 +112,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       case UserRole.CASHIER:
         return { label: "Cashier", bg: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" };
       default:
-        return { label: "Staff", bg: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20" };
+        return { label: "Staff", bg: "bg-default-500/10 text-default-600 dark:text-default-400 border-divider/20" };
     }
   }, [currentUser.role]);
 
@@ -211,8 +211,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               onClick={() => handleCategoryClick(cat)}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer group active:scale-[0.98] ${
                 isCategoryActive
-                  ? "bg-white text-zinc-900 shadow-xs border border-divider/60 dark:bg-zinc-800 dark:text-white dark:border-white/10"
-                  : "text-default-600 dark:text-zinc-400 hover:text-foreground hover:bg-default-100/70 dark:hover:bg-zinc-800/50"
+                  ? "bg-white text-foreground shadow-xs border border-divider/60 dark:bg-content2 dark:text-white dark:border-white/10"
+                  : "text-default-600 dark:text-default-400 hover:text-foreground hover:bg-default-100/70 dark:hover:bg-content2/50"
               }`}
               title={`Open ${cat.name}`}
             >

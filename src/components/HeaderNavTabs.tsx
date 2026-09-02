@@ -260,7 +260,7 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
         ref={scrollRef}
         onScroll={checkScroll}
         onWheel={handleWheel}
-        className="flex items-center gap-1.5 border border-divider/40 dark:border-white/5 bg-default-100/80 dark:bg-zinc-800/80 p-1 rounded-full shadow-xs overflow-x-auto no-scrollbar scroll-smooth w-full select-none shrink-0"
+        className="flex items-center gap-1.5 border border-divider/40 dark:border-white/5 bg-default-100/80 dark:bg-content2/80 p-1 rounded-full shadow-xs overflow-x-auto no-scrollbar scroll-smooth w-full select-none shrink-0"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {currentSubTabs.map((sub) => {
@@ -312,8 +312,8 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
               onClick={() => onChangeTab(sub.id)}
               className={`flex items-center gap-2 py-1.5 px-3.5 md:px-4 text-xs font-semibold tracking-tight transition-all duration-200 rounded-full shrink-0 cursor-pointer font-sans active:scale-[0.97] ${
                 isSelected
-                  ? 'bg-white text-zinc-900 dark:bg-zinc-700 dark:text-white shadow-xs'
-                  : 'text-default-500 dark:text-zinc-400 hover:text-foreground hover:bg-default-200/50 dark:hover:bg-zinc-700/50 font-medium'
+                  ? 'bg-white text-foreground dark:bg-content3 dark:text-white shadow-xs'
+                  : 'text-default-500 dark:text-default-400 hover:text-foreground hover:bg-default-200/50 dark:hover:bg-content3/50 font-medium'
               }`}
               title={`Sub-view: ${sub.name}`}
             >
@@ -325,7 +325,7 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
         })}
 
         {currentUser && sessionRemainingSeconds !== undefined && sessionRemainingSeconds > 0 && (
-          <div className="ml-auto flex items-center gap-1.5 pl-3 py-1 pr-1.5 bg-white dark:bg-zinc-700/60 border border-divider/40 rounded-full text-[11px] shrink-0 font-sans">
+          <div className="ml-auto flex items-center gap-1.5 pl-3 py-1 pr-1.5 bg-white dark:bg-content3/60 border border-divider/40 rounded-full text-[11px] shrink-0 font-sans">
             <Clock className={`h-3 w-3 ${sessionRemainingSeconds < 300 ? "text-rose-500 font-bold" : "text-primary"}`} />
             <span className="font-semibold text-foreground tabular-nums">
               {formatRemainingTime(sessionRemainingSeconds)}
