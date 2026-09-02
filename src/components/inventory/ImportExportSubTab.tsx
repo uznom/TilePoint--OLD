@@ -65,40 +65,45 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
   exportInventoryCatalogToXLSX,
 }) => {
   return (
-    <div className="space-y-6 text-left animate-fade-in font-sans">
+    <div className="space-y-6 text-left animate-fade-in font-sans text-xs">
       {/* Tool Header & Mode Selector */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-content1 p-5 rounded-2xl border border-divider shadow-xs">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 p-5 rounded-2xl border border-zinc-200/70 dark:border-white/10 shadow-elevation-soft">
         <div>
           <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
             <Database className="h-5 w-5 text-emerald-500" />
             <span>Migration &amp; Import / Export Tool</span>
           </h2>
+          <p className="text-xs text-default-500 font-medium mt-0.5">
+            Bulk catalog onboarding via CSV/JSON schemas and full enterprise data exports.
+          </p>
         </div>
 
         {/* Tab Switcher: Import vs Export */}
-        <div className="flex bg-default-100 dark:bg-content2/80 p-1 rounded-full border border-divider/40 dark:border-white/5 shrink-0 shadow-xs">
-          <HeroButton
-            size="sm"
-            variant={migrationSubTab === 'import' ? 'solid' : 'light'}
-            color={migrationSubTab === 'import' ? 'primary' : 'default'}
-            radius="full"
+        <div className="flex bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-full border border-zinc-200/50 dark:border-white/5 shrink-0">
+          <button
+            type="button"
             onClick={() => setMigrationSubTab('import')}
-            startIcon={<Upload className="h-3.5 w-3.5" />}
-            className="text-xs font-semibold h-8"
+            className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
+              migrationSubTab === 'import'
+                ? 'bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+            }`}
           >
-            Import &amp; Migration
-          </HeroButton>
-          <HeroButton
-            size="sm"
-            variant={migrationSubTab === 'export' ? 'solid' : 'light'}
-            color={migrationSubTab === 'export' ? 'primary' : 'default'}
-            radius="full"
+            <Upload className="h-3.5 w-3.5" />
+            <span>Import &amp; Migration</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setMigrationSubTab('export')}
-            startIcon={<Download className="h-3.5 w-3.5" />}
-            className="text-xs font-semibold h-8"
+            className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer ${
+              migrationSubTab === 'export'
+                ? 'bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+            }`}
           >
-            Export &amp; Backups
-          </HeroButton>
+            <Download className="h-3.5 w-3.5" />
+            <span>Export &amp; Backups</span>
+          </button>
         </div>
       </div>
 
@@ -106,8 +111,8 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
       {migrationSubTab === 'import' && (
         <div className="space-y-6 animate-fade-in font-sans">
           {/* Target Branch Selection */}
-          <div className="p-5 rounded-2xl bg-content1 border border-divider flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
-            <div className="flex items-center gap-2 text-xs font-semibold text-foreground tracking-tight">
+          <div className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-elevation-soft">
+            <div className="flex items-center gap-2 text-xs font-bold text-foreground tracking-tight">
               <MapPin className="h-4 w-4 text-primary" />
               <span>Target Destination Branch Allocation</span>
             </div>
@@ -124,17 +129,17 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
                 className="min-w-[220px]"
               />
             ) : (
-              <div className="px-3 py-1.5 text-xs font-bold text-foreground bg-content2 rounded-medium border border-divider flex items-center gap-2">
+              <div className="px-3.5 py-1.5 text-xs font-bold text-foreground bg-zinc-100 dark:bg-zinc-800 rounded-full border border-zinc-200/50 dark:border-white/5 flex items-center gap-2">
                 <span>{branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name}</span>
-                <span className="text-[10px] text-default-500">({currentUser?.branchAssignmentId || 'B1'})</span>
+                <span className="text-[10px] text-default-500 font-mono">({currentUser?.branchAssignmentId || 'B1'})</span>
               </div>
             )}
           </div>
 
           {/* Upload Box & Drag Zone */}
-          <div className="bg-content1 p-6 rounded-large border border-divider space-y-4 shadow-sm">
-            <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
-              <Upload className="h-4 w-4 text-success" />
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/70 dark:border-white/10 space-y-4 shadow-elevation-soft">
+            <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+              <Upload className="h-4 w-4 text-emerald-500" />
               <span>Upload CSV / JSON Dataset</span>
             </h3>
             
@@ -146,7 +151,7 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
                 const fileInput = document.getElementById('inventory-import-file-input');
                 if (fileInput) fileInput.click();
               }}
-              className="border-2 border-dashed border-divider hover:border-primary p-8 rounded-large text-center cursor-pointer transition-all bg-content2 hover:bg-primary/5 space-y-2 group active:scale-[0.98]"
+              className="border-2 border-dashed border-zinc-200 dark:border-white/10 hover:border-primary p-8 rounded-2xl text-center cursor-pointer transition-all bg-zinc-50 dark:bg-zinc-800/40 hover:bg-primary/5 space-y-2 group"
             >
               <input
                 id="inventory-import-file-input"
@@ -155,18 +160,18 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              <Database className="h-8 w-8 text-primary mx-auto group-hover:scale-110 transition-transform active:scale-95" />
-              <div className="text-xs font-black text-foreground">Click to Browse or Drag &amp; Drop Catalog Files Here</div>
-              <div className="text-[10.5px] text-default-500">Supports .CSV spreadsheet tables and .JSON exports</div>
+              <Database className="h-8 w-8 text-primary mx-auto group-hover:scale-110 transition-transform" />
+              <div className="text-xs font-bold text-foreground">Click to Browse or Drag &amp; Drop Catalog Files Here</div>
+              <div className="text-[11px] text-default-500 font-medium">Supports .CSV spreadsheet tables and .JSON exports</div>
             </div>
           </div>
 
           {/* Raw Text Input & Inspector */}
-          <div className="bg-content1 p-6 rounded-large border border-divider space-y-4 shadow-sm">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/70 dark:border-white/10 space-y-4 shadow-elevation-soft">
             <div className="flex justify-between items-center flex-wrap gap-2">
               <div>
-                <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-success" />
+                <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
                   <span>Pre-Flight Schema &amp; Validation Inspector</span>
                 </h3>
               </div>
@@ -175,20 +180,21 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
                 onClick={handleRunPreflightManual}
                 disabled={!rawImportText.trim() || isAnalyzingPreflight}
                 startIcon={<ShieldCheck className="h-4 w-4" />}
-                className="text-xs font-black uppercase tracking-wider shadow"
+                radius="full"
+                className="text-xs font-bold shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
               >
                 Run Pre-Flight Inspection
               </HeroButton>
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase text-primary tracking-wider block">Raw Data / Payload Preview</label>
+              <label className="text-[10px] font-bold uppercase text-primary tracking-wider block">Raw Data / Payload Preview</label>
               <textarea
                 value={rawImportText ?? ''}
                 onChange={(e) => setRawImportText(e.target.value)}
                 rows={5}
                 placeholder="Paste raw JSON array or CSV text content here..."
-                className="w-full bg-content2 border border-divider focus:border-primary p-3.5 text-xs text-foreground rounded-large focus:outline-none transition-colors active:scale-[0.98]"
+                className="w-full bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-white/5 focus:border-primary p-3.5 text-xs text-foreground rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all font-mono"
               />
             </div>
 
@@ -205,18 +211,24 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
 
       {/* MODE 2: EXPORT & BACKUPS */}
       {migrationSubTab === 'export' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in font-sans">
           {/* JSON Export Card */}
-          <div className="bg-content1 p-6 rounded-large border border-divider space-y-4 flex flex-col justify-between shadow-sm">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/70 dark:border-white/10 space-y-4 flex flex-col justify-between shadow-elevation-soft">
             <div className="space-y-2">
-              <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
+              <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
                 <Database className="h-4 w-4 text-primary" />
                 <span>Export Product Catalog (.JSON)</span>
               </h3>
+              <p className="text-xs text-default-500 font-medium">
+                Generates a raw JSON payload containing full catalog items, pricing, and branch records.
+              </p>
             </div>
             <div className="pt-2">
-              <button
+              <HeroButton
                 type="button"
+                color="primary"
+                variant="solid"
+                radius="full"
                 onClick={() => {
                   const jsonStr = JSON.stringify(products, null, 2);
                   const filename = `tilepoint_catalog_export_${new Date().toISOString().slice(0, 10)}.json`;
@@ -237,25 +249,31 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
                       showToast("Product catalog JSON backup downloaded!");
                     });
                 }}
-                className="w-full py-3 px-4 rounded-medium bg-primary hover:bg-primary/95 text-primary-foreground font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-between shadow-md active:scale-[0.98]"
+                className="w-full font-bold text-xs flex items-center justify-between shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
               >
                 <span className="flex items-center gap-2"><Download className="h-4 w-4" /> Download JSON Backup</span>
-                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">{branchProducts.length} Items</span>
-              </button>
+                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-mono">{branchProducts.length} Items</span>
+              </HeroButton>
             </div>
           </div>
 
           {/* CSV Export Card */}
-          <div className="bg-content1 p-6 rounded-large border border-divider space-y-4 flex flex-col justify-between shadow-sm">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200/70 dark:border-white/10 space-y-4 flex flex-col justify-between shadow-elevation-soft">
             <div className="space-y-2">
-              <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
-                <Sliders className="h-4 w-4 text-success" />
+              <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+                <Sliders className="h-4 w-4 text-emerald-500" />
                 <span>Export Inventory CSV Spreadsheet</span>
               </h3>
+              <p className="text-xs text-default-500 font-medium">
+                Generates a standard CSV spreadsheet with product codes, categories, pricing, and stock levels.
+              </p>
             </div>
             <div className="pt-2">
-              <button
+              <HeroButton
                 type="button"
+                color="success"
+                variant="solid"
+                radius="full"
                 onClick={() => {
                   const csvHeader = "ID,Product Code,Product Name,Category,Brand,Selling Price,Stock Quantity\n";
                   const csvRows = branchProducts.map(p => `"${p.id}","${p.productCode}","${p.productName}","${p.category}","${p.brand}",${p.sellingPrice},${getBranchStockQuantity(p, selectedViewBranchId, branchStock, branches)}`).join("\n");
@@ -279,34 +297,40 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
                       showToast("Product catalog CSV exported!");
                     });
                 }}
-                className="w-full py-3 px-4 rounded-medium bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-between shadow-md active:scale-[0.98]"
+                className="w-full font-bold text-xs flex items-center justify-between text-white shadow-2xs"
               >
                 <span className="flex items-center gap-2"><Download className="h-4 w-4" /> Download CSV Spreadsheet</span>
-                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">.CSV Table</span>
-              </button>
+                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-mono">.CSV Table</span>
+              </HeroButton>
             </div>
           </div>
 
           {/* XLSX Admin Multi-Sheet Workbook Export Card */}
-          <div className="bg-content1 p-6 rounded-large border border-emerald-500/30 space-y-4 flex flex-col justify-between shadow-sm relative overflow-hidden">
+          <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-emerald-500/30 space-y-4 flex flex-col justify-between shadow-elevation-soft relative overflow-hidden">
             <div className="space-y-2">
-              <h3 className="text-sm font-black text-foreground uppercase tracking-wider flex items-center gap-2">
-                <FileSpreadsheet className="h-4 w-4 text-success" />
+              <h3 className="text-sm font-bold text-foreground uppercase tracking-wider flex items-center gap-2">
+                <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
                 <span>Export Admin Excel Workbook (.XLSX)</span>
               </h3>
+              <p className="text-xs text-default-500 font-medium">
+                Full multi-sheet workbook covering catalog, branch stock balances, suppliers, and purchase history.
+              </p>
             </div>
             <div className="pt-2">
-              <button
+              <HeroButton
                 type="button"
+                color="success"
+                variant="solid"
+                radius="full"
                 onClick={async () => {
                   await exportInventoryCatalogToXLSX(products, branches, suppliers);
                   showToast(`Master Admin Inventory exported to Excel (.XLSX) workbook!`);
                 }}
-                className="w-full py-3 px-4 rounded-medium bg-teal-600 hover:bg-teal-500 text-white font-black text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-between shadow-md active:scale-98"
+                className="w-full font-bold text-xs flex items-center justify-between text-white shadow-2xs"
               >
                 <span className="flex items-center gap-2"><Download className="h-4 w-4" /> Export Multi-Sheet .XLSX</span>
-                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">Excel .XLSX</span>
-              </button>
+                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-mono">Excel .XLSX</span>
+              </HeroButton>
             </div>
           </div>
         </div>
@@ -314,3 +338,5 @@ export const ImportExportSubTab: React.FC<ImportExportSubTabProps> = ({
     </div>
   );
 };
+
+export default ImportExportSubTab;

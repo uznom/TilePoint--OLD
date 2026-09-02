@@ -121,24 +121,24 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
   }, [filteredBatches, batchSortDescriptors, sortBatchData]);
 
   return (
-    <div className="space-y-6 text-left animate-fade-in font-sans">
+    <div className="space-y-6 text-left animate-fade-in font-sans text-xs">
       {/* Top Split: Calendar View Matrix (cols 1 & 2) + Analytics / Protocol (col 3) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Column 1 & 2: Interactive Expiration Calendar Matrix */}
-        <div className="lg:col-span-2 bg-content1 border border-divider p-5 rounded-2xl space-y-4 shadow-xs">
+        <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-5 rounded-2xl space-y-4 shadow-elevation-soft">
           {/* Calendar Header Navigation */}
-          <div className="flex flex-wrap justify-between items-center gap-3 border-b border-divider pb-3">
+          <div className="flex flex-wrap justify-between items-center gap-3 border-b border-divider/20 pb-3">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-primary" />
-              <span className="font-sans font-semibold text-xs tracking-tight text-foreground">
+              <span className="font-sans font-bold text-xs tracking-tight text-foreground">
                 Interactive Expiration Calendar
               </span>
               {calendarSelectedDay && (
-                <span className="text-[10px] bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-semibold border border-primary/20 flex items-center gap-1">
+                <span className="text-[10px] bg-primary/10 text-primary px-2.5 py-0.5 rounded-full font-bold border border-primary/20 flex items-center gap-1">
                   Selected: {calendarSelectedDay}
                   <button 
                     onClick={() => setCalendarSelectedDay(null)}
-                    className="ml-1 hover:text-rose-500 font-bold cursor-pointer active:scale-[0.98]"
+                    className="ml-1 hover:text-rose-500 font-bold cursor-pointer active:scale-95"
                     title="Clear date filter"
                   >
                     ×
@@ -150,14 +150,14 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
             <div className="flex items-center gap-2">
               <HeroButton
                 size="sm"
-                variant="bordered"
+                variant="flat"
                 radius="full"
                 onClick={jumpToToday}
-                className="text-xs font-semibold h-8 px-3"
+                className="text-xs font-bold h-8 px-3.5"
               >
                 Today
               </HeroButton>
-              <div className="flex items-center gap-1 bg-default-100 dark:bg-content2/80 rounded-full p-1 border border-divider/40 shadow-xs">
+              <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 rounded-full p-1 border border-zinc-200/50 dark:border-white/5">
                 <HeroButton
                   size="sm"
                   variant="light"
@@ -169,7 +169,7 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
                 >
                   <ChevronLeft className="h-4 w-4 text-foreground" />
                 </HeroButton>
-                <span className="text-xs font-semibold font-sans px-3 min-w-[120px] text-center text-foreground">
+                <span className="text-xs font-bold font-sans px-3 min-w-[120px] text-center text-foreground">
                   {MONTH_NAMES[calendarMonth]} {calendarYear}
                 </span>
                 <HeroButton
@@ -188,8 +188,8 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
           </div>
 
           {/* Days of Week Header */}
-          <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-black uppercase text-default-500 border-b border-divider pb-2">
-            <span className="text-danger">Sun</span>
+          <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase text-default-500 border-b border-divider/20 pb-2">
+            <span className="text-rose-500">Sun</span>
             <span>Mon</span>
             <span>Tue</span>
             <span>Wed</span>
@@ -202,7 +202,7 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
           <div className="grid grid-cols-7 gap-1.5">
             {/* Empty leading slots */}
             {Array.from({ length: startDayOfWeek }).map((_, idx) => (
-              <div key={`empty-${idx}`} className="h-16 rounded-medium bg-content2/30 border border-transparent opacity-30" />
+              <div key={`empty-${idx}`} className="h-16 rounded-xl bg-zinc-100/30 dark:bg-zinc-800/30 border border-transparent opacity-30" />
             ))}
 
             {/* Day Tiles */}
@@ -223,24 +223,24 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
                 <div
                   key={`day-${dayNum}`}
                   onClick={() => setCalendarSelectedDay(isSelected ? null : dateStr)}
-                  className={`h-16 p-1.5 rounded-medium border flex flex-col justify-between transition-all cursor-pointer select-none relative ${
+                  className={`h-16 p-1.5 rounded-xl border flex flex-col justify-between transition-all cursor-pointer select-none relative ${
                     isSelected
-                      ? 'bg-primary/15 border-primary ring-2 ring-primary/30 shadow-md scale-[1.02]'
+                      ? 'bg-primary/10 border-primary ring-2 ring-primary/30 shadow-2xs'
                       : isToday
-                      ? 'bg-warning/10 border-warning/40'
+                      ? 'bg-amber-500/10 border-amber-500/40'
                       : dayBatches.length > 0
-                      ? 'bg-content2 border-divider hover:border-primary/50 hover:bg-content3'
-                      : 'bg-content2/50 border-divider/50 opacity-70 hover:opacity-100 hover:border-divider'
+                      ? 'bg-zinc-100/90 dark:bg-zinc-800/80 border-zinc-200/60 dark:border-white/5 hover:border-primary/50'
+                      : 'bg-zinc-50 dark:bg-zinc-800/40 border-zinc-200/40 dark:border-white/5 opacity-80 hover:opacity-100'
                   }`}
                 >
                   <div className="flex justify-between items-center">
-                    <span className={`text-[10px] font-black ${
-                      isToday ? 'text-warning font-extrabold' : 'text-foreground'
+                    <span className={`text-[10px] font-bold font-mono ${
+                      isToday ? 'text-amber-500 font-extrabold' : 'text-foreground'
                     }`}>
                       {dayNum}
                     </span>
                     {isToday && (
-                      <span className="text-[7.5px] font-extrabold uppercase bg-warning text-black px-1 rounded">
+                      <span className="text-[7.5px] font-bold uppercase bg-amber-500 text-black px-1 rounded-full">
                         Today
                       </span>
                     )}
@@ -249,19 +249,19 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
                   {/* Expiry Indicators */}
                   <div className="space-y-0.5">
                     {expiredCount > 0 && (
-                      <div className="bg-danger text-white text-[8px] font-black px-1 py-0.2 rounded truncate flex items-center justify-between">
+                      <div className="bg-rose-500 text-white text-[8px] font-bold px-1 py-0.2 rounded-full truncate flex items-center justify-between font-mono">
                         <span>Expired</span>
                         <span>{expiredCount}</span>
                       </div>
                     )}
                     {expiringSoonCount > 0 && (
-                      <div className="bg-warning text-slate-950 text-[8px] font-black px-1 py-0.2 rounded truncate flex items-center justify-between">
+                      <div className="bg-amber-500 text-black text-[8px] font-bold px-1 py-0.2 rounded-full truncate flex items-center justify-between font-mono">
                         <span>Soon</span>
                         <span>{expiringSoonCount}</span>
                       </div>
                     )}
                     {goodCount > 0 && expiredCount === 0 && expiringSoonCount === 0 && (
-                      <div className="bg-success/20 text-success text-[8px] font-bold px-1 rounded truncate text-center">
+                      <div className="bg-emerald-500/20 text-emerald-500 text-[8px] font-bold px-1 rounded-full truncate text-center font-mono">
                         {goodCount} Stable
                       </div>
                     )}
@@ -271,71 +271,71 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
             })}
           </div>
           
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-divider text-[10px] text-default-500 font-sans">
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-divider/20 text-[10px] text-default-500 font-sans font-medium">
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-danger inline-block" /> Expired
+                <span className="h-2 w-2 rounded-full bg-rose-500 inline-block" /> Expired
               </span>
               <span className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-warning inline-block" /> Expiring &lt;= 30 Days
+                <span className="h-2 w-2 rounded-full bg-amber-500 inline-block" /> Expiring &lt;= 30 Days
               </span>
               <span className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-success inline-block" /> Stable (&gt; 30 Days)
+                <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" /> Stable (&gt; 30 Days)
               </span>
             </div>
-            <span className="text-[9px] text-default-500/70">
+            <span className="text-[9px] text-default-400">
               Click any day tile to isolate batch entries
             </span>
           </div>
         </div>
 
         {/* Column 3: Shelf-Life Analytics & Real-Time Alerts */}
-        <div className="bg-content1 border border-divider p-5 rounded-large space-y-4 text-left flex flex-col justify-between shadow-sm">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-5 rounded-2xl space-y-4 text-left flex flex-col justify-between shadow-elevation-soft">
           <div className="space-y-4">
-            <div className="flex justify-between items-center border-b border-divider pb-3">
-              <span className="font-sans font-black text-xs uppercase tracking-widest text-primary block">
+            <div className="flex justify-between items-center border-b border-divider/20 pb-3">
+              <span className="font-sans font-bold text-xs uppercase tracking-wider text-primary block">
                 Shelf-Life Warnings &amp; Logs
               </span>
               <button
                 type="button"
                 onClick={handleResetSimulationBatches}
-                className="text-[9.5px] font-extrabold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
                 title="Re-synchronize chemical stock batch logs directly with products catalog"
               >
                 <span>Re-Sync Database</span>
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 font-sans">
               {/* Expired count stat */}
-              <div className="flex justify-between items-center bg-danger/5 p-3.5 rounded-medium border border-danger/10">
+              <div className="flex justify-between items-center bg-rose-500/10 p-3.5 rounded-2xl border border-rose-500/20">
                 <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-danger" />
-                  <span className="text-[11px] font-bold text-danger uppercase">Expired Batches</span>
+                  <span className="h-2 w-2 rounded-full bg-rose-500" />
+                  <span className="text-[11px] font-bold text-rose-500 uppercase tracking-wider">Expired Batches</span>
                 </div>
-                <span className="text-sm font-black text-danger">
+                <span className="text-sm font-bold text-rose-500 font-mono">
                   {filteredBatches.filter(b => computeLiveBatchStatus(b.expiryDate) === "Expired").length}
                 </span>
               </div>
 
               {/* Expiring Soon count stat */}
-              <div className="flex justify-between items-center bg-warning/5 p-3.5 rounded-medium border border-warning/10">
+              <div className="flex justify-between items-center bg-amber-500/10 p-3.5 rounded-2xl border border-amber-500/20">
                 <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-warning" />
-                  <span className="text-[11px] font-bold text-warning uppercase">Expiring (&lt;= 30 days)</span>
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  <span className="text-[11px] font-bold text-amber-500 uppercase tracking-wider">Expiring (&lt;= 30 days)</span>
                 </div>
-                <span className="text-sm font-black text-warning">
+                <span className="text-sm font-bold text-amber-500 font-mono">
                   {filteredBatches.filter(b => computeLiveBatchStatus(b.expiryDate) === "Expiring Soon").length}
                 </span>
               </div>
 
               {/* Healthy count stat */}
-              <div className="flex justify-between items-center bg-success/5 p-3.5 rounded-medium border border-success/10">
+              <div className="flex justify-between items-center bg-emerald-500/10 p-3.5 rounded-2xl border border-emerald-500/20">
                 <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-success" />
-                  <span className="text-[11px] font-bold text-success uppercase">Stable Stocks</span>
+                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <span className="text-[11px] font-bold text-emerald-500 uppercase tracking-wider">Stable Stocks</span>
                 </div>
-                <span className="text-sm font-black text-success">
+                <span className="text-sm font-bold text-emerald-500 font-mono">
                   {filteredBatches.filter(b => computeLiveBatchStatus(b.expiryDate) === "Good").length}
                 </span>
               </div>
@@ -343,8 +343,8 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
           </div>
 
           {/* Expiry Action Protocol Notice */}
-          <div className="p-3.5 rounded-medium bg-content2 border border-divider space-y-1.5 mt-2">
-            <span className="text-[9px] font-black text-primary uppercase tracking-wider block font-sans">
+          <div className="p-3.5 rounded-2xl bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/50 dark:border-white/5 space-y-1.5 mt-2 shadow-2xs">
+            <span className="text-[10px] font-bold text-primary uppercase tracking-wider block font-sans">
               ERP Quality &amp; Safety Protocol
             </span>
             <p className="text-[11px] text-default-500 font-medium leading-relaxed font-sans">
@@ -358,11 +358,11 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
       <div className="space-y-3.5 text-left pt-2">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="font-sans font-black text-xs uppercase tracking-widest text-primary block">
+            <span className="font-sans font-bold text-xs uppercase tracking-wider text-default-500 block">
               Chemical Batch Expiration Log Entries ({filteredBatches.length})
             </span>
             {calendarSelectedDay && (
-              <span className="text-[10px] font-bold text-warning bg-warning/10 px-2 py-0.5 rounded-full border border-warning/20">
+              <span className="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20 font-mono">
                 Filtered for {calendarSelectedDay}
               </span>
             )}
@@ -375,7 +375,8 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
               setShowAddBatchModal(true);
             }}
             startIcon={<Plus className="h-4 w-4" />}
-            className="text-xs font-black uppercase tracking-wider shadow-sm"
+            radius="full"
+            className="text-xs font-bold shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
           >
             Register Chemical Stock Batch
           </HeroButton>
@@ -398,16 +399,16 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
           }}
         />
 
-        <div className="overflow-x-auto rounded-large border border-divider bg-content1 shadow-sm">
+        <div className="overflow-x-auto rounded-2xl border border-zinc-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-elevation-soft">
           <HeroTable isStriped className="min-w-full text-xs">
             <HeroTable.Header>
-              <tr className="bg-content2 border-b border-divider font-black text-foreground">
+              <tr className="bg-zinc-100/80 dark:bg-zinc-800/80 border-b border-divider/20 font-bold text-default-600 dark:text-default-400">
                 <HeroTable.Column
                   allowsSorting
                   sortDirection={getBatchSortDir('productName')}
                   sortRank={getBatchSortRank('productName')}
                   onSort={(e) => handleBatchSort('productName', e)}
-                  className="py-3 px-4 font-sans"
+                  className="py-3.5 px-4 font-sans"
                 >
                   Product / Code
                 </HeroTable.Column>
@@ -417,7 +418,7 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
                   sortDirection={getBatchSortDir('batchNumber')}
                   sortRank={getBatchSortRank('batchNumber')}
                   onSort={(e) => handleBatchSort('batchNumber', e)}
-                  className="py-3 px-4 font-sans text-center"
+                  className="py-3.5 px-4 font-sans text-center"
                 >
                   Batch Number
                 </HeroTable.Column>
@@ -427,7 +428,7 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
                   sortDirection={getBatchSortDir('quantity')}
                   sortRank={getBatchSortRank('quantity')}
                   onSort={(e) => handleBatchSort('quantity', e)}
-                  className="py-3 px-4 font-sans text-right"
+                  className="py-3.5 px-4 font-sans text-right"
                 >
                   Quantity
                 </HeroTable.Column>
@@ -437,7 +438,7 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
                   sortDirection={getBatchSortDir('manufactureDate')}
                   sortRank={getBatchSortRank('manufactureDate')}
                   onSort={(e) => handleBatchSort('manufactureDate', e)}
-                  className="py-3 px-4 font-sans text-center"
+                  className="py-3.5 px-4 font-sans text-center"
                 >
                   Mfg Date
                 </HeroTable.Column>
@@ -447,7 +448,7 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
                   sortDirection={getBatchSortDir('expiryDate')}
                   sortRank={getBatchSortRank('expiryDate')}
                   onSort={(e) => handleBatchSort('expiryDate', e)}
-                  className="py-3 px-4 font-sans text-center"
+                  className="py-3.5 px-4 font-sans text-center"
                 >
                   Expiry Date
                 </HeroTable.Column>
@@ -457,7 +458,7 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
                   sortDirection={getBatchSortDir('branchId')}
                   sortRank={getBatchSortRank('branchId')}
                   onSort={(e) => handleBatchSort('branchId', e)}
-                  className="py-3 px-4 font-sans text-center"
+                  className="py-3.5 px-4 font-sans text-center"
                 >
                   Branch Allocation
                 </HeroTable.Column>
@@ -467,7 +468,7 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
                   sortDirection={getBatchSortDir('status')}
                   sortRank={getBatchSortRank('status')}
                   onSort={(e) => handleBatchSort('status', e)}
-                  className="py-3 px-4 font-sans text-center"
+                  className="py-3.5 px-4 font-sans text-center"
                 >
                   Status
                 </HeroTable.Column>
@@ -476,11 +477,11 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
                   sortDirection={getBatchSortDir('remarks')}
                   sortRank={getBatchSortRank('remarks')}
                   onSort={(e) => handleBatchSort('remarks', e)}
-                  className="py-3 px-4 font-sans text-center"
+                  className="py-3.5 px-4 font-sans text-center"
                 >
                   Remarks / Notes
                 </HeroTable.Column>
-                <th className="py-3 px-4 font-sans text-center">Actions</th>
+                <th className="py-3.5 px-4 font-sans text-center font-bold text-default-600 dark:text-default-400">Actions</th>
               </tr>
             </HeroTable.Header>
             <HeroTable.Body>
@@ -502,56 +503,57 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
                     <tr 
                       key={b.id} 
                       onClick={() => setSelectedBatchDetail(b)}
-                      className="hover:bg-content2/60 transition-colors cursor-pointer group active:scale-[0.98]"
+                      className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer group"
                     >
-                      <td className="py-3 px-4 font-sans">
-                        <strong className="text-foreground font-black block group-hover:text-primary transition-colors active:scale-[0.98]">{pName}</strong>
-                        <span className="text-[9px] text-primary font-bold">{pCode}</span>
+                      <td className="py-3.5 px-4 font-sans">
+                        <strong className="text-foreground font-bold block group-hover:text-primary transition-colors">{pName}</strong>
+                        <span className="text-[10px] text-default-500 font-mono">{pCode}</span>
                       </td>
 
-                      <td className="py-3 px-4 text-center font-bold text-foreground">
+                      <td className="py-3.5 px-4 text-center font-bold text-foreground font-mono">
                         #{b.batchNumber}
                       </td>
 
-                      <td className="py-3 px-4 text-right font-black text-foreground">
+                      <td className="py-3.5 px-4 text-right font-bold text-foreground font-mono">
                         {b.quantity} {pUnit}
                       </td>
 
-                      <td className="py-3 px-4 text-center text-default-500 font-semibold">
+                      <td className="py-3.5 px-4 text-center text-default-500 font-medium font-mono text-[11px]">
                         {b.manufactureDate}
                       </td>
 
-                      <td className="py-3 px-4 text-center text-foreground font-bold">
+                      <td className="py-3.5 px-4 text-center text-foreground font-bold font-mono text-[11px]">
                         {b.expiryDate}
                       </td>
 
-                      <td className="py-3 px-4 text-center font-bold">
+                      <td className="py-3.5 px-4 text-center font-medium">
                         {branches.find(br => br.id === b.branchId)?.name || b.branchId}
                       </td>
 
-                      <td className="py-3 px-4 text-center">
-                        <span className={`px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wide border ${
+                      <td className="py-3.5 px-4 text-center">
+                        <span className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] uppercase tracking-wide border ${
                           liveStatus === "Expired"
-                            ? "bg-danger/10 text-danger border-danger/20 font-black"
+                            ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
                             : liveStatus === "Expiring Soon"
-                            ? "bg-warning/10 text-warning border-warning/20"
-                            : "bg-success/10 text-success border-success/20"
+                            ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                            : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
                         }`}>
                           {liveStatus}
                         </span>
                       </td>
 
-                      <td className="py-3 px-4 font-sans text-default-500 italic font-medium max-w-[200px] truncate" title={b.remarks}>
+                      <td className="py-3.5 px-4 font-sans text-default-500 italic font-medium max-w-[200px] truncate text-[11px]" title={b.remarks}>
                         {b.remarks || "N/A"}
                       </td>
 
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-3.5 px-4 text-center">
                         <div className="flex items-center justify-center gap-1">
                           <HeroTooltip content="View Full Batch Details">
                             <HeroButton
                               size="sm"
                               variant="light"
                               isIconOnly
+                              radius="full"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedBatchDetail(b);
@@ -568,11 +570,12 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
                                 size="sm"
                                 variant="light"
                                 isIconOnly
+                                radius="full"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleRemoveBatch(b.id);
                                 }}
-                                className="h-7 w-7 min-w-7 p-0 text-default-500 hover:text-danger active:scale-95"
+                                className="h-7 w-7 min-w-7 p-0 text-default-400 hover:text-rose-500"
                                 aria-label="Remove batch log entry"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -592,3 +595,5 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
     </div>
   );
 };
+
+export default ExpirySubTab;
