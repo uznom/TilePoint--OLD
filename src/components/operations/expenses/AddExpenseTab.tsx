@@ -3,6 +3,9 @@ import { Building2, DollarSign, PlusCircle, Receipt, Search, Trash2 } from "luci
 import { Expense } from "../../../types/db";
 import { formatCurrency } from "../../../utils/formatters";
 import { HeroSelect } from "../../common/ui/HeroSelect";
+import { HeroInput } from "../../common/ui/HeroInput";
+import { HeroTextarea } from "../../common/ui/HeroTextarea";
+import { HeroButton } from "../../common/ui/HeroButton";
 import { HeroDropdownSelect } from "../../common/ui/HeroDropdown";
 
 export interface AddExpenseTabProps {
@@ -67,107 +70,98 @@ export const AddExpenseTab: React.FC<AddExpenseTabProps> = ({
 
   return (
     <div className="grid md:grid-cols-3 gap-6 font-sans text-xs">
-      <div className="md:col-span-1 bg-content1 border border-divider/15 p-5 rounded-2xl h-fit space-y-4">
-        <h3 className="font-bold text-sm text-primary border-b border-divider/10 pb-3 flex items-center gap-1.5">
-          <PlusCircle className="h-5 w-5" />
-          Deduct Branch Cash Expense
+      <div className="md:col-span-1 bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-5 rounded-2xl h-fit space-y-4 shadow-elevation-soft text-left">
+        <h3 className="font-bold text-sm text-foreground border-b border-divider/20 pb-3 flex items-center gap-2 tracking-tight">
+          <PlusCircle className="h-5 w-5 text-primary" />
+          <span>Deduct Branch Cash Expense</span>
         </h3>
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1">
-            <HeroSelect
-              label="Branch Location"
-              isRequired
-              value={expBranchId}
-              onValueChange={(val) => setExpBranchId(val)}
-              radius="md"
-              items={branches.filter((b) => !b.isDeleted).map((b) => ({
-                key: b.id,
-                value: b.id,
-                label: `${b.name} (${b.id})`,
-              }))}
-            />
-          </div>
+          <HeroSelect
+            label="Branch Location"
+            isRequired
+            value={expBranchId}
+            onValueChange={(val) => setExpBranchId(val)}
+            radius="lg"
+            items={branches.filter((b) => !b.isDeleted).map((b) => ({
+              key: b.id,
+              value: b.id,
+              label: `${b.name} (${b.id})`,
+            }))}
+          />
 
-          <div className="space-y-1">
-            <HeroSelect
-              label="Expense Classification"
-              isRequired
-              value={expCategory}
-              onValueChange={(val) => setExpCategory(val)}
-              radius="md"
-              items={[
-                { key: 'Floor Supplies', label: 'Floor Supplies' },
-                { key: 'Delivery Gas', label: 'Delivery Gas' },
-                { key: 'Snacks / Snacks Meetings', label: 'Snacks / Snacks Meetings' },
-                { key: 'Office Stationery', label: 'Office Stationery' },
-                { key: 'Utility Repairs', label: 'Utility Repairs' },
-                { key: 'Showroom Lightings', label: 'Showroom Lightings' },
-                { key: 'Other / Custom', label: 'Other / Custom (Specify Below)' },
-              ]}
-            />
-          </div>
+          <HeroSelect
+            label="Expense Classification"
+            isRequired
+            value={expCategory}
+            onValueChange={(val) => setExpCategory(val)}
+            radius="lg"
+            items={[
+              { key: 'Floor Supplies', label: 'Floor Supplies' },
+              { key: 'Delivery Gas', label: 'Delivery Gas' },
+              { key: 'Snacks / Snacks Meetings', label: 'Snacks / Snacks Meetings' },
+              { key: 'Office Stationery', label: 'Office Stationery' },
+              { key: 'Utility Repairs', label: 'Utility Repairs' },
+              { key: 'Showroom Lightings', label: 'Showroom Lightings' },
+              { key: 'Other / Custom', label: 'Other / Custom (Specify Below)' },
+            ]}
+          />
 
           {expCategory === "Other / Custom" && (
-            <div className="space-y-1">
-              <label className="font-bold text-default-500">
-                Specify Custom Classification *
-              </label>
-              <input
-                required
-                value={customCategory}
-                onChange={(e) => setCustomCategory(e.target.value)}
-                type="text"
-                placeholder="Custom classification"
-                className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary text-foreground"
-              />
-            </div>
+            <HeroInput
+              label="Specify Custom Classification"
+              required
+              value={customCategory}
+              onValueChange={(val) => setCustomCategory(val)}
+              placeholder="Custom classification"
+              radius="lg"
+              variant="flat"
+            />
           )}
 
-          <div className="space-y-1">
-            <label className="font-bold text-default-500">
-              Amount Disbursed (PHP) *
-            </label>
-            <input
-              required
-              value={expAmount}
-              onChange={(e) => setExpAmount(e.target.value)}
-              type="number"
-              placeholder="500"
-              className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary text-foreground font-bold"
-            />
-          </div>
+          <HeroInput
+            label="Amount Disbursed (PHP)"
+            type="number"
+            required
+            value={expAmount}
+            onValueChange={(val) => setExpAmount(val)}
+            placeholder="500.00"
+            radius="lg"
+            variant="flat"
+          />
 
-          <div className="space-y-1">
-            <label className="font-bold text-default-500">
-              Detailed Notes / Vendor *
-            </label>
-            <textarea
-              rows={3}
-              value={expNotes}
-              onChange={(e) => setExpNotes(e.target.value)}
-              placeholder="Bought extra heavy mop for the main hall tiles..."
-              className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary text-foreground"
-            />
-          </div>
+          <HeroTextarea
+            label="Detailed Notes / Vendor"
+            required
+            rows={3}
+            value={expNotes}
+            onValueChange={(val) => setExpNotes(val)}
+            placeholder="Bought extra heavy mop for the main hall tiles..."
+            radius="lg"
+            variant="flat"
+          />
 
-          <button
+          <HeroButton
             type="submit"
-            className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-bold transition hover:opacity-90 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+            color="primary"
+            variant="solid"
+            size="md"
+            radius="full"
+            startIcon={<DollarSign className="h-4 w-4" />}
+            className="w-full font-bold shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
           >
-            <DollarSign className="h-4 w-4" />
             Confirm Petty Cash Payout
-          </button>
+          </HeroButton>
         </form>
       </div>
 
-      <div className="md:col-span-2 space-y-4">
-        <div className="flex bg-content1 border border-divider/15 p-2 rounded-xl items-center gap-2">
-          <Search className="h-4 w-4 text-default-500 pl-1 shrink-0" />
+      <div className="md:col-span-2 space-y-4 text-left">
+        <div className="flex bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-2.5 rounded-2xl items-center gap-2 shadow-2xs">
+          <Search className="h-4 w-4 text-default-400 pl-1 shrink-0" />
           <input
             value={expenseSearch}
             onChange={(e) => setExpenseSearch(e.target.value)}
             placeholder="Filter disbursements..."
-            className="w-full bg-transparent border-0 outline-none p-1.5 text-foreground"
+            className="w-full bg-transparent border-0 outline-none p-1 text-foreground font-sans text-xs"
           />
           <div className="flex items-center gap-1 shrink-0 border-l border-divider/20 pl-2">
             <HeroDropdownSelect
@@ -188,16 +182,16 @@ export const AddExpenseTab: React.FC<AddExpenseTabProps> = ({
           </div>
         </div>
 
-        <div className="bg-content1 border border-divider/15 rounded-2xl overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl overflow-hidden shadow-elevation-soft">
           <table className="w-full text-left font-sans text-xs">
-            <thead className="bg-content3/50 font-bold border-b border-divider/15">
+            <thead className="bg-zinc-100/80 dark:bg-zinc-800/80 font-bold border-b border-divider/20 text-default-600 dark:text-default-400">
               <tr>
-                <th className="p-3">Track Info</th>
-                <th className="p-3">Category</th>
-                <th className="p-3">Officer</th>
-                <th className="p-3">Branch ID</th>
-                <th className="p-3 text-right">Amount</th>
-                <th className="p-3 text-center">Actions</th>
+                <th className="p-3.5">Track Info</th>
+                <th className="p-3.5">Category</th>
+                <th className="p-3.5">Officer</th>
+                <th className="p-3.5">Branch ID</th>
+                <th className="p-3.5 text-right">Amount</th>
+                <th className="p-3.5 text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -205,11 +199,11 @@ export const AddExpenseTab: React.FC<AddExpenseTabProps> = ({
                 <tr>
                   <td colSpan={6} className="p-8 text-center">
                     <div className="flex flex-col items-center justify-center space-y-2.5 py-6">
-                      <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-inner border border-primary/15">
+                      <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-2xs border border-primary/15">
                         <Receipt className="h-6 w-6" />
                       </div>
                       <div className="space-y-1">
-                        <p className="font-extrabold text-sm text-foreground">
+                        <p className="font-bold text-sm text-foreground">
                           {expenseSearch ? "No Matching Expenses Found" : "No Operational Expenses Logged"}
                         </p>
                         <p className="text-xs text-default-500 max-w-sm mx-auto leading-relaxed">
@@ -219,13 +213,15 @@ export const AddExpenseTab: React.FC<AddExpenseTabProps> = ({
                         </p>
                       </div>
                       {expenseSearch && (
-                        <button
+                        <HeroButton
                           type="button"
+                          variant="flat"
+                          size="sm"
+                          radius="full"
                           onClick={() => setExpenseSearch("")}
-                          className="mt-1 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold rounded-lg transition-colors cursor-pointer border-0 active:scale-[0.98]"
                         >
                           Clear Expense Filter
-                        </button>
+                        </HeroButton>
                       )}
                     </div>
                   </td>
@@ -234,9 +230,9 @@ export const AddExpenseTab: React.FC<AddExpenseTabProps> = ({
                 filteredExpenses.map((ex) => (
                   <tr
                     key={ex.id}
-                    className="border-b border-divider/10 hover:bg-primary/5 transition-all active:scale-[0.98]"
+                    className="border-b border-divider/10 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors"
                   >
-                    <td className="p-3 font-semibold text-foreground">
+                    <td className="p-3.5 font-semibold text-foreground">
                       <div>{ex.notes}</div>
                       <div className="text-[10px] text-default-500 mt-0.5">
                         {ex.dateTime && !isNaN(new Date(ex.dateTime).getTime())
@@ -244,21 +240,21 @@ export const AddExpenseTab: React.FC<AddExpenseTabProps> = ({
                           : "N/A"}
                       </div>
                     </td>
-                    <td className="p-3">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-content2 text-foreground">
+                    <td className="p-3.5">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-foreground border border-zinc-200/50 dark:border-white/5">
                         {ex.category}
                       </span>
                     </td>
-                    <td className="p-3 text-default-500 font-bold">{ex.recordedBy}</td>
-                    <td className="p-3 text-default-500">{ex.branchId}</td>
-                    <td className="p-3 text-right text-rose-500 font-bold">
+                    <td className="p-3.5 text-default-500 font-bold">{ex.recordedBy}</td>
+                    <td className="p-3.5 text-default-500">{ex.branchId}</td>
+                    <td className="p-3.5 text-right text-rose-500 font-bold font-mono">
                       -{formatCurrency(ex.amount)}
                     </td>
-                    <td className="p-3 text-center">
+                    <td className="p-3.5 text-center">
                       <button
                         type="button"
                         onClick={() => onDeleteExpense(ex.id)}
-                        className="p-1 hover:bg-red-500/10 text-red-500 rounded transition border-0 cursor-pointer bg-transparent active:scale-95"
+                        className="p-1.5 hover:bg-rose-500/10 text-rose-500 rounded-lg transition-colors cursor-pointer"
                         title="Delete Expense"
                       >
                         <Trash2 className="h-4 w-4" />

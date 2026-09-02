@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { CheckCircle2, CreditCard, Info } from "lucide-react";
 import { Member } from "../../../types/db";
 import { formatCurrency } from "../../../utils/formatters";
+import { HeroButton } from "../../common/ui/HeroButton";
+import { HeroInput } from "../../common/ui/HeroInput";
 
 export interface AccountReceivablesTabProps {
   members: Member[];
@@ -38,21 +40,21 @@ export const AccountReceivablesTab: React.FC<AccountReceivablesTabProps> = ({
   const nearLimitCount = members.filter((m) => getBalance(m) > getLimit(m) * 0.8).length;
 
   return (
-    <div className="grid md:grid-cols-2 gap-6">
-      <div className="bg-content1 border border-divider/15 p-5 rounded-2xl space-y-4">
-        <h3 className="font-bold text-sm text-primary">
+    <div className="grid md:grid-cols-2 gap-6 font-sans text-xs text-left">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-5 rounded-2xl space-y-4 shadow-elevation-soft">
+        <h3 className="font-bold text-sm text-foreground tracking-tight">
           Settle Customer Account Ledger
         </h3>
 
         <div className="space-y-2 font-sans text-xs">
-          <label className="font-bold text-default-500">
+          <label className="font-bold text-default-500 uppercase tracking-wider text-[10px]">
             Select Account Client *
           </label>
-          <div className="space-y-1 max-h-48 overflow-y-auto border border-divider rounded-lg divide-y divide-divider/15">
+          <div className="space-y-1 max-h-48 overflow-y-auto border border-zinc-200/60 dark:border-white/5 rounded-xl divide-y divide-divider/10 shadow-2xs">
             {receivableMembers.length === 0 ? (
-              <div className="p-6 text-center text-xs space-y-2 bg-content1/50 rounded-lg">
+              <div className="p-6 text-center text-xs space-y-2 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl">
                 <CheckCircle2 className="h-7 w-7 text-emerald-500 mx-auto opacity-90" />
-                <p className="font-extrabold text-foreground">All Accounts Fully Settled</p>
+                <p className="font-bold text-foreground">All Accounts Fully Settled</p>
                 <p className="text-[11px] text-default-500 max-w-xs mx-auto leading-relaxed">
                   There are currently no registered client accounts with outstanding credit balances.
                 </p>
@@ -66,19 +68,19 @@ export const AccountReceivablesTab: React.FC<AccountReceivablesTabProps> = ({
                     key={m.id}
                     type="button"
                     onClick={() => setSelectedMember(m)}
-                    className={`w-full text-left p-3 flex justify-between cursor-pointer transition ${
+                    className={`w-full text-left p-3.5 flex justify-between cursor-pointer transition-colors ${
                       selectedMember?.id === m.id
                         ? "bg-primary/10 border-l-4 border-primary font-bold"
-                        : "hover:bg-primary/5"
+                        : "hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
                     }`}
                   >
                     <div>
-                      <span>{m.fullName}</span>
-                      <span className="text-[10px] block text-default-500">
+                      <span className="font-bold text-foreground">{m.fullName}</span>
+                      <span className="text-[10px] block text-default-500 font-mono">
                         Limit: {formatCurrency(limit)}
                       </span>
                     </div>
-                    <span className="text-rose-500 font-bold">
+                    <span className="text-rose-500 font-bold font-mono">
                       {formatCurrency(bal)}
                     </span>
                   </button>
@@ -91,79 +93,79 @@ export const AccountReceivablesTab: React.FC<AccountReceivablesTabProps> = ({
         {selectedMember && (
           <form
             onSubmit={handlePayBalance}
-            className="space-y-4 font-sans text-xs pt-3 animate-fade-in border-t border-divider/15"
+            className="space-y-4 font-sans text-xs pt-3 animate-fade-in border-t border-divider/20"
           >
-            <div className="flex justify-between items-center bg-primary/5 p-3 rounded-xl border border-primary/10">
+            <div className="flex justify-between items-center bg-zinc-100/90 dark:bg-zinc-800/80 p-3.5 rounded-2xl border border-zinc-200/60 dark:border-white/5 shadow-2xs">
               <div>
-                <span className="text-[10px] text-primary font-bold uppercase block">
+                <span className="text-[10px] text-primary font-bold uppercase tracking-wider block">
                   Selected Account Billing
                 </span>
-                <span className="font-extrabold text-sm">
+                <span className="font-bold text-sm text-foreground">
                   {selectedMember.fullName}
                 </span>
               </div>
               <div className="text-right">
-                <span className="text-[10px] text-default-500 block">
+                <span className="text-[10px] text-default-500 font-bold block uppercase tracking-wider">
                   Balance Due
                 </span>
-                <span className="text-sm font-black text-rose-500">
+                <span className="text-sm font-bold text-rose-500 font-mono">
                   {formatCurrency(getBalance(selectedMember))}
                 </span>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="font-bold text-default-500">
-                Amount to Tender (PHP) *
-              </label>
-              <input
-                type="number"
-                required
-                value={paymentAmount}
-                onChange={(e) => setPaymentAmount(e.target.value)}
-                placeholder="Amount"
-                className="w-full bg-content3 border border-divider rounded-lg p-2.5 outline-none focus:border-primary"
-                max={getBalance(selectedMember)}
-              />
-            </div>
+            <HeroInput
+              label="Amount to Tender (PHP) *"
+              type="number"
+              required
+              value={paymentAmount}
+              onValueChange={(val) => setPaymentAmount(val)}
+              placeholder="0.00"
+              radius="lg"
+              variant="flat"
+            />
 
-            <button
+            <HeroButton
               type="submit"
-              className="w-full bg-primary text-primary-foreground py-2.5 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+              color="primary"
+              variant="solid"
+              size="md"
+              radius="full"
+              startIcon={<CreditCard className="h-4 w-4" />}
+              className="w-full font-bold shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
             >
-              <CreditCard className="h-4 w-4" />
-              Process Payment & Print Slip
-            </button>
+              Process Payment &amp; Print Slip
+            </HeroButton>
           </form>
         )}
       </div>
 
       <div className="space-y-4">
-        <div className="bg-content1 border border-divider/15 p-5 rounded-2xl grid grid-cols-2 gap-4">
-          <div className="p-4 bg-content2 dark:bg-content2/40 rounded-xl border border-divider/10">
-            <span className="text-[10px] font-bold text-default-500 block uppercase">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-5 rounded-2xl grid grid-cols-2 gap-4 shadow-elevation-soft">
+          <div className="p-4 bg-zinc-100/90 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200/60 dark:border-white/5 shadow-2xs">
+            <span className="text-[10px] font-bold text-default-500 block uppercase tracking-wider">
               Total Outstanding A/R
             </span>
-            <span className="text-lg font-black text-rose-500">
+            <span className="text-lg font-bold text-rose-500 font-mono">
               {formatCurrency(totalAR)}
             </span>
           </div>
-          <div className="p-4 bg-content2 dark:bg-content2/40 rounded-xl border border-divider/10">
-            <span className="text-[10px] font-bold text-default-500 block uppercase">
+          <div className="p-4 bg-zinc-100/90 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200/60 dark:border-white/5 shadow-2xs">
+            <span className="text-[10px] font-bold text-default-500 block uppercase tracking-wider">
               Overdue Accounts Limit
             </span>
-            <span className="text-lg font-black text-amber-500">
+            <span className="text-lg font-bold text-amber-500 font-mono">
               {nearLimitCount} clients
             </span>
           </div>
         </div>
 
-        <div className="bg-content1 border border-divider/15 p-5 rounded-2xl text-xs space-y-3 font-sans">
-          <div className="flex items-center gap-1.5 font-bold text-default-500 pb-2 border-b border-divider/10">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-5 rounded-2xl text-xs space-y-3 font-sans shadow-elevation-soft">
+          <div className="flex items-center gap-2 font-bold text-foreground pb-2 border-b border-divider/20">
             <Info className="h-4 w-4 text-primary" />
-            <span>Accounts Receivable Policies & Terms</span>
+            <span>Accounts Receivable Policies &amp; Terms</span>
           </div>
-          <p className="text-default-400 leading-relaxed">
+          <p className="text-default-500 leading-relaxed font-medium text-[11px]">
             All credit sales require customer identification and signature. Unsettled invoices beyond 30 days will restrict new transactions on POS checkout terminals automatically.
           </p>
         </div>

@@ -12,6 +12,7 @@ import { Member, UserRole } from "../../../types/db";
 import { formatCurrency } from "../../../utils/formatters";
 import { HeroModal } from "../../common/ui/HeroModal";
 import { HeroButton } from "../../common/ui/HeroButton";
+import { HeroInput } from "../../common/ui/HeroInput";
 
 export interface LoyaltyPointsTabProps {
   members: Member[];
@@ -87,61 +88,64 @@ export const LoyaltyPointsTab: React.FC<LoyaltyPointsTabProps> = ({
   );
 
   return (
-    <div className="space-y-4 font-sans text-xs">
+    <div className="space-y-4 font-sans text-xs text-left">
       {/* Header & Overview Banner */}
-      <div className="bg-content1 border border-divider/15 p-4 rounded-2xl shadow-xs space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-divider/10 pb-3">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-5 rounded-2xl shadow-elevation-soft space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-divider/20 pb-3">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-amber-500 shrink-0" />
-            <h3 className="font-extrabold text-sm text-primary">Member Account & Loyalty Desk</h3>
+            <h3 className="font-bold text-sm text-foreground tracking-tight">Member Account &amp; Loyalty Desk</h3>
           </div>
 
           {canEditSettings && (
-            <button
+            <HeroButton
               type="button"
+              variant="flat"
+              size="sm"
+              radius="full"
+              startIcon={<Settings className="h-3.5 w-3.5 text-amber-500" />}
               onClick={() => setShowLoyaltySettings(!showLoyaltySettings)}
-              className="px-3 py-1.5 bg-content3 hover:bg-content4 text-foreground text-xs font-bold rounded-xl border border-divider/30 flex items-center gap-1.5 cursor-pointer transition-colors active:scale-95"
+              className="font-bold text-xs"
             >
-              <Settings className="h-3.5 w-3.5 text-amber-500" />
-              <span>{showLoyaltySettings ? "Close Rules Settings" : "Edit Loyalty Rules"}</span>
-            </button>
+              {showLoyaltySettings ? "Close Rules Settings" : "Edit Loyalty Rules"}
+            </HeroButton>
           )}
         </div>
 
         {/* Quick Metrics Bar */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 text-xs">
-          <div className="bg-content1 p-2.5 rounded-xl border border-divider/10 flex items-center justify-between">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+          <div className="bg-zinc-100/90 dark:bg-zinc-800/80 p-3.5 rounded-2xl border border-zinc-200/60 dark:border-white/5 flex items-center justify-between shadow-2xs">
             <div>
-              <span className="text-[10px] text-default-500 uppercase font-bold block">Earning Formula</span>
-              <span className="text-xs font-extrabold text-amber-500">₱{config.spendPerPoint.toLocaleString()} = 1 Pt</span>
+              <span className="text-[10px] text-default-500 uppercase font-bold block tracking-wider">Earning Formula</span>
+              <span className="text-xs font-bold text-amber-500 font-mono">₱{config.spendPerPoint.toLocaleString()} = 1 Pt</span>
             </div>
-            <Award className="h-4 w-4 text-amber-500/30 shrink-0" />
+            <Award className="h-4 w-4 text-amber-500/40 shrink-0" />
           </div>
 
-          <div className="bg-content1 p-2.5 rounded-xl border border-divider/10 flex items-center justify-between">
+          <div className="bg-zinc-100/90 dark:bg-zinc-800/80 p-3.5 rounded-2xl border border-zinc-200/60 dark:border-white/5 flex items-center justify-between shadow-2xs">
             <div>
-              <span className="text-[10px] text-default-500 uppercase font-bold block">Redemption Value</span>
-              <span className="text-xs font-extrabold text-emerald-500">1 Pt = {formatCurrency(config.pointValueInPhp)} Off</span>
+              <span className="text-[10px] text-default-500 uppercase font-bold block tracking-wider">Redemption Value</span>
+              <span className="text-xs font-bold text-emerald-500 font-mono">1 Pt = {formatCurrency(config.pointValueInPhp)}</span>
             </div>
-            <Sparkles className="h-4 w-4 text-emerald-500/30 shrink-0" />
+            <Sparkles className="h-4 w-4 text-emerald-500/40 shrink-0" />
           </div>
 
-          <div className="bg-content1 p-2.5 rounded-xl border border-divider/10 flex items-center justify-between">
+          <div className="bg-zinc-100/90 dark:bg-zinc-800/80 p-3.5 rounded-2xl border border-zinc-200/60 dark:border-white/5 flex items-center justify-between shadow-2xs">
             <div>
-              <span className="text-[10px] text-default-500 uppercase font-bold block">Active Members</span>
-              <span className="text-xs font-extrabold text-foreground">{members.length} Members</span>
+              <span className="text-[10px] text-default-500 uppercase font-bold block tracking-wider">Active Members</span>
+              <span className="text-xs font-bold text-foreground">{members.length} Members</span>
             </div>
-            <Users className="h-4 w-4 text-primary/30 shrink-0" />
+            <Users className="h-4 w-4 text-primary/40 shrink-0" />
           </div>
 
-          <div className="bg-content1 p-2.5 rounded-xl border border-divider/10 flex items-center justify-between">
+          <div className="bg-zinc-100/90 dark:bg-zinc-800/80 p-3.5 rounded-2xl border border-zinc-200/60 dark:border-white/5 flex items-center justify-between shadow-2xs">
             <div>
-              <span className="text-[10px] text-default-500 uppercase font-bold block">Total Points Issued</span>
-              <span className="text-xs font-extrabold text-amber-500">
+              <span className="text-[10px] text-default-500 uppercase font-bold block tracking-wider">Total Points Issued</span>
+              <span className="text-xs font-bold text-amber-500 font-mono">
                 {totalPointsPool.toLocaleString()} Pts <span className="text-[10px] text-default-500 font-normal">({formatCurrency(totalMonetaryValue)})</span>
               </span>
             </div>
-            <Award className="h-4 w-4 text-amber-500/30 shrink-0" />
+            <Award className="h-4 w-4 text-amber-500/40 shrink-0" />
           </div>
         </div>
 
@@ -149,63 +153,49 @@ export const LoyaltyPointsTab: React.FC<LoyaltyPointsTabProps> = ({
         {showLoyaltySettings && (
           <form
             onSubmit={handleSaveSettings}
-            className="p-3.5 bg-content1 border border-amber-500/20 rounded-xl space-y-3 text-xs pt-3"
+            className="p-4 bg-zinc-100/90 dark:bg-zinc-800/80 border border-amber-500/30 rounded-2xl space-y-3.5 text-xs pt-3 shadow-2xs"
           >
-            <div className="flex items-center justify-between border-b border-divider/10 pb-2">
-              <span className="font-extrabold text-xs text-amber-500 flex items-center gap-1.5">
+            <div className="flex items-center justify-between border-b border-divider/20 pb-2">
+              <span className="font-bold text-xs text-amber-500 flex items-center gap-1.5">
                 <Settings className="h-3.5 w-3.5" />
                 <span>Loyalty Program Parameters</span>
               </span>
-              <label className="font-bold text-foreground cursor-pointer flex items-center gap-1.5 text-xs">
+              <label className="font-bold text-foreground cursor-pointer flex items-center gap-2 text-xs">
                 <input
                   type="checkbox"
                   checked={loyaltyEnabled}
                   onChange={(e) => setLoyaltyEnabled(e.target.checked)}
-                  className="h-3.5 w-3.5 accent-amber-500 cursor-pointer"
+                  className="h-4 w-4 accent-amber-500 cursor-pointer rounded"
                 />
                 <span>Enable Program</span>
               </label>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="font-bold text-default-500 flex justify-between">
-                  <span>Spend Threshold (PHP)</span>
-                  <span className="text-default-500 text-[10px] font-normal">Spend to earn 1 point</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2 text-default-500 font-bold">₱</span>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={loyaltySpendInput}
-                    onChange={(e) => setLoyaltySpendInput(e.target.value)}
-                    placeholder="500"
-                    className="w-full bg-content3 border border-divider rounded-lg py-1.5 pl-7 pr-2 outline-none font-bold focus:border-amber-500 text-foreground"
-                  />
-                </div>
-              </div>
+              <HeroInput
+                label="Spend Threshold (PHP)"
+                type="number"
+                required
+                min={1}
+                value={loyaltySpendInput}
+                onValueChange={(val) => setLoyaltySpendInput(val)}
+                placeholder="500.00"
+                radius="lg"
+                variant="flat"
+              />
 
-              <div className="space-y-1">
-                <label className="font-bold text-default-500 flex justify-between">
-                  <span>Point Value in PHP</span>
-                  <span className="text-default-500 text-[10px] font-normal">Discount value per 1 point</span>
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2 text-default-500 font-bold">₱</span>
-                  <input
-                    type="number"
-                    required
-                    step="0.01"
-                    min="0.01"
-                    value={loyaltyPointValInput}
-                    onChange={(e) => setLoyaltyPointValInput(e.target.value)}
-                    placeholder="1.00"
-                    className="w-full bg-content3 border border-divider rounded-lg py-1.5 pl-7 pr-2 outline-none font-bold focus:border-amber-500 text-foreground"
-                  />
-                </div>
-              </div>
+              <HeroInput
+                label="Point Value in PHP"
+                type="number"
+                required
+                step="0.01"
+                min={0.01}
+                value={loyaltyPointValInput}
+                onValueChange={(val) => setLoyaltyPointValInput(val)}
+                placeholder="1.00"
+                radius="lg"
+                variant="flat"
+              />
             </div>
 
             <div className="flex items-center justify-between pt-1">
@@ -215,53 +205,57 @@ export const LoyaltyPointsTab: React.FC<LoyaltyPointsTabProps> = ({
                 </span>
               ) : <span />}
 
-              <button
+              <HeroButton
                 type="submit"
-                className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs active:scale-95"
+                color="warning"
+                variant="solid"
+                size="sm"
+                radius="full"
+                startIcon={<Save className="h-3.5 w-3.5" />}
+                className="font-bold text-black shadow-2xs"
               >
-                <Save className="h-3.5 w-3.5" />
-                <span>Save Loyalty Rules</span>
-              </button>
+                Save Loyalty Rules
+              </HeroButton>
             </div>
           </form>
         )}
       </div>
 
       {/* Member Loyalty Roster Table */}
-      <div className="bg-content1 border border-divider/15 p-4 rounded-2xl space-y-3 shadow-xs text-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-divider/10 pb-3">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-5 rounded-2xl space-y-3.5 shadow-elevation-soft text-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-divider/20 pb-3">
           <div>
-            <h3 className="font-bold text-sm text-primary flex items-center gap-1.5">
-              <Users className="h-4 w-4" />
+            <h3 className="font-bold text-sm text-foreground tracking-tight flex items-center gap-1.5">
+              <Users className="h-4 w-4 text-primary" />
               <span>Member Loyalty Points Roster</span>
             </h3>
-            <p className="text-[11px] text-default-500 mt-0.5">
+            <p className="text-[11px] text-default-500 mt-0.5 font-medium">
               View accumulated reward points and manage balances.
             </p>
           </div>
 
-          <div className="flex bg-content3 border border-divider/30 px-2.5 py-1.5 rounded-xl items-center gap-2 w-full sm:w-64">
-            <Search className="h-3.5 w-3.5 text-default-500 shrink-0" />
+          <div className="flex bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-white/5 px-3 py-1.5 rounded-2xl items-center gap-2 w-full sm:w-64">
+            <Search className="h-3.5 w-3.5 text-default-400 shrink-0" />
             <input
               type="text"
               value={loyaltyMemberSearch}
               onChange={(e) => setLoyaltyMemberSearch(e.target.value)}
               placeholder="Search member name or phone..."
-              className="w-full bg-transparent border-0 outline-none text-xs text-foreground"
+              className="w-full bg-transparent border-0 outline-none text-xs text-foreground font-sans"
             />
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-divider/15">
+        <div className="overflow-x-auto rounded-2xl border border-zinc-200/60 dark:border-white/5 shadow-2xs">
           <table className="w-full text-left text-xs">
-            <thead className="bg-content3/50 font-bold border-b border-divider/15 text-default-500">
+            <thead className="bg-zinc-100/80 dark:bg-zinc-800/80 font-bold border-b border-divider/20 text-default-600 dark:text-default-400">
               <tr>
-                <th className="p-3">Member Profile</th>
-                <th className="p-3">Contact</th>
-                <th className="p-3 text-right">Points Balance</th>
-                <th className="p-3 text-right">Discount Value</th>
-                <th className="p-3 text-center">Status</th>
-                <th className="p-3 text-center">Action</th>
+                <th className="p-3.5">Member Profile</th>
+                <th className="p-3.5">Contact</th>
+                <th className="p-3.5 text-right">Points Balance</th>
+                <th className="p-3.5 text-right">Discount Value</th>
+                <th className="p-3.5 text-center">Status</th>
+                <th className="p-3.5 text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-divider/10">
@@ -275,48 +269,52 @@ export const LoyaltyPointsTab: React.FC<LoyaltyPointsTabProps> = ({
                 filteredMembers.map((m) => {
                   const ptValue = (m.points || 0) * (config.pointValueInPhp || 1.0);
                   return (
-                    <tr key={m.id} className="hover:bg-primary/5 transition-colors active:scale-[0.98]">
-                      <td className="p-3 font-semibold text-foreground">
-                        <div className="flex items-center gap-2">
+                    <tr key={m.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                      <td className="p-3.5 font-semibold text-foreground">
+                        <div className="flex items-center gap-2.5">
                           <div className="h-7 w-7 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center font-bold text-xs shrink-0">
                             {m.fullName.charAt(0)}
                           </div>
                           <div>
                             <div className="font-bold text-foreground">{m.fullName}</div>
-                            <div className="text-[10px] text-default-500">{m.id}</div>
+                            <div className="text-[10px] text-default-500 font-mono">{m.id}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="p-3">
+                      <td className="p-3.5">
                         <div className="text-foreground font-medium">{m.phone || "N/A"}</div>
                         <div className="text-[10px] text-default-500">{m.email || "—"}</div>
                       </td>
-                      <td className="p-3 text-right font-extrabold text-amber-500 text-sm">
+                      <td className="p-3.5 text-right font-bold text-amber-500 text-sm font-mono">
                         {(m.points || 0).toLocaleString()} Pts
                       </td>
-                      <td className="p-3 text-right font-bold text-emerald-500">
+                      <td className="p-3.5 text-right font-bold text-emerald-500 font-mono">
                         {formatCurrency(ptValue)}
                       </td>
-                      <td className="p-3 text-center">
-                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                      <td className="p-3.5 text-center">
+                        <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
                           m.status === "Active" || !m.status ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
                         }`}>
                           {m.status || "Active"}
                         </span>
                       </td>
-                      <td className="p-3 text-center">
-                        <button
+                      <td className="p-3.5 text-center">
+                        <HeroButton
                           type="button"
+                          variant="flat"
+                          color="warning"
+                          size="sm"
+                          radius="full"
                           onClick={() => {
                             setSelectedLoyaltyMember(m);
                             setAdjustPointsAmount("");
                             setAdjustPointsReason("");
                             setShowAdjustPointsModal(true);
                           }}
-                          className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 font-bold text-[10.5px] rounded-lg transition-colors cursor-pointer border border-amber-500/20 active:scale-[0.98]"
+                          className="font-bold text-[11px]"
                         >
                           Manage Points
-                        </button>
+                        </HeroButton>
                       </td>
                     </tr>
                   );
@@ -337,50 +335,49 @@ export const LoyaltyPointsTab: React.FC<LoyaltyPointsTabProps> = ({
         <HeroModal.Header className="pb-3 border-b border-divider/20">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-amber-500" />
-            <h3 className="font-bold text-sm text-foreground">Adjust Loyalty Points</h3>
+            <h3 className="font-bold text-sm text-foreground tracking-tight">Adjust Loyalty Points</h3>
           </div>
         </HeroModal.Header>
-        <HeroModal.Body className="py-4 space-y-3">
+        <HeroModal.Body className="py-4 space-y-3 font-sans text-xs text-left">
           {selectedLoyaltyMember && (
-            <div className="p-3 bg-content2 rounded-xl border border-divider/20 text-xs">
-              <span className="text-default-500 block text-[10px]">Member</span>
+            <div className="p-3.5 bg-zinc-100/90 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200/60 dark:border-white/5 text-xs shadow-2xs">
+              <span className="text-default-500 block text-[10px] font-bold uppercase tracking-wider">Member</span>
               <span className="font-bold text-foreground text-sm">{selectedLoyaltyMember.fullName}</span>
-              <div className="mt-1 flex justify-between text-default-500">
+              <div className="mt-1 flex justify-between text-default-500 font-medium">
                 <span>Current Balance:</span>
-                <span className="font-bold text-amber-500">{(selectedLoyaltyMember.points || 0).toLocaleString()} Pts</span>
+                <span className="font-bold text-amber-500 font-mono">{(selectedLoyaltyMember.points || 0).toLocaleString()} Pts</span>
               </div>
             </div>
           )}
 
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-default-500">Points Delta (+ or -) *</label>
-            <input
-              type="number"
-              required
-              value={adjustPointsAmount}
-              onChange={(e) => setAdjustPointsAmount(e.target.value)}
-              placeholder="e.g. 50 or -20"
-              className="w-full bg-content3 border border-divider rounded-lg p-2 text-xs outline-none focus:border-amber-500 text-foreground font-bold"
-            />
-          </div>
+          <HeroInput
+            label="Points Delta (+ or -) *"
+            type="number"
+            required
+            value={adjustPointsAmount}
+            onValueChange={(val) => setAdjustPointsAmount(val)}
+            placeholder="e.g. 50 or -20"
+            radius="lg"
+            variant="flat"
+          />
 
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-default-500">Adjustment Reason</label>
-            <input
-              type="text"
-              value={adjustPointsReason}
-              onChange={(e) => setAdjustPointsReason(e.target.value)}
-              placeholder="e.g. Promo bonus or Correction"
-              className="w-full bg-content3 border border-divider rounded-lg p-2 text-xs outline-none focus:border-amber-500 text-foreground"
-            />
-          </div>
+          <HeroInput
+            label="Adjustment Reason"
+            value={adjustPointsReason}
+            onValueChange={(val) => setAdjustPointsReason(val)}
+            placeholder="e.g. Promo bonus or Correction"
+            radius="lg"
+            variant="flat"
+          />
         </HeroModal.Body>
         <HeroModal.Footer className="justify-end gap-2 pt-3 border-t border-divider/20">
           <HeroButton
             type="button"
             variant="flat"
             size="sm"
+            radius="full"
             onClick={() => setShowAdjustPointsModal(false)}
+            className="font-bold text-xs"
           >
             Cancel
           </HeroButton>
@@ -389,8 +386,9 @@ export const LoyaltyPointsTab: React.FC<LoyaltyPointsTabProps> = ({
             variant="solid"
             color="warning"
             size="sm"
+            radius="full"
             onClick={handleConfirmAdjustPoints}
-            className="font-bold text-black"
+            className="font-bold text-xs text-black shadow-2xs"
           >
             Save Points Delta
           </HeroButton>
