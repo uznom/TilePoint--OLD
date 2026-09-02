@@ -2,8 +2,10 @@ import React from "react";
 import { HeroModal } from "../../common/ui/HeroModal";
 import { HeroSelect } from "../../common/ui/HeroSelect";
 import { HeroButton } from "../../common/ui/HeroButton";
+import { HeroInput } from "../../common/ui/HeroInput";
+import { HeroTextarea } from "../../common/ui/HeroTextarea";
 import { Supplier } from "../../../types/db";
-import { Tag, X } from "lucide-react";
+import { Tag } from "lucide-react";
 
 export interface BrandModalProps {
   isOpen: boolean;
@@ -35,50 +37,40 @@ export const BrandModal: React.FC<BrandModalProps> = ({
   onSave,
 }) => {
   return (
-    <HeroModal isOpen={isOpen} onClose={onClose} size="md" className="p-6 sm:p-7 space-y-6 border border-divider/40">
-      <div className="flex items-center justify-between border-b border-divider/20 pb-4">
+    <HeroModal isOpen={isOpen} onClose={onClose} size="md">
+      <div className="p-6 sm:p-7 space-y-5 text-left font-sans text-xs">
+        <div className="flex items-center justify-between border-b border-divider/20 pb-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shrink-0 border border-primary/20">
               <Tag className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-black text-foreground">
+              <h3 className="text-base font-bold text-foreground tracking-tight">
                 {isEditingBrand ? "Modify Brand Specification" : "Register Verified Brand"}
               </h3>
-              <p className="text-[10px] text-default-500 font-bold uppercase tracking-wider">
-                Product Line & Manufacturer Association
+              <p className="text-[11px] text-default-500 font-medium">
+                Product line & manufacturer association
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </div>
 
         {brandError && (
-          <div className="p-3 bg-danger-50 dark:bg-danger-500/10 border border-danger-200 dark:border-danger-500/20 text-danger text-xs font-bold rounded-xl">
+          <div className="p-3 bg-danger/10 border border-danger/20 text-danger text-xs font-bold rounded-xl">
             {brandError}
           </div>
         )}
 
         <form onSubmit={onSave} className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-default-500 uppercase tracking-wider pl-1">
-              Brand / Manufacturer Name <span className="text-danger">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={brandName ?? ''}
-              onChange={(e) => setBrandName(e.target.value)}
-              placeholder="e.g. Mariwasa, EuroTiles, Guocera"
-              className="w-full bg-content2 border border-divider/40 rounded-2xl px-4 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            />
-          </div>
+          <HeroInput
+            label="Brand / Manufacturer Name"
+            required
+            value={brandName ?? ''}
+            onValueChange={(val) => setBrandName(val)}
+            placeholder="e.g. Mariwasa, EuroTiles, Guocera"
+            radius="lg"
+            variant="flat"
+          />
 
           <div className="space-y-1.5">
             <HeroSelect
@@ -99,23 +91,19 @@ export const BrandModal: React.FC<BrandModalProps> = ({
             </HeroSelect>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-default-500 uppercase tracking-wider pl-1">
-              Product Category / Specifications Notes
-            </label>
-            <textarea
-              rows={2}
-              value={brandDescription ?? ''}
-              onChange={(e) => setBrandDescription(e.target.value)}
-              placeholder="e.g. Specialized in vitrified porcelain and rustic bathroom tiles..."
-              className="w-full bg-content2 border border-divider/40 rounded-2xl px-4 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
-            />
-          </div>
+          <HeroTextarea
+            label="Product Category / Specifications Notes"
+            rows={2}
+            value={brandDescription ?? ''}
+            onValueChange={(val) => setBrandDescription(val)}
+            placeholder="e.g. Specialized in vitrified porcelain and rustic bathroom tiles..."
+            radius="lg"
+            variant="flat"
+          />
 
           <div className="flex justify-end gap-2.5 pt-3 border-t border-divider/20">
             <HeroButton
               variant="flat"
-              color="default"
               size="sm"
               radius="full"
               onClick={onClose}
@@ -128,12 +116,13 @@ export const BrandModal: React.FC<BrandModalProps> = ({
               color="primary"
               size="sm"
               radius="full"
-              className="font-black uppercase tracking-wider shadow-lg"
+              className="font-bold shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
             >
               {isEditingBrand ? "Save Brand Details" : "Register Brand"}
             </HeroButton>
           </div>
         </form>
+      </div>
     </HeroModal>
   );
 };

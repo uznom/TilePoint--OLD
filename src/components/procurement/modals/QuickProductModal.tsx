@@ -2,8 +2,9 @@ import React from "react";
 import { HeroModal } from "../../common/ui/HeroModal";
 import { HeroSelect } from "../../common/ui/HeroSelect";
 import { HeroButton } from "../../common/ui/HeroButton";
+import { HeroInput } from "../../common/ui/HeroInput";
 import { Brand, Supplier } from "../../../types/db";
-import { Package, X } from "lucide-react";
+import { Package } from "lucide-react";
 
 export interface QuickProductModalProps {
   isOpen: boolean;
@@ -57,144 +58,139 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
   if (!isOpen || typeof document === "undefined") return null;
 
   return (
-    <HeroModal isOpen={isOpen} onClose={onClose} size="lg" className="p-6 sm:p-7 space-y-6 border border-divider/40">
-      <div className="flex items-center justify-between border-b border-divider/20 pb-4">
+    <HeroModal isOpen={isOpen} onClose={onClose} size="lg">
+      <div className="p-6 sm:p-7 space-y-6 text-left font-sans text-xs">
+        <div className="flex items-center justify-between border-b border-divider/20 pb-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shrink-0 border border-primary/20">
               <Package className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-black text-foreground">Catalog Quick-Registration</h3>
-              <p className="text-[10px] text-default-500 font-bold uppercase tracking-wider">
-                Create & Map New Sourced Tile SKU
+              <h3 className="text-base font-bold text-foreground tracking-tight">Catalog Quick-Registration</h3>
+              <p className="text-[11px] text-default-500 font-medium">
+                Create &amp; map new sourced tile SKU
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </div>
 
         <form onSubmit={onSave} className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-default-500 uppercase tracking-wider pl-1">
-              Product Description / Name <span className="text-danger">*</span>
-            </label>
-            <input
-              type="text"
+          <HeroInput
+            label="Product Description / Name"
+            required
+            value={quickProductName ?? ''}
+            onValueChange={(val) => setQuickProductName(val)}
+            placeholder="e.g. 60x60 Carrara White Glazed Porcelain"
+            radius="lg"
+            variant="flat"
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <HeroInput
+              label="Stock Keeping Unit (SKU)"
               required
-              value={quickProductName ?? ''}
-              onChange={(e) => setQuickProductName(e.target.value)}
-              placeholder="e.g. 60x60 Carrara White Glazed Porcelain"
-              className="w-full bg-content2 border border-divider/40 rounded-2xl px-4 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              value={quickProductSku ?? ''}
+              onValueChange={(val) => setQuickProductSku(val)}
+              placeholder="CW-6060-GLZ"
+              radius="lg"
+              variant="flat"
+            />
+            <HeroInput
+              label="Barcode (EAN-13)"
+              value={quickProductBarcode ?? ''}
+              onValueChange={(val) => setQuickProductBarcode(val)}
+              placeholder="Auto-generated or scanner..."
+              radius="lg"
+              variant="flat"
+              endContent={
+                <button
+                  type="button"
+                  onClick={onGenerateBarcode}
+                  className="text-[10px] font-bold text-primary hover:underline cursor-pointer"
+                >
+                  Generate EAN-13
+                </button>
+              }
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <HeroInput
+              label="Cost Price (PHP)"
+              type="number"
+              required
+              min="0"
+              step="0.01"
+              value={quickProductCost === "" ? "" : String(quickProductCost)}
+              onValueChange={(val) => setQuickProductCost(val === "" ? "" : Number(val))}
+              placeholder="0.00"
+              radius="lg"
+              variant="flat"
+            />
+            <HeroInput
+              label="Suggested Selling Price (PHP)"
+              type="number"
+              required
+              min="0"
+              step="0.01"
+              value={quickProductPrice === "" ? "" : String(quickProductPrice)}
+              onValueChange={(val) => setQuickProductPrice(val === "" ? "" : Number(val))}
+              placeholder="0.00"
+              radius="lg"
+              variant="flat"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-default-500 uppercase tracking-wider pl-1">
-                Stock Keeping Unit (SKU) <span className="text-danger">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={quickProductSku ?? ''}
-                onChange={(e) => setQuickProductSku(e.target.value)}
-                placeholder="CW-6060-GLZ"
-                className="w-full bg-content2 border border-divider/40 rounded-2xl px-4 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center pl-1">
-                <label className="text-[10px] font-black text-default-500 uppercase tracking-wider">
-                  Barcode (EAN-13)
-                </label>
-                <button
-                  type="button"
-                  onClick={onGenerateBarcode}
-                  className="text-[9px] font-bold text-primary hover:underline cursor-pointer"
-                >
-                  Generate EAN-13
-                </button>
-              </div>
-              <input
-                type="text"
-                value={quickProductBarcode ?? ''}
-                onChange={(e) => setQuickProductBarcode(e.target.value)}
-                placeholder="Auto-generated or scanner..."
-                className="w-full bg-content2 border border-divider/40 rounded-2xl px-4 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-default-500 uppercase tracking-wider pl-1">
-                Cost Price (PHP) <span className="text-danger">*</span>
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                value={quickProductCost}
-                onChange={(e) => setQuickProductCost(e.target.value === "" ? "" : Number(e.target.value))}
-                placeholder="250.00"
-                className="w-full bg-content2 border border-divider/40 rounded-2xl px-4 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-default-500 uppercase tracking-wider pl-1">
-                Selling Price (PHP) <span className="text-danger">*</span>
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                value={quickProductPrice}
-                onChange={(e) => setQuickProductPrice(e.target.value === "" ? "" : Number(e.target.value))}
-                placeholder="380.00"
-                className="w-full bg-content2 border border-divider/40 rounded-2xl px-4 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary font-mono"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div className="space-y-1.5">
               <HeroSelect
-                label="Brand Line"
+                label="Product Brand"
                 value={quickProductBrand ?? ''}
                 onChange={(e) => setQuickProductBrand(e.target.value)}
               >
-                <option value="">-- Generic / None --</option>
-                {brands.filter((b) => !b.isDeleted).map((b) => (
-                  <option key={b.id} value={b.name}>{b.name}</option>
+                <option value="Generic">Generic / Unbranded</option>
+                {brands.map((b) => (
+                  <option key={b.id} value={b.name}>
+                    {b.name}
+                  </option>
                 ))}
               </HeroSelect>
             </div>
             <div className="space-y-1.5">
               <HeroSelect
-                label="Supplying Vendor"
-                value={quickProductSupplierId ?? ''}
-                onChange={(e) => setQuickProductSupplierId(e.target.value)}
+                label="Category"
+                value={quickProductCategory ?? ''}
+                onChange={(e) => setQuickProductCategory(e.target.value)}
               >
-                <option value="">-- Unassigned --</option>
-                {suppliers.filter((s) => !s.isDeleted).map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
+                <option value="Tiles">Floor &amp; Wall Tiles</option>
+                <option value="Adhesives">Adhesives &amp; Grouts</option>
+                <option value="Sanitary">Sanitary Ware</option>
+                <option value="Accessories">Trims &amp; Accessories</option>
               </HeroSelect>
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <HeroSelect
+              label="Primary Supplier Vendor"
+              isRequired
+              value={quickProductSupplierId ?? ''}
+              onChange={(e) => setQuickProductSupplierId(e.target.value)}
+            >
+              <option value="">-- Select Vendor --</option>
+              {suppliers
+                .filter((s) => !s.isDeleted)
+                .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+            </HeroSelect>
           </div>
 
           <div className="flex justify-end gap-2.5 pt-3 border-t border-divider/20">
             <HeroButton
               variant="flat"
-              color="default"
               size="sm"
               radius="full"
               onClick={onClose}
@@ -207,12 +203,13 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
               color="primary"
               size="sm"
               radius="full"
-              className="font-black uppercase tracking-wider shadow-lg"
+              className="font-bold shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
             >
-              Register & Add to Draft PO
+              Register &amp; Add to PO
             </HeroButton>
           </div>
         </form>
+      </div>
     </HeroModal>
   );
 };
