@@ -1,6 +1,7 @@
 import React from "react";
 import { Supplier, PurchaseOrder, PoItem } from "../../../types/db";
 import { formatCurrency } from "../../../utils/formatters";
+import { HeroButton } from "../../common/ui/HeroButton";
 
 export interface SuppliersCreditsTabProps {
   suppliers: Supplier[];
@@ -14,7 +15,7 @@ export const SuppliersCreditsTab: React.FC<SuppliersCreditsTabProps> = ({
   poItems,
 }) => {
   return (
-    <div className="space-y-6 font-sans text-xs">
+    <div className="space-y-6 font-sans text-xs text-left">
       <div className="grid md:grid-cols-3 gap-6">
         {suppliers
           .filter((s) => !s.isDeleted)
@@ -45,53 +46,57 @@ export const SuppliersCreditsTab: React.FC<SuppliersCreditsTabProps> = ({
             return (
               <div
                 key={sup.id}
-                className="bg-content1 border border-divider/15 p-5 rounded-2xl space-y-4 shadow-xs flex flex-col justify-between"
+                className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-5 rounded-2xl space-y-4 shadow-elevation-soft flex flex-col justify-between"
               >
                 <div>
                   <div className="flex justify-between items-start">
-                    <span className="text-[10px] text-default-500 block tracking-wider font-bold">
+                    <span className="text-[10px] text-default-500 block tracking-wider font-bold font-mono">
                       Supplier {sup.id}
                     </span>
-                    <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase bg-emerald-500/10 text-emerald-500">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-500">
                       Credited
                     </span>
                   </div>
-                  <h4 className="font-black text-sm text-foreground mt-1">
+                  <h4 className="font-bold text-sm text-foreground tracking-tight mt-1">
                     {sup.name}
                   </h4>
-                  <p className="text-[11px] text-default-500 mt-1">
+                  <p className="text-[11px] text-default-500 mt-1 font-medium">
                     {sup.contactPerson || "Primary Contact"} · {sup.phone || "No phone"}
                   </p>
                 </div>
 
-                <div className="pt-3 border-t border-divider/10 space-y-2 mt-4">
+                <div className="pt-3 border-t border-divider/20 space-y-2.5 mt-4">
                   <div className="flex justify-between text-xs">
-                    <span className="text-default-500">Outstanding Accounts Payable:</span>
-                    <span className="font-extrabold text-rose-500">
+                    <span className="text-default-500 font-medium">Outstanding Accounts Payable:</span>
+                    <span className="font-bold text-rose-500 font-mono">
                       {formatCurrency(outstanding)}
                     </span>
                   </div>
-                  <div className="w-full bg-content3 h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-zinc-100 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
                     <div
                       style={{ width: `${utilization}%` }}
-                      className="bg-rose-500 h-full rounded-full"
+                      className="bg-rose-500 h-full rounded-full transition-all"
                     />
                   </div>
-                  <div className="flex justify-between text-[10px] text-default-500">
+                  <div className="flex justify-between text-[10px] text-default-500 font-medium font-mono">
                     <span>Allocated Limit: {formatCurrency(creditLimit)}</span>
                     <span>{utilization}% utilized</span>
                   </div>
                 </div>
 
-                <button
+                <HeroButton
                   type="button"
+                  variant="flat"
+                  color="primary"
+                  size="sm"
+                  radius="full"
                   onClick={() =>
                     alert(`Sent payment dispatch authorization request to accounting for ${sup.name}!`)
                   }
-                  className="w-full py-2 bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground text-xs rounded-xl font-bold transition mt-3 cursor-pointer active:scale-[0.98]"
+                  className="w-full font-bold mt-2"
                 >
                   Authorize Payment
-                </button>
+                </HeroButton>
               </div>
             );
           })}

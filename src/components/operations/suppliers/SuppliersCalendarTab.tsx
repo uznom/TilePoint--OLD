@@ -468,14 +468,14 @@ export const SuppliersCalendarTab: React.FC<SuppliersCalendarTabProps> = ({
               </span>
             </div>
 
-            <div className="flex border border-divider/10 p-0.5 bg-content3/30 rounded-xl">
+            <div className="flex bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-full border border-zinc-200/50 dark:border-white/5">
               <button
                 type="button"
                 onClick={() => setLeftPanelTab("list")}
-                className={`flex-1 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all border-0 cursor-pointer ${
+                className={`flex-1 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer font-sans active:scale-[0.98] ${
                   leftPanelTab === "list"
-                    ? "bg-primary text-primary-foreground shadow-xs"
-                    : "text-default-500 hover:text-foreground"
+                    ? "bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
                 }`}
               >
                 Accounts List
@@ -483,10 +483,10 @@ export const SuppliersCalendarTab: React.FC<SuppliersCalendarTabProps> = ({
               <button
                 type="button"
                 onClick={() => setLeftPanelTab("create")}
-                className={`flex-1 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all border-0 cursor-pointer ${
+                className={`flex-1 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer font-sans active:scale-[0.98] ${
                   leftPanelTab === "create"
-                    ? "bg-primary text-primary-foreground shadow-xs"
-                    : "text-default-500 hover:text-foreground"
+                    ? "bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
                 }`}
               >
                 Setup Bill
@@ -494,10 +494,10 @@ export const SuppliersCalendarTab: React.FC<SuppliersCalendarTabProps> = ({
               <button
                 type="button"
                 onClick={() => setLeftPanelTab("notes")}
-                className={`flex-1 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all border-0 cursor-pointer ${
+                className={`flex-1 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer font-sans active:scale-[0.98] ${
                   leftPanelTab === "notes"
-                    ? "bg-primary text-primary-foreground shadow-xs"
-                    : "text-default-500 hover:text-foreground"
+                    ? "bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
                 }`}
               >
                 Memos

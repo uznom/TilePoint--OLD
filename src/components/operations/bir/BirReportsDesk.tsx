@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Download, FileText, Printer } from "lucide-react";
 import { Branch, Sale, User, UserRole } from "../../../types/db";
 import { formatCurrency } from "../../../utils/formatters";
+import { HeroButton } from "../../common/ui/HeroButton";
 import { saveFileToBackup } from "../../../lib/fileBackupHelper";
 
 export interface BirReportsDeskProps {
@@ -162,46 +163,46 @@ export const BirReportsDesk: React.FC<BirReportsDeskProps> = ({
   };
 
   return (
-    <div className="space-y-6 font-sans text-xs">
+    <div className="space-y-6 font-sans text-xs text-left">
       {/* 5-Column Taxation Metric Ribbon */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <div className="bg-content1 border border-divider/15 p-4 rounded-xl space-y-1">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-4 rounded-2xl space-y-1 shadow-elevation-soft">
           <span className="text-default-500 block font-bold uppercase tracking-wider text-[9px]">
             Vatable Sales (Net of VAT)
           </span>
-          <span className="text-sm font-black text-foreground">
+          <span className="text-sm font-bold text-foreground font-mono">
             {formatCurrency(vatableSales)}
           </span>
         </div>
-        <div className="bg-content1 border border-divider/15 p-4 rounded-xl space-y-1">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-4 rounded-2xl space-y-1 shadow-elevation-soft">
           <span className="text-default-500 block font-bold uppercase tracking-wider text-[9px]">
             VAT-Exempt Sales Base
           </span>
-          <span className="text-sm font-black text-foreground">
+          <span className="text-sm font-bold text-foreground font-mono">
             {formatCurrency(vatExemptSales)}
           </span>
         </div>
-        <div className="bg-content1 border border-divider/15 p-4 rounded-xl space-y-1">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-4 rounded-2xl space-y-1 shadow-elevation-soft">
           <span className="text-default-500 block font-bold uppercase tracking-wider text-[9px]">
             12% Output VAT Amount
           </span>
-          <span className="text-sm font-black text-amber-500">
+          <span className="text-sm font-bold text-amber-500 font-mono">
             {formatCurrency(vatOutput)}
           </span>
         </div>
-        <div className="bg-content1 border border-divider/15 p-4 rounded-xl space-y-1">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-4 rounded-2xl space-y-1 shadow-elevation-soft">
           <span className="text-default-500 block font-bold uppercase tracking-wider text-[9px]">
-            BIR Discounts & Deductions
+            BIR Discounts &amp; Deductions
           </span>
-          <span className="text-sm font-black text-emerald-500">
+          <span className="text-sm font-bold text-emerald-500 font-mono">
             {formatCurrency(discountTotal)}
           </span>
         </div>
-        <div className="bg-content1 border border-divider/15 p-4 rounded-xl space-y-1 col-span-2 sm:col-span-1">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-4 rounded-2xl space-y-1 col-span-2 sm:col-span-1 shadow-elevation-soft">
           <span className="text-default-500 block font-bold uppercase tracking-wider text-[9px]">
             Accredited Net Sales Due
           </span>
-          <span className="text-sm font-black text-emerald-500">
+          <span className="text-sm font-bold text-emerald-500 font-mono">
             {formatCurrency(totalSalesFromDay)}
           </span>
         </div>
@@ -210,39 +211,44 @@ export const BirReportsDesk: React.FC<BirReportsDeskProps> = ({
       {activeSubTab === "bir-xz" ? (
         <div className="grid md:grid-cols-2 gap-6">
           {/* X Reading Card */}
-          <div className="bg-content1 border border-divider/15 p-5 rounded-2xl space-y-4 shadow-sm font-sans">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-5 rounded-2xl space-y-4 shadow-elevation-soft font-sans">
             <div>
-              <h3 className="font-extrabold text-sm text-primary uppercase tracking-wider">
+              <h3 className="font-bold text-sm text-primary uppercase tracking-wider">
                 Generate Cashier X-Reading
               </h3>
-              <p className="text-xs text-default-500 mt-1">
+              <p className="text-xs text-default-500 mt-1 font-medium">
                 Runs the cumulative reading for the active terminal session without closing counters.
               </p>
             </div>
-            <div className="p-4 bg-content2/50 border border-divider/10 rounded-xl space-y-2 text-[11px]">
+            <div className="p-4 bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-white/5 rounded-2xl space-y-2 text-[11px] shadow-2xs">
               <div className="flex justify-between">
-                <span>Assigned Terminal:</span>
-                <span className="font-bold">TERM-01 ({activeBranchName})</span>
+                <span className="text-default-500 font-medium">Assigned Terminal:</span>
+                <span className="font-bold text-foreground">TERM-01 ({activeBranchName})</span>
               </div>
               <div className="flex justify-between">
-                <span>Working Cashier:</span>
-                <span className="font-bold">{currentUser?.fullName || "Active Cashier"}</span>
+                <span className="text-default-500 font-medium">Working Cashier:</span>
+                <span className="font-bold text-foreground">{currentUser?.fullName || "Active Cashier"}</span>
               </div>
               <div className="flex justify-between">
-                <span>Subtotal Item Sales:</span>
-                <span>{formatCurrency(totalSalesFromDay + discountTotal)}</span>
+                <span className="text-default-500 font-medium">Subtotal Item Sales:</span>
+                <span className="font-mono font-bold text-foreground">{formatCurrency(totalSalesFromDay + discountTotal)}</span>
               </div>
               <div className="flex justify-between text-rose-500">
-                <span>Deducted Vouchers:</span>
-                <span>-{formatCurrency(discountTotal)}</span>
+                <span className="font-medium">Deducted Vouchers:</span>
+                <span className="font-mono font-bold">-{formatCurrency(discountTotal)}</span>
               </div>
-              <div className="flex justify-between text-emerald-500 font-extrabold border-t border-dashed border-divider/20 pt-1.5 text-xs">
+              <div className="flex justify-between text-emerald-500 font-bold border-t border-dashed border-divider/20 pt-1.5 text-xs">
                 <span>Cash In Drawer Match:</span>
-                <span>{formatCurrency(totalSalesFromDay)}</span>
+                <span className="font-mono">{formatCurrency(totalSalesFromDay)}</span>
               </div>
             </div>
-            <button
+            <HeroButton
               type="button"
+              color="primary"
+              variant="solid"
+              size="md"
+              radius="full"
+              startIcon={<Printer className="h-4 w-4" />}
               onClick={() => {
                 if (onPrintSlip) {
                   onPrintSlip({
@@ -257,62 +263,67 @@ export const BirReportsDesk: React.FC<BirReportsDeskProps> = ({
                   });
                 }
               }}
-              className="w-full py-2.5 bg-primary hover:bg-primary/95 text-primary-foreground rounded-xl font-bold transition flex items-center justify-center gap-1.5 cursor-pointer text-xs active:scale-95"
+              className="w-full font-bold shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
             >
-              <Printer className="h-4 w-4" /> Print Current X-Reading Slip
-            </button>
+              Print Current X-Reading Slip
+            </HeroButton>
           </div>
 
           {/* Z Reading Card */}
-          <div className="bg-content1 border border-divider/15 p-5 rounded-2xl space-y-4 shadow-sm font-sans">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-5 rounded-2xl space-y-4 shadow-elevation-soft font-sans">
             <div>
-              <h3 className="font-extrabold text-sm text-amber-500 uppercase tracking-wider">
+              <h3 className="font-bold text-sm text-amber-500 uppercase tracking-wider">
                 Generate Cumulative Z-Reading
               </h3>
-              <p className="text-xs text-default-500 mt-1">
+              <p className="text-xs text-default-500 mt-1 font-medium">
                 Concludes working shifts, commits locked fiscal audit counts, and resets drawers.
               </p>
             </div>
-            <div className="p-4 bg-content2/50 border border-divider/10 rounded-xl space-y-2 text-[11px]">
+            <div className="p-4 bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-white/5 rounded-2xl space-y-2 text-[11px] shadow-2xs">
               <div className="flex justify-between">
-                <span>Z-Reading Record #:</span>
-                <span className="font-bold font-mono">Z-FINAL-{new Date().toISOString().slice(0, 10).replace(/-/g, "")}</span>
+                <span className="text-default-500 font-medium">Z-Reading Record #:</span>
+                <span className="font-bold font-mono text-foreground">Z-FINAL-{new Date().toISOString().slice(0, 10).replace(/-/g, "")}</span>
               </div>
               <div className="flex justify-between">
-                <span>Total Accumulated Sales:</span>
-                <span className="font-bold">{formatCurrency(totalSalesFromDay)}</span>
+                <span className="text-default-500 font-medium">Total Accumulated Sales:</span>
+                <span className="font-bold font-mono text-foreground">{formatCurrency(totalSalesFromDay)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Total Output Tax (12%):</span>
-                <span>{formatCurrency(vatOutput)}</span>
+                <span className="text-default-500 font-medium">Total Output Tax (12%):</span>
+                <span className="font-mono font-bold text-foreground">{formatCurrency(vatOutput)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Fiscal Register Counter:</span>
-                <span className="font-mono text-emerald-500 font-bold">LOCKED & READY</span>
+                <span className="text-default-500 font-medium">Fiscal Register Counter:</span>
+                <span className="font-mono text-emerald-500 font-bold">LOCKED &amp; READY</span>
               </div>
             </div>
-            <button
+            <HeroButton
               type="button"
+              color="warning"
+              variant="solid"
+              size="md"
+              radius="full"
+              startIcon={<Printer className="h-4 w-4" />}
               onClick={() => {
                 if (onRequestZReading) onRequestZReading();
               }}
-              className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-black font-extrabold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer text-xs active:scale-95"
+              className="w-full font-bold text-black shadow-2xs"
             >
-              <Printer className="h-4 w-4" /> Finalize End-Of-Day Z-Reading
-            </button>
+              Finalize End-Of-Day Z-Reading
+            </HeroButton>
           </div>
         </div>
       ) : (
         /* Detailed Table & CSV Export for BIR Discount Books / Summary */
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-content1 border border-divider/15 p-4 rounded-2xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-4 rounded-2xl shadow-elevation-soft">
             <div className="flex items-center gap-2">
               <span className="font-bold text-default-500">Filter Date:</span>
               <input
                 type="date"
                 value={reportDateFilter}
                 onChange={(e) => setReportDateFilter(e.target.value)}
-                className="bg-content3 border border-divider rounded-lg p-1.5 text-xs text-foreground outline-none"
+                className="bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-white/5 rounded-xl px-2.5 py-1 text-xs text-foreground outline-none font-sans"
               />
               {reportDateFilter && (
                 <button
@@ -325,37 +336,41 @@ export const BirReportsDesk: React.FC<BirReportsDeskProps> = ({
               )}
             </div>
 
-            <button
+            <HeroButton
               type="button"
+              variant="flat"
+              color="primary"
+              size="sm"
+              radius="full"
+              startIcon={<Download className="h-4 w-4" />}
               onClick={handleExportCSV}
-              className="px-3.5 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 rounded-xl font-bold flex items-center justify-center gap-1.5 cursor-pointer transition active:scale-95"
+              className="font-bold"
             >
-              <Download className="h-4 w-4" />
-              <span>Export Tax CSV</span>
-            </button>
+              Export Tax CSV
+            </HeroButton>
           </div>
 
-          <div className="bg-content1 border border-divider/15 rounded-2xl overflow-hidden shadow-xs">
-            <div className="p-4 bg-content2/40 border-b border-divider/15 flex justify-between items-center">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl overflow-hidden shadow-elevation-soft">
+            <div className="p-4 bg-zinc-100/80 dark:bg-zinc-800/80 border-b border-divider/20 flex justify-between items-center">
               <div>
-                <h4 className="font-bold text-sm text-foreground uppercase tracking-wide">
+                <h4 className="font-bold text-sm text-foreground uppercase tracking-wider">
                   {activeSubTab.replace("bir-", "").replace("-", " ")} Ledger Book
                 </h4>
-                <span className="text-[10px] text-default-500">{filteredReportSales.length} records registered</span>
+                <span className="text-[11px] text-default-500 font-medium">{filteredReportSales.length} records registered</span>
               </div>
             </div>
 
             <div className="overflow-x-auto max-h-[60vh] scrollbar-thin">
               <table className="w-full text-left font-sans text-xs">
-                <thead className="bg-content3/50 font-bold border-b border-divider/15 text-default-500">
+                <thead className="bg-zinc-100/50 dark:bg-zinc-800/50 font-bold border-b border-divider/20 text-default-600 dark:text-default-400">
                   <tr>
-                    <th className="p-3">Invoice / Timestamp</th>
-                    <th className="p-3">Client / ID</th>
-                    <th className="p-3 text-right">Gross Amount</th>
-                    <th className="p-3 text-right">VAT (12%)</th>
-                    <th className="p-3 text-right">Discount</th>
-                    <th className="p-3 text-right">Net Tendered</th>
-                    <th className="p-3 text-center">Cashier</th>
+                    <th className="p-3.5">Invoice / Timestamp</th>
+                    <th className="p-3.5">Client / ID</th>
+                    <th className="p-3.5 text-right">Gross Amount</th>
+                    <th className="p-3.5 text-right">VAT (12%)</th>
+                    <th className="p-3.5 text-right">Discount</th>
+                    <th className="p-3.5 text-right">Net Tendered</th>
+                    <th className="p-3.5 text-center">Cashier</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-divider/10">
@@ -368,14 +383,14 @@ export const BirReportsDesk: React.FC<BirReportsDeskProps> = ({
                     </tr>
                   ) : (
                     filteredReportSales.map((s: any) => (
-                      <tr key={s.id} className="hover:bg-content2/40 transition active:scale-[0.98]">
-                        <td className="p-3 font-semibold text-foreground">
-                          <div>{s.saleNumber || s.id}</div>
+                      <tr key={s.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                        <td className="p-3.5 font-semibold text-foreground">
+                          <div className="font-mono font-bold">{s.saleNumber || s.id}</div>
                           <div className="text-[10px] text-default-400">
                             {new Date(s.createdAt || Date.now()).toLocaleString("en-US")}
                           </div>
                         </td>
-                        <td className="p-3">
+                        <td className="p-3.5">
                           <div className="font-medium text-foreground">{s.customerName || "Walk-In"}</div>
                           {s.seniorCitizenId && (
                             <div className="text-[9.5px] text-primary font-mono font-bold">
@@ -388,19 +403,19 @@ export const BirReportsDesk: React.FC<BirReportsDeskProps> = ({
                             </div>
                           )}
                         </td>
-                        <td className="p-3 text-right font-bold">
+                        <td className="p-3.5 text-right font-bold font-mono">
                           {formatCurrency(Number(s.subtotal) || Number(s.grandTotal) || 0)}
                         </td>
-                        <td className="p-3 text-right text-amber-500 font-bold">
+                        <td className="p-3.5 text-right text-amber-500 font-bold font-mono">
                           {formatCurrency(Number(s.vat) || 0)}
                         </td>
-                        <td className="p-3 text-right text-rose-500 font-bold">
+                        <td className="p-3.5 text-right text-rose-500 font-bold font-mono">
                           -{formatCurrency(Number(s.discount) || 0)}
                         </td>
-                        <td className="p-3 text-right text-emerald-500 font-black">
+                        <td className="p-3.5 text-right text-emerald-500 font-bold font-mono">
                           {formatCurrency(Number(s.grandTotal) || 0)}
                         </td>
-                        <td className="p-3 text-center text-default-500">
+                        <td className="p-3.5 text-center text-default-500">
                           {s.cashierName || "Cashier"}
                         </td>
                       </tr>
