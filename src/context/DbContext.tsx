@@ -42,7 +42,7 @@ const queryClient = new QueryClient({
   },
 });
 
-export const DbContext = createContext<DbContextType | undefined>(undefined);
+const DbContext = createContext<DbContextType | undefined>(undefined);
 
 export const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
   children,
