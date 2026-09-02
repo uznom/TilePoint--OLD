@@ -35,14 +35,14 @@ export const HeroCard: React.FC<HeroCardProps> & {
   const getVariantStyles = () => {
     switch (variant) {
       case 'flat':
-        return 'bg-content2/80 dark:bg-content2/60 border border-transparent shadow-none text-foreground';
+        return 'bg-zinc-100/90 dark:bg-zinc-800/60 border border-transparent shadow-none text-foreground';
       case 'elevated':
-        return 'bg-content1 border border-zinc-200/80 dark:border-white/10 shadow-elevation-soft text-foreground';
+        return 'bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-white/10 shadow-elevation-card text-foreground';
       case 'shadow':
-        return 'bg-content1 border border-zinc-200/60 dark:border-white/10 shadow-[0_12px_32px_-4px_rgba(0,0,0,0.08)] dark:shadow-[0_12px_32px_-4px_rgba(0,0,0,0.6)] text-foreground';
+        return 'bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 shadow-elevation-floating text-foreground';
       case 'bordered':
       default:
-        return 'bg-content1 border border-zinc-200/70 dark:border-white/10 shadow-elevation-soft text-foreground';
+        return 'bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 shadow-elevation-soft text-foreground';
     }
   };
 
@@ -65,11 +65,11 @@ export const HeroCard: React.FC<HeroCardProps> & {
   };
 
   const hoverStyle = isHoverable
-    ? 'hover:border-default-400/60 hover:shadow-sm transition-all duration-200 ease-out'
+    ? 'hover:border-primary/50 hover:shadow-elevation-card hover:-translate-y-[1.5px] transition-all duration-200 ease-out'
     : '';
 
   const pressStyle = isPressable
-    ? 'cursor-pointer active:scale-[0.98] transition-transform duration-150'
+    ? 'cursor-pointer active:scale-[0.985] active:translate-y-[0px] transition-transform duration-150'
     : '';
 
   return (

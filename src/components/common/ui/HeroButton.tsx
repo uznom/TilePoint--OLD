@@ -114,50 +114,50 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
       case 'solid':
         switch (resolvedColor) {
           case 'primary':
-            return 'bg-primary text-primary-foreground hover:brightness-105 active:brightness-95 shadow-sm shadow-primary/20';
+            return 'bg-primary text-primary-foreground btn-tactile-primary hover:brightness-105 active:brightness-95 hover:-translate-y-[1px] active:translate-y-[0px] active:scale-[0.985] transition-all duration-150';
           case 'secondary':
-            return 'bg-secondary text-secondary-foreground hover:brightness-105 active:brightness-95 shadow-sm shadow-secondary/20';
+            return 'bg-secondary text-secondary-foreground shadow-[0_3px_12px_rgba(120,40,200,0.38)] hover:brightness-105 active:brightness-95 hover:-translate-y-[1px] active:scale-[0.985] transition-all duration-150';
           case 'success':
-            return 'bg-success text-success-foreground hover:brightness-105 active:brightness-95 shadow-sm shadow-success/20';
+            return 'bg-success text-success-foreground shadow-[0_3px_12px_rgba(23,201,100,0.38)] hover:brightness-105 active:brightness-95 hover:-translate-y-[1px] active:scale-[0.985] transition-all duration-150';
           case 'warning':
-            return 'bg-warning text-warning-foreground hover:brightness-105 active:brightness-95 shadow-sm shadow-warning/20';
+            return 'bg-warning text-warning-foreground shadow-[0_3px_12px_rgba(245,165,36,0.38)] hover:brightness-105 active:brightness-95 hover:-translate-y-[1px] active:scale-[0.985] transition-all duration-150';
           case 'danger':
-            return 'bg-danger text-danger-foreground hover:brightness-105 active:brightness-95 shadow-sm shadow-danger/20';
+            return 'bg-danger text-danger-foreground shadow-[0_3px_12px_rgba(243,18,96,0.38)] hover:brightness-105 active:brightness-95 hover:-translate-y-[1px] active:scale-[0.985] transition-all duration-150';
           case 'default':
           default:
-            return 'bg-default-200 text-default-foreground hover:bg-default-300 active:bg-default-400 dark:bg-content2 dark:hover:bg-content3 dark:text-default-100 shadow-xs';
+            return 'bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-100 btn-tactile-default hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 border border-zinc-200/70 dark:border-white/10 active:scale-[0.985] transition-all duration-150';
         }
       case 'flat':
         switch (resolvedColor) {
           case 'primary':
-            return 'bg-primary/10 text-primary hover:bg-primary/20 active:bg-primary/25 dark:bg-primary/20 dark:text-primary dark:hover:bg-primary/30';
+            return 'bg-primary/10 text-primary hover:bg-primary/20 active:bg-primary/25 dark:bg-primary/20 dark:text-primary dark:hover:bg-primary/30 active:scale-[0.985] transition-all';
           case 'secondary':
-            return 'bg-secondary/10 text-secondary hover:bg-secondary/20 active:bg-secondary/25 dark:bg-secondary/20 dark:text-secondary dark:hover:bg-secondary/30';
+            return 'bg-secondary/10 text-secondary hover:bg-secondary/20 active:bg-secondary/25 dark:bg-secondary/20 dark:text-secondary dark:hover:bg-secondary/30 active:scale-[0.985] transition-all';
           case 'success':
-            return 'bg-success/10 text-success hover:bg-success/20 active:bg-success/25 dark:bg-success/20 dark:text-success dark:hover:bg-success/30';
+            return 'bg-success/10 text-success hover:bg-success/20 active:bg-success/25 dark:bg-success/20 dark:text-success dark:hover:bg-success/30 active:scale-[0.985] transition-all';
           case 'warning':
-            return 'bg-warning/10 text-warning hover:bg-warning/20 active:bg-warning/25 dark:bg-warning/20 dark:text-warning dark:hover:bg-warning/30';
+            return 'bg-warning/10 text-warning hover:bg-warning/20 active:bg-warning/25 dark:bg-warning/20 dark:text-warning dark:hover:bg-warning/30 active:scale-[0.985] transition-all';
           case 'danger':
-            return 'bg-danger/10 text-danger hover:bg-danger/20 active:bg-danger/25 dark:bg-danger/20 dark:text-danger dark:hover:bg-danger/30';
+            return 'bg-danger/10 text-danger hover:bg-danger/20 active:bg-danger/25 dark:bg-danger/20 dark:text-danger dark:hover:bg-danger/30 active:scale-[0.985] transition-all';
           case 'default':
           default:
-            return 'bg-default-100 text-default-700 hover:bg-default-200 active:bg-default-300 dark:bg-content2/80 dark:hover:bg-content3 dark:text-default-200';
+            return 'bg-zinc-100 text-default-700 hover:bg-zinc-200/80 active:bg-zinc-300/80 dark:bg-zinc-800/80 dark:hover:bg-zinc-700 dark:text-default-200 active:scale-[0.985] transition-all';
         }
       case 'bordered':
         switch (resolvedColor) {
           case 'primary':
-            return 'border border-primary text-primary hover:bg-primary/10 active:bg-primary/20';
+            return 'border border-primary text-primary hover:bg-primary/10 active:bg-primary/20 shadow-xs active:scale-[0.985] transition-all';
           case 'secondary':
-            return 'border border-secondary text-secondary hover:bg-secondary/10 active:bg-secondary/20';
+            return 'border border-secondary text-secondary hover:bg-secondary/10 active:bg-secondary/20 shadow-xs active:scale-[0.985] transition-all';
           case 'success':
-            return 'border border-success text-success hover:bg-success/10 active:bg-success/20';
+            return 'border border-success text-success hover:bg-success/10 active:bg-success/20 shadow-xs active:scale-[0.985] transition-all';
           case 'warning':
-            return 'border border-warning text-warning hover:bg-warning/10 active:bg-warning/20';
+            return 'border border-warning text-warning hover:bg-warning/10 active:bg-warning/20 shadow-xs active:scale-[0.985] transition-all';
           case 'danger':
-            return 'border border-danger text-danger hover:bg-danger/10 active:bg-danger/20';
+            return 'border border-danger text-danger hover:bg-danger/10 active:bg-danger/20 shadow-xs active:scale-[0.985] transition-all';
           case 'default':
           default:
-            return 'border border-divider dark:border-white/10 text-default-700 hover:bg-default-100 active:bg-default-200 dark:text-default-200 dark:hover:bg-content2';
+            return 'border border-zinc-200/80 dark:border-white/10 text-default-700 hover:bg-zinc-100 active:bg-zinc-200 dark:text-default-200 dark:hover:bg-zinc-800 shadow-xs active:scale-[0.985] transition-all';
         }
       case 'light':
         switch (resolvedColor) {

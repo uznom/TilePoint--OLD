@@ -236,27 +236,61 @@ html.dark {
    ========================================================================== */
 
 .shadow-elevation-soft {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 8px 24px -4px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 2px -1px rgba(0, 0, 0, 0.08), 0 4px 14px -2px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.03);
 }
 
 .dark .shadow-elevation-soft {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 8px 24px -4px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.09), 0 6px 20px -2px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .shadow-elevation-card {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px -1px rgba(0, 0, 0, 0.1), 0 8px 24px -4px rgba(0, 0, 0, 0.08), 0 20px 48px -12px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.04);
 }
 
 .dark .shadow-elevation-card {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px -2px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.7), inset 0 1px 0 0 rgba(255, 255, 255, 0.11), 0 12px 36px -4px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.shadow-elevation-floating,
+.shadow-elevation-modal {
+  box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.05), 0 20px 50px -10px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.dark .shadow-elevation-floating,
+.dark .shadow-elevation-modal {
+  box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.14), 0 24px 60px -8px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.shadow-elevation-inset {
+  box-shadow: inset 0 1.5px 3px 0 rgba(0, 0, 0, 0.06), inset 0 0 0 1px rgba(0, 0, 0, 0.03);
+}
+
+.dark .shadow-elevation-inset {
+  box-shadow: inset 0 2px 5px 0 rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .border-tactile {
-  border: 1px solid rgba(228, 228, 231, 0.7);
+  border: 1px solid rgba(228, 228, 231, 0.8);
 }
 
 .dark .border-tactile {
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-tactile-primary {
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.3), 0 3px 12px 0 rgba(0, 111, 238, 0.38), 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+}
+
+.btn-tactile-primary:hover {
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.4), 0 6px 20px 0 rgba(0, 111, 238, 0.48), 0 2px 4px 0 rgba(0, 0, 0, 0.12);
+}
+
+.btn-tactile-default {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05), inset 0 1px 0 0 rgba(255, 255, 255, 0.7);
+}
+
+.dark .btn-tactile-default {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.6), inset 0 1px 0 0 rgba(255, 255, 255, 0.09);
 }
 
 /* ==========================================================================

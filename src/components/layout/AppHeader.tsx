@@ -111,7 +111,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const queuedWrites = serverDegradedState?.queuedWritesCount ?? 0;
 
   return (
-    <header className="h-14 min-h-[56px] bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md border-b border-zinc-200/60 dark:border-white/10 px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2 sm:gap-4 sticky top-0 z-30 select-none transition-colors duration-200 shrink-0">
+    <header className="h-14 min-h-[56px] bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-200/80 dark:border-white/10 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5)] px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2 sm:gap-4 sticky top-0 z-30 select-none transition-colors duration-200 shrink-0">
       {/* Left Zone: Sidebar Toggles & Dynamic Breadcrumbs */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {/* Mobile Hamburger Trigger */}

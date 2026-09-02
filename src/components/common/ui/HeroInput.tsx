@@ -101,19 +101,19 @@ export const HeroInput = React.forwardRef<HTMLInputElement, HeroInputProps>(
 
     const getVariantClasses = () => {
       if (isInvalid) {
-        return 'bg-danger-50/20 border border-danger text-foreground focus-within:border-danger focus-within:ring-2 focus-within:ring-danger/25';
+        return 'bg-danger-50/20 border border-danger text-foreground focus-within:border-danger focus-within:ring-2 focus-within:ring-danger/25 shadow-elevation-inset';
       }
 
       switch (variant) {
         case 'flat':
-          return 'bg-zinc-100/90 dark:bg-zinc-800/70 border border-transparent dark:border-white/5 text-foreground hover:bg-zinc-200/70 dark:hover:bg-zinc-800 focus-within:bg-content1 dark:focus-within:bg-zinc-900 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30 shadow-2xs';
+          return 'bg-zinc-100/90 dark:bg-zinc-800/80 border border-transparent dark:border-white/5 text-foreground hover:bg-zinc-200/70 dark:hover:bg-zinc-800 focus-within:bg-white dark:focus-within:bg-zinc-900 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30 shadow-elevation-inset';
         case 'faded':
-          return 'bg-zinc-100/80 dark:bg-zinc-900/80 border border-zinc-200/60 dark:border-white/10 text-foreground hover:border-zinc-300 dark:hover:border-white/20 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30 shadow-2xs';
+          return 'bg-zinc-100/80 dark:bg-zinc-900/80 border border-zinc-200/70 dark:border-white/10 text-foreground hover:border-zinc-300 dark:hover:border-white/20 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30 shadow-elevation-inset';
         case 'underlined':
           return 'bg-transparent border-b-2 border-divider rounded-none px-0 text-foreground hover:border-default-400 focus-within:border-primary';
         case 'bordered':
         default:
-          return 'bg-content1 dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 text-foreground hover:border-zinc-300 dark:hover:border-white/20 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30 shadow-2xs';
+          return 'bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-white/10 text-foreground hover:border-zinc-300 dark:hover:border-white/20 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30 shadow-elevation-inset';
       }
     };
 

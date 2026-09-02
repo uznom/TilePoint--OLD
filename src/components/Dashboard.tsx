@@ -647,20 +647,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* 2. TOP METRIC CARDS (4-CARD HEROUI AESTHETIC) */}
+      {/* 2. TOP METRIC CARDS (4-CARD HEROUI TACTILE BENTO) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Revenue */}
         <HeroCard
-          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 shadow-xs active:scale-[0.98]"
-          variant="bordered"
+          className="p-5 relative overflow-hidden bg-gradient-to-br from-white to-zinc-50/50 dark:from-zinc-900 dark:to-zinc-900/60"
+          variant="elevated"
           radius="2xl"
+          isHoverable
         >
           <div className="flex items-start justify-between">
-            <span className="text-xs font-medium text-default-500 tracking-tight">
+            <span className="text-xs font-semibold text-default-500 tracking-tight">
               Total Gross Sales
             </span>
             <span
-              className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+              className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
                 momGrowth >= 0
                   ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400 border border-emerald-500/20'
                   : 'bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400 border border-rose-500/20'
@@ -673,8 +674,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             <div className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground tabular-nums">
               {formatCurrency(totalRevenue)}
             </div>
-            <div className="text-xs text-default-400 mt-1 flex items-center gap-1.5 font-normal">
-              <Receipt className="h-3.5 w-3.5 text-primary" />
+            <div className="text-xs text-default-400 mt-1.5 flex items-center gap-1.5 font-normal">
+              <span className="p-1 rounded-md bg-primary/10 text-primary">
+                <Receipt className="h-3 w-3" />
+              </span>
               <span>{sales.filter((s) => !s.isDeleted).length} Invoices Recorded</span>
             </div>
           </div>
@@ -682,15 +685,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Inventory Stock Valuation */}
         <HeroCard
-          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 shadow-xs active:scale-[0.98]"
-          variant="bordered"
+          className="p-5 relative overflow-hidden bg-gradient-to-br from-white to-zinc-50/50 dark:from-zinc-900 dark:to-zinc-900/60"
+          variant="elevated"
           radius="2xl"
+          isHoverable
         >
           <div className="flex items-start justify-between">
-            <span className="text-xs font-medium text-default-500 tracking-tight">
+            <span className="text-xs font-semibold text-default-500 tracking-tight">
               Catalog Asset Value
             </span>
-            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-600 dark:bg-sky-500/15 dark:text-sky-400 border border-sky-500/20">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-50 text-sky-600 dark:bg-sky-500/15 dark:text-sky-400 border border-sky-500/20">
               {activeSkuCount} Active SKUs
             </span>
           </div>
@@ -698,12 +702,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             <div className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground tabular-nums">
               {formatCurrency(totalInventoryValuation)}
             </div>
-            <div className="text-xs text-default-400 mt-1 flex items-center gap-1.5 font-normal">
-              <Package className="h-3.5 w-3.5 text-sky-500" />
+            <div className="text-xs text-default-400 mt-1.5 flex items-center gap-1.5 font-normal">
+              <span className="p-1 rounded-md bg-sky-500/10 text-sky-500">
+                <Package className="h-3 w-3" />
+              </span>
               <button
                 type="button"
                 onClick={() => onNavigate('inventory-stocks')}
-                className="text-sky-500 hover:underline cursor-pointer"
+                className="text-sky-500 hover:underline cursor-pointer font-medium"
               >
                 View Stock Catalog →
               </button>
@@ -713,24 +719,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Top Performer Tile - Clickable to open Top 20 & Slow 10 Velocity Analytics */}
         <HeroCard
-          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-primary/60 hover:shadow-sm cursor-pointer group bg-content1 shadow-xs active:scale-[0.98]"
-          variant="bordered"
+          className="p-5 relative overflow-hidden cursor-pointer group bg-gradient-to-br from-white to-zinc-50/50 dark:from-zinc-900 dark:to-zinc-900/60"
+          variant="elevated"
           radius="2xl"
+          isHoverable
           onClick={() => setIsTopSellingModalOpen(true)}
         >
           <div className="flex items-start justify-between">
-            <span className="text-xs font-medium text-default-500 tracking-tight group-hover:text-primary transition-colors active:scale-[0.98]">
+            <span className="text-xs font-semibold text-default-500 tracking-tight group-hover:text-primary transition-colors">
               Top Selling Product
             </span>
-            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400 border border-amber-500/20 group-hover:bg-amber-100 transition-all active:scale-95">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400 border border-amber-500/20 group-hover:bg-amber-100 dark:group-hover:bg-amber-500/25 transition-all">
               Top 20 / Slow 10
             </span>
           </div>
           <div className="mt-3">
-            <div className="text-lg font-bold text-foreground tracking-tight truncate group-hover:text-primary transition-colors active:scale-[0.98]" title={topProduct.name}>
+            <div className="text-lg font-bold text-foreground tracking-tight truncate group-hover:text-primary transition-colors" title={topProduct.name}>
               {topProduct.name}
             </div>
-            <div className="text-xs text-default-400 mt-1 flex items-center justify-between font-normal">
+            <div className="text-xs text-default-400 mt-1.5 flex items-center justify-between font-normal">
               <span>{topProduct.qty} Units Sold</span>
               <span className="text-emerald-500 font-semibold tabular-nums">
                 {formatCurrency(topProduct.revenue)}
@@ -741,36 +748,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         {/* Operational Pulse & Alerts */}
         <HeroCard
-          className="p-5 relative overflow-hidden transition-all duration-200 hover:border-default-400 bg-content1 shadow-xs active:scale-[0.98]"
-          variant="bordered"
+          className="p-5 relative overflow-hidden bg-gradient-to-br from-white to-zinc-50/50 dark:from-zinc-900 dark:to-zinc-900/60"
+          variant="elevated"
           radius="2xl"
+          isHoverable
         >
           <div className="flex items-start justify-between">
-            <span className="text-xs font-medium text-default-500 tracking-tight">
+            <span className="text-xs font-semibold text-default-500 tracking-tight">
               Operations & Alerts
             </span>
-            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
               Active Queue
             </span>
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
             <div
               onClick={() => onNavigate('deliveries-panel')}
-              className="p-2 rounded-xl bg-default-100/70 dark:bg-content2/60 hover:bg-default-200/70 cursor-pointer transition-colors active:scale-[0.98]"
+              className="p-2 rounded-xl bg-zinc-100/80 dark:bg-zinc-800/70 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 cursor-pointer transition-colors shadow-xs active:scale-[0.98]"
             >
               <div className="text-sm font-bold text-sky-500 tabular-nums">{pendingDeliveriesCount}</div>
               <div className="text-[10px] text-default-400 font-medium">Cargo</div>
             </div>
             <div
               onClick={() => onNavigate('pos')}
-              className="p-2 rounded-xl bg-default-100/70 dark:bg-content2/60 hover:bg-default-200/70 cursor-pointer transition-colors active:scale-[0.98]"
+              className="p-2 rounded-xl bg-zinc-100/80 dark:bg-zinc-800/70 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 cursor-pointer transition-colors shadow-xs active:scale-[0.98]"
             >
               <div className="text-sm font-bold text-amber-500 tabular-nums">{parkedSalesCount}</div>
               <div className="text-[10px] text-default-400 font-medium">Parked</div>
             </div>
             <div
               onClick={() => onNavigate('inventory-stocks')}
-              className="p-2 rounded-xl bg-default-100/70 dark:bg-content2/60 hover:bg-default-200/70 cursor-pointer transition-colors active:scale-[0.98]"
+              className="p-2 rounded-xl bg-zinc-100/80 dark:bg-zinc-800/70 hover:bg-zinc-200/80 dark:hover:bg-zinc-700/80 cursor-pointer transition-colors shadow-xs active:scale-[0.98]"
             >
               <div className="text-sm font-bold text-rose-500 tabular-nums">{lowStockCount}</div>
               <div className="text-[10px] text-default-400 font-medium">Low Stock</div>

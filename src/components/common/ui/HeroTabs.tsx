@@ -142,14 +142,14 @@ export const HeroTabs: React.FC<HeroTabsProps> = ({
   const getContainerStyles = () => {
     switch (variant) {
       case 'bordered':
-        return 'p-1 bg-transparent border border-divider';
+        return 'p-1 bg-transparent border border-zinc-200/80 dark:border-white/10 shadow-elevation-inset';
       case 'light':
         return 'p-1 bg-transparent';
       case 'underlined':
         return 'p-0 bg-transparent border-b border-divider rounded-none gap-4';
       case 'solid':
       default:
-        return 'p-1 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/50 dark:border-white/5';
+        return 'p-1 bg-zinc-200/60 dark:bg-zinc-800/80 border border-zinc-300/50 dark:border-white/10 shadow-elevation-inset';
     }
   };
 
@@ -171,18 +171,18 @@ export const HeroTabs: React.FC<HeroTabsProps> = ({
     }
     switch (color) {
       case 'primary':
-        return 'bg-primary text-primary-foreground shadow-[0_2px_8px_rgba(0,111,238,0.25)] font-semibold';
+        return 'bg-primary text-primary-foreground btn-tactile-primary font-semibold';
       case 'secondary':
-        return 'bg-secondary text-secondary-foreground shadow-[0_2px_8px_rgba(120,40,200,0.25)] font-semibold';
+        return 'bg-secondary text-secondary-foreground shadow-[0_2px_8px_rgba(120,40,200,0.35)] font-semibold';
       case 'success':
-        return 'bg-success text-success-foreground shadow-[0_2px_8px_rgba(23,201,100,0.25)] font-semibold';
+        return 'bg-success text-success-foreground shadow-[0_2px_8px_rgba(23,201,100,0.35)] font-semibold';
       case 'warning':
-        return 'bg-warning text-warning-foreground shadow-[0_2px_8px_rgba(245,165,36,0.25)] font-semibold';
+        return 'bg-warning text-warning-foreground shadow-[0_2px_8px_rgba(245,165,36,0.35)] font-semibold';
       case 'danger':
-        return 'bg-danger text-danger-foreground shadow-[0_2px_8px_rgba(243,18,96,0.25)] font-semibold';
+        return 'bg-danger text-danger-foreground shadow-[0_2px_8px_rgba(243,18,96,0.35)] font-semibold';
       case 'default':
       default:
-        return 'bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.4)] font-semibold';
+        return 'bg-white text-zinc-900 dark:bg-zinc-700 dark:text-white shadow-[0_2px_8px_rgba(0,0,0,0.12),_0_1px_2px_rgba(0,0,0,0.08)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.6),_inset_0_1px_0_rgba(255,255,255,0.15)] font-semibold border border-black/5 dark:border-white/10';
     }
   };
 

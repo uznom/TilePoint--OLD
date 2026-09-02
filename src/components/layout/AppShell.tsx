@@ -127,6 +127,10 @@ export const AppShell: React.FC<AppShellProps> = ({
 
         {/* MAIN VIEWPORT CONTAINER */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden relative">
+          {/* Atmospheric Ambient Canvas Radiance */}
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/[0.04] dark:bg-primary/[0.07] rounded-full blur-[140px] pointer-events-none -z-0 translate-x-1/3 -translate-y-1/3" />
+          <div className="absolute bottom-0 left-0 w-[450px] h-[450px] bg-secondary/[0.03] dark:bg-purple-600/[0.05] rounded-full blur-[130px] pointer-events-none -z-0 -translate-x-1/3 translate-y-1/3" />
+
           {/* UNIFIED TOP APP HEADER */}
           <AppHeader
             activeTab={activeTab}
