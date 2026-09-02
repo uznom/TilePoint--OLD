@@ -5,6 +5,7 @@ import { Branch, BranchStock, Product } from '../../types/db';
 import { HeroButton } from '../common/ui/HeroButton';
 import { HeroModal } from '../common/ui/HeroModal';
 import { HeroSelect } from '../common/ui/HeroSelect';
+import { HeroTextarea } from '../common/ui/HeroTextarea';
 
 interface BulkDamageModalProps {
   isOpen: boolean;
@@ -49,17 +50,17 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
       onClose={onClose}
       size="2xl"
     >
-      <form onSubmit={onSubmit} className="flex flex-col h-full overflow-hidden">
+      <form onSubmit={onSubmit} className="flex flex-col h-full overflow-hidden font-sans">
         <HeroModal.Header className="pb-3.5">
           <div className="flex items-center gap-2.5">
             <div className="p-2.5 rounded-2xl bg-danger/10 text-danger border border-danger/20 shrink-0">
               <AlertTriangle className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-black text-foreground uppercase tracking-wider">
-                Register Bulk Damages & Log Breakages
+              <h3 className="text-sm sm:text-base font-bold text-foreground tracking-tight">
+                Register Bulk Damages &amp; Log Breakages
               </h3>
-              <p className="text-[10.5px] text-default-500 font-medium">Batch incident reporting & stock write-off</p>
+              <p className="text-[11px] text-default-500 font-medium">Batch incident reporting &amp; stock write-off</p>
             </div>
           </div>
         </HeroModal.Header>
@@ -73,7 +74,7 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
                 isRequired
                 value={bulkDamageBranchId}
                 onValueChange={val => setBulkDamageBranchId(val)}
-                radius="md"
+                radius="lg"
                 items={branches.filter(b => !b.isDeleted).map(b => ({
                   key: b.id,
                   value: b.id,
@@ -87,7 +88,7 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
                 label="Damage Category"
                 value={bulkDamageCategory}
                 onValueChange={val => setBulkDamageCategory(val)}
-                radius="md"
+                radius="lg"
                 items={[
                   { key: 'Warehouse Breakage', value: 'Warehouse Breakage', label: 'Warehouse Drop / Forklift Clash' },
                   { key: 'BOA', value: 'BOA', label: 'BOA (Broken On Arrival)' },
@@ -102,7 +103,7 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
                 label="Action / Treatment Taken"
                 value={bulkDamageAction}
                 onValueChange={val => setBulkDamageAction(val)}
-                radius="md"
+                radius="lg"
                 items={[
                   { key: 'Disposed / Scrapped', value: 'Disposed / Scrapped', label: 'Shattered - Disposed & Scrapped' },
                   { key: 'Saved for Mosaic', value: 'Saved for Mosaic', label: 'Saved for Mosaic Sales' },
@@ -115,16 +116,16 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
 
           {/* Selected Products Quantities list */}
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-primary uppercase tracking-widest pl-1 block">
+            <label className="text-[10px] font-bold text-default-500 uppercase tracking-wider pl-1 block">
               Damaged Quantities per Product
             </label>
-            <div className="bg-content2/50 border border-divider/30 rounded-2xl max-h-[220px] overflow-y-auto divide-y divide-divider/20 scrollbar-thin">
+            <div className="bg-zinc-100/90 dark:bg-zinc-900/80 border border-zinc-200/60 dark:border-white/5 rounded-2xl max-h-[220px] overflow-y-auto divide-y divide-divider/20 scrollbar-thin shadow-2xs">
               {selectedProducts.map((pItem) => {
                 const branchStockVal = branchStock.find(bs => bs.productId === pItem.id && bs.branchId === bulkDamageBranchId)?.quantity ?? 0;
                 return (
-                  <div key={pItem.id} className="p-3 flex items-center justify-between gap-4 text-xs">
+                  <div key={pItem.id} className="p-3.5 flex items-center justify-between gap-4 text-xs">
                     <div className="flex-1 min-w-0">
-                      <div className="font-extrabold truncate text-foreground">{pItem.productName}</div>
+                      <div className="font-bold truncate text-foreground">{pItem.productName}</div>
                       <div className="text-[10px] text-default-500 mt-0.5 font-medium">
                         SKU: {pItem.sku} • Stock in Branch: <span className="font-bold text-primary">{branchStockVal}</span>
                       </div>
@@ -144,7 +145,7 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
                             [pItem.id]: val
                           }));
                         }}
-                        className="w-20 bg-background border border-divider/50 rounded-xl text-center p-1.5 font-bold text-xs focus:border-primary focus:outline-none"
+                        className="w-20 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-white/5 rounded-xl text-center p-1.5 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
                       />
                     </div>
                   </div>
@@ -154,19 +155,16 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
           </div>
 
           {/* Incident description */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-primary uppercase tracking-widest pl-1 block">
-              Incident Description & Audit Remarks
-            </label>
-            <textarea
-              required
-              rows={2}
-              value={bulkDamageNotes}
-              onChange={e => setBulkDamageNotes(e.target.value)}
-              placeholder="Describe the incident causing the stock breakages or supplier delivery issue..."
-              className="w-full bg-background border border-divider/50 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-sans"
-            />
-          </div>
+          <HeroTextarea
+            label="Incident Description & Audit Remarks"
+            required
+            rows={2}
+            value={bulkDamageNotes}
+            onValueChange={val => setBulkDamageNotes(val)}
+            placeholder="Describe the incident causing the stock breakages or supplier delivery issue..."
+            radius="lg"
+            variant="flat"
+          />
         </HeroModal.Body>
 
         <HeroModal.Footer className="justify-end gap-2 pt-3 pb-4">
@@ -175,6 +173,7 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
             onClick={onClose}
             variant="flat"
             size="sm"
+            radius="full"
             className="font-bold text-xs"
           >
             Cancel
@@ -184,7 +183,8 @@ export const BulkDamageModal: React.FC<BulkDamageModalProps> = React.memo(({
             color="danger"
             variant="solid"
             size="sm"
-            className="font-bold uppercase tracking-wider"
+            radius="full"
+            className="font-bold shadow-[0_2px_8px_rgba(243,18,96,0.25)]"
             startIcon={<Check className="h-4 w-4" />}
           >
             Register Bulk Damages

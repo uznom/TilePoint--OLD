@@ -135,6 +135,7 @@ export const BarcodeModal: React.FC<BarcodeModalProps> = React.memo(({
           variant="flat"
           color="default"
           size="sm"
+          radius="full"
           className="font-bold text-xs"
         >
           Copy Barcode Raw
@@ -146,6 +147,7 @@ export const BarcodeModal: React.FC<BarcodeModalProps> = React.memo(({
             onClick={onClose}
             variant="flat"
             size="sm"
+            radius="full"
             className="font-bold text-xs"
           >
             Close
@@ -157,8 +159,9 @@ export const BarcodeModal: React.FC<BarcodeModalProps> = React.memo(({
             color="primary"
             variant="solid"
             size="sm"
+            radius="full"
             startIcon={!printingCode ? <Printer className="h-4 w-4 shrink-0" /> : undefined}
-            className="text-xs font-black uppercase tracking-wider"
+            className="text-xs font-bold shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
           >
             {printingCode ? 'Spooling...' : 'Print Scannable Label'}
           </HeroButton>

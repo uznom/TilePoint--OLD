@@ -209,11 +209,12 @@ export const ChemicalBatchDetailModal: React.FC<ChemicalBatchDetailModalProps> =
       </HeroModal.Body>
 
       {/* Footer Actions */}
-      <HeroModal.Footer className="justify-between items-center gap-3 p-4 px-6 border-t border-divider bg-content1">
+      <HeroModal.Footer className="justify-between items-center gap-3 p-4 px-6 border-t border-divider">
         <HeroButton
           type="button"
           variant="flat"
           size="sm"
+          radius="full"
           onClick={onClose}
           className="font-bold text-xs"
         >
@@ -225,8 +226,9 @@ export const ChemicalBatchDetailModal: React.FC<ChemicalBatchDetailModalProps> =
           color="primary"
           variant="solid"
           size="sm"
+          radius="full"
           onClick={() => onTriggerTransfer(batch)}
-          className="font-bold text-xs uppercase tracking-wider"
+          className="font-bold text-xs shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
           startIcon={<ArrowRightLeft className="h-4 w-4" />}
         >
           Trigger Stock Transfer

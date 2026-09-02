@@ -2,8 +2,10 @@ import React from "react";
 import { HeroModal } from "../../common/ui/HeroModal";
 import { HeroSelect } from "../../common/ui/HeroSelect";
 import { HeroButton } from "../../common/ui/HeroButton";
+import { HeroInput } from "../../common/ui/HeroInput";
+import { HeroTextarea } from "../../common/ui/HeroTextarea";
 import { Branch, Product, Supplier } from "../../../types/db";
-import { FileText, X, Plus, Trash2 } from "lucide-react";
+import { FileText, Plus, Trash2 } from "lucide-react";
 import { formatCurrency } from "../../../utils/formatters";
 
 export interface DraftPoItem {
@@ -62,12 +64,12 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
   setDraftItems,
   poNotes,
   setPoNotes,
-  poTemplates,
-  setPoTemplates,
+  poTemplates: _poTemplates,
+  setPoTemplates: _setPoTemplates,
   showToast,
-  triggerConfirmation,
-  isRowClearingBlocked,
-  getRowClearingBlockedReason,
+  triggerConfirmation: _triggerConfirmation,
+  isRowClearingBlocked: _isRowClearingBlocked,
+  getRowClearingBlockedReason: _getRowClearingBlockedReason,
   onOpenQuickProductModal,
   onSavePo,
   isSubmittingPo,
@@ -123,26 +125,20 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
   const grandTotal = draftItems.reduce((sum, item) => sum + item.costPrice * item.quantity, 0);
 
   return (
-    <HeroModal isOpen={isOpen} onClose={onClose} size="4xl" className="p-6 sm:p-7 space-y-6 border border-divider/40">
-      <div className="flex items-center justify-between border-b border-divider/20 pb-4 shrink-0">
+    <HeroModal isOpen={isOpen} onClose={onClose} size="4xl">
+      <div className="p-6 sm:p-7 space-y-6 text-left font-sans text-xs flex flex-col max-h-[85vh]">
+        <div className="flex items-center justify-between border-b border-divider/20 pb-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-primary/10 text-primary shrink-0 border border-primary/20">
               <FileText className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-black text-foreground">Purchase Requisition Builder</h3>
-              <p className="text-[10px] text-default-500 font-bold uppercase tracking-wider mt-0.5">
-                Compile & Dispatch Purchase Order to Vendor
+              <h3 className="text-base font-bold text-foreground tracking-tight">Purchase Requisition Builder</h3>
+              <p className="text-[11px] text-default-500 font-medium">
+                Compile &amp; dispatch purchase order to vendor
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer"
-          >
-            <X className="h-4 w-4" />
-          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-4 pr-1 scrollbar-thin">
@@ -180,15 +176,15 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
           </div>
 
           {/* Add Item Row */}
-          <div className="bg-content2/50 border border-divider/30 rounded-2xl p-4 space-y-3">
+          <div className="bg-zinc-100/90 dark:bg-zinc-900/80 border border-zinc-200/60 dark:border-white/5 rounded-2xl p-4 space-y-3 shadow-2xs">
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-black text-primary uppercase tracking-wider">
+              <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
                 Add Sourced Catalog Item
               </span>
               <button
                 type="button"
                 onClick={onOpenQuickProductModal}
-                className="text-[9px] font-bold text-primary hover:underline cursor-pointer"
+                className="text-[11px] font-bold text-primary hover:underline cursor-pointer"
               >
                 + Register New SKU
               </button>
@@ -217,36 +213,39 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
               </div>
 
               <div className="col-span-6 sm:col-span-3">
-                <input
+                <HeroInput
                   type="number"
                   min="0"
                   step="0.01"
-                  value={itemCost || ""}
-                  onChange={(e) => setItemCost(Number(e.target.value))}
+                  value={itemCost ? String(itemCost) : ""}
+                  onValueChange={(val) => setItemCost(Number(val) || 0)}
                   placeholder="Cost Price"
-                  className="w-full h-8 bg-content1 border border-divider/40 rounded-xl px-3 text-xs font-bold font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  radius="lg"
+                  variant="flat"
                 />
               </div>
 
               <div className="col-span-4 sm:col-span-2">
-                <input
+                <HeroInput
                   type="number"
                   min="1"
-                  value={itemQuantity}
-                  onChange={(e) => setItemQuantity(Math.max(1, Number(e.target.value)))}
+                  value={String(itemQuantity)}
+                  onValueChange={(val) => setItemQuantity(Math.max(1, Number(val) || 1))}
                   placeholder="Qty"
-                  className="w-full h-8 bg-content1 border border-divider/40 rounded-xl px-3 text-xs font-bold font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  radius="lg"
+                  variant="flat"
                 />
               </div>
 
               <div className="col-span-2 sm:col-span-1 flex items-center justify-center">
                 <HeroButton
                   isIconOnly
-                  size="sm"
+                  size="md"
                   variant="solid"
                   color="primary"
+                  radius="lg"
                   onClick={handleAddItem}
-                  className="w-8 h-8 rounded-xl"
+                  className="shadow-2xs"
                 >
                   <Plus className="h-4 w-4" />
                 </HeroButton>
@@ -256,17 +255,17 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
 
           {/* Draft Items List */}
           <div className="space-y-2">
-            <div className="text-[10px] font-black text-default-500 uppercase tracking-wider pl-1">
+            <div className="text-[10px] font-bold text-default-500 uppercase tracking-wider pl-1">
               Requisition Line Items ({draftItems.length})
             </div>
 
             {draftItems.length === 0 ? (
-              <div className="p-8 text-center bg-content2/30 rounded-2xl border border-dashed border-divider/30 text-default-500 text-xs font-medium">
+              <div className="p-8 text-center bg-zinc-100/50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-zinc-200/60 dark:border-white/5 text-default-500 text-xs font-medium">
                 No items added yet. Select a product above or load a saved PO template.
               </div>
             ) : (
-              <div className="border border-divider/30 rounded-2xl overflow-hidden divide-y divide-divider/20">
-                <div className="grid grid-cols-12 gap-2 bg-content2 p-3 text-[9px] font-black text-default-500 uppercase tracking-wider">
+              <div className="border border-zinc-200/60 dark:border-white/5 rounded-2xl overflow-hidden divide-y divide-divider/20 shadow-2xs">
+                <div className="grid grid-cols-12 gap-2 bg-zinc-100/80 dark:bg-zinc-800/80 p-3 text-[10px] font-bold text-default-500 uppercase tracking-wider">
                   <span className="col-span-6">Product</span>
                   <span className="col-span-2 text-right">Unit Cost</span>
                   <span className="col-span-2 text-right">Quantity</span>
@@ -274,7 +273,7 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
                 </div>
 
                 {draftItems.map((item, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-2 p-3 items-center text-xs">
+                  <div key={idx} className="grid grid-cols-12 gap-2 p-3 items-center text-xs hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors">
                     <div className="col-span-6 space-y-0.5">
                       <div className="font-bold text-foreground">{item.productName}</div>
                       <div className="text-[10px] text-default-500 font-mono">SKU: {item.sku}</div>
@@ -292,17 +291,17 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
                           updated[idx].quantity = Math.max(1, Number(e.target.value));
                           setDraftItems(updated);
                         }}
-                        className="w-16 bg-content2 border border-divider/40 rounded-lg px-2 py-0.5 text-right font-mono font-bold text-xs text-foreground focus:outline-none"
+                        className="w-16 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/60 dark:border-white/5 rounded-xl px-2 py-1 text-right font-mono font-bold text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                       />
                     </div>
-                    <div className="col-span-2 text-right font-mono font-black text-primary flex items-center justify-end gap-2">
+                    <div className="col-span-2 text-right font-mono font-bold text-primary flex items-center justify-end gap-2">
                       <span>{formatCurrency(item.costPrice * item.quantity)}</span>
                       <button
                         type="button"
                         onClick={() => setDraftItems(draftItems.filter((_, i) => i !== idx))}
-                        className="p-1 rounded text-default-400 hover:text-danger cursor-pointer"
+                        className="p-1 rounded-lg text-default-400 hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer"
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   </div>
@@ -311,30 +310,26 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-default-500 uppercase tracking-wider pl-1">
-              Purchase Order Remarks / Special Terms
-            </label>
-            <textarea
-              rows={2}
-              value={poNotes}
-              onChange={(e) => setPoNotes(e.target.value)}
-              placeholder="e.g. Free freight on orders over 100 boxes, deliver by Friday..."
-              className="w-full bg-content2 border border-divider/40 rounded-2xl px-4 py-2 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
-            />
-          </div>
+          <HeroTextarea
+            label="Purchase Order Remarks / Special Terms"
+            rows={2}
+            value={poNotes}
+            onValueChange={(val) => setPoNotes(val)}
+            placeholder="e.g. Free freight on orders over 100 boxes, deliver by Friday..."
+            radius="lg"
+            variant="flat"
+          />
         </div>
 
         <div className="flex items-center justify-between border-t border-divider/20 pt-4 shrink-0">
           <div className="space-y-0.5">
-            <span className="text-[9px] font-black text-default-500 uppercase tracking-wider block">Estimated PO Total</span>
-            <div className="text-lg font-black text-primary font-mono">{formatCurrency(grandTotal)}</div>
+            <span className="text-[10px] font-bold text-default-500 uppercase tracking-wider block">Estimated PO Total</span>
+            <div className="text-lg font-bold text-primary font-mono">{formatCurrency(grandTotal)}</div>
           </div>
 
           <div className="flex gap-2.5">
             <HeroButton
               variant="flat"
-              color="default"
               size="sm"
               radius="full"
               onClick={onClose}
@@ -350,12 +345,13 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
               isLoading={isSubmittingPo}
               loadingText="Creating PO..."
               onClick={onSavePo}
-              className="font-black uppercase tracking-wider shadow-lg"
+              className="font-bold shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
             >
               Issue Purchase Order
             </HeroButton>
           </div>
         </div>
+      </div>
     </HeroModal>
   );
 };

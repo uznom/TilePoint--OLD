@@ -3,8 +3,10 @@ import React from 'react';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
 import { Branch, Product, User } from '../../types/db';
 import { HeroButton } from '../common/ui/HeroButton';
+import { HeroInput } from '../common/ui/HeroInput';
 import { HeroModal } from '../common/ui/HeroModal';
 import { HeroSelect } from '../common/ui/HeroSelect';
+import { HeroTextarea } from '../common/ui/HeroTextarea';
 
 interface RegisterBatchModalProps {
   isOpen: boolean;
@@ -59,17 +61,17 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
       onClose={onClose}
       size="lg"
     >
-      <form onSubmit={onSubmit} className="flex flex-col h-full overflow-hidden">
+      <form onSubmit={onSubmit} className="flex flex-col h-full overflow-hidden font-sans">
         <HeroModal.Header className="pb-3.5">
           <div className="flex items-center gap-2.5">
             <div className="p-2.5 rounded-2xl bg-danger/10 text-danger border border-danger/20 shrink-0">
               <Clock className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-black text-foreground uppercase tracking-wider">
+              <h3 className="text-sm sm:text-base font-bold text-foreground tracking-tight">
                 Register Chemical Stock Batch
               </h3>
-              <p className="text-[10.5px] text-default-500 font-medium">Batch lifecycle and shelf-life tracking</p>
+              <p className="text-[11px] text-default-500 font-medium">Batch lifecycle and shelf-life tracking</p>
             </div>
           </div>
         </HeroModal.Header>
@@ -91,7 +93,7 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
                   if (!batchFormNo) setBatchFormNo(`B-${prod.productCode.replace(/[^A-Z0-9]/gi, '')}-${Date.now().toString().slice(-4)}`);
                 }
               }}
-              radius="md"
+              radius="lg"
               items={branchProducts.map(p => ({
                 key: p.id,
                 value: p.id,
@@ -113,60 +115,47 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
 
           {/* Batch Number & Quantity */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">
-                Batch / Lot #
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="Batch / Lot number"
-                value={batchFormNo ?? ''}
-                onChange={e => setBatchFormNo(e.target.value)}
-                className="w-full bg-background border border-divider/50 focus:border-primary px-3.5 py-2 text-xs focus:outline-none rounded-xl font-bold text-foreground"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">
-                Qty (Bags/Units)
-              </label>
-              <input
-                type="number"
-                required
-                min={1}
-                value={batchFormQty ?? ''}
-                onChange={e => setBatchFormQty(parseInt(e.target.value) || 0)}
-                className="w-full bg-background border border-divider/50 focus:border-primary px-3.5 py-2 text-xs focus:outline-none rounded-xl font-bold text-foreground"
-              />
-            </div>
+            <HeroInput
+              label="Batch / Lot #"
+              required
+              placeholder="Batch / Lot number"
+              value={batchFormNo ?? ''}
+              onValueChange={val => setBatchFormNo(val)}
+              radius="lg"
+              variant="flat"
+            />
+            <HeroInput
+              label="Qty (Bags/Units)"
+              type="number"
+              required
+              min={1}
+              value={batchFormQty ? String(batchFormQty) : ''}
+              onValueChange={val => setBatchFormQty(parseInt(val) || 0)}
+              radius="lg"
+              variant="flat"
+            />
           </div>
 
           {/* Mfg Date & Expiry Date */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">
-                Manufacture Date
-              </label>
-              <input
-                type="date"
-                required
-                value={batchFormMfgDate ?? ''}
-                onChange={e => setBatchFormMfgDate(e.target.value)}
-                className="w-full bg-background border border-divider/50 focus:border-primary px-3.5 py-2 text-xs focus:outline-none rounded-xl font-bold text-foreground cursor-pointer"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">
-                Expiry Date
-              </label>
-              <input
-                type="date"
-                required
-                value={batchFormExpDate ?? ''}
-                onChange={e => setBatchFormExpDate(e.target.value)}
-                className="w-full bg-background border border-divider/50 focus:border-primary px-3.5 py-2 text-xs focus:outline-none rounded-xl font-bold text-foreground cursor-pointer"
-              />
-            </div>
+            <HeroInput
+              label="Manufacture Date"
+              type="date"
+              required
+              value={batchFormMfgDate ?? ''}
+              onValueChange={val => setBatchFormMfgDate(val)}
+              radius="lg"
+              variant="flat"
+            />
+            <HeroInput
+              label="Expiry Date"
+              type="date"
+              required
+              value={batchFormExpDate ?? ''}
+              onValueChange={val => setBatchFormExpDate(val)}
+              radius="lg"
+              variant="flat"
+            />
           </div>
 
           {/* Branch Assignment */}
@@ -177,7 +166,7 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
                 isRequired
                 value={batchFormBranchId ?? ''}
                 onValueChange={val => setBatchFormBranchId(val)}
-                radius="md"
+                radius="lg"
                 items={branches.map(b => ({
                   key: b.id,
                   value: b.id,
@@ -186,10 +175,10 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
               />
             ) : (
               <div className="space-y-1">
-                <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">
+                <label className="font-bold text-default-500 uppercase tracking-wider text-[10px]">
                   Branch Allocation
                 </label>
-                <div className="w-full bg-content2 border border-divider px-3.5 py-2 text-xs rounded-xl font-bold text-default-500">
+                <div className="w-full bg-zinc-100/90 dark:bg-zinc-800/80 border border-zinc-200/60 dark:border-white/5 px-3.5 py-2 text-xs rounded-xl font-bold text-default-500">
                   {branches.find(b => b.id === (currentUser?.branchAssignmentId || 'B1'))?.name || 'N/A'}
                 </div>
               </div>
@@ -197,18 +186,15 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
           </div>
 
           {/* Remarks */}
-          <div className="space-y-1">
-            <label className="font-extrabold text-default-500 uppercase tracking-wider text-[10px]">
-              Storage Notes / Remarks
-            </label>
-            <textarea
-              rows={2}
-              placeholder="Storage specifications, quality checks..."
-              value={batchFormRemarks ?? ''}
-              onChange={e => setBatchFormRemarks(e.target.value)}
-              className="w-full bg-background border border-divider/50 focus:border-primary px-3.5 py-2 text-xs focus:outline-none rounded-xl font-medium text-foreground"
-            />
-          </div>
+          <HeroTextarea
+            label="Storage Notes / Remarks"
+            rows={2}
+            placeholder="Storage specifications, quality checks..."
+            value={batchFormRemarks ?? ''}
+            onValueChange={val => setBatchFormRemarks(val)}
+            radius="lg"
+            variant="flat"
+          />
         </HeroModal.Body>
 
         <HeroModal.Footer className="justify-end gap-2 pt-3 pb-4">
@@ -216,6 +202,7 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
             type="button"
             variant="flat"
             size="sm"
+            radius="full"
             onClick={onClose}
             className="font-bold text-xs"
           >
@@ -226,7 +213,8 @@ export const RegisterBatchModal: React.FC<RegisterBatchModalProps> = ({
             color="danger"
             variant="solid"
             size="sm"
-            className="font-bold text-xs uppercase tracking-wider"
+            radius="full"
+            className="font-bold text-xs shadow-[0_2px_8px_rgba(243,18,96,0.25)]"
           >
             Log Batch Entry
           </HeroButton>

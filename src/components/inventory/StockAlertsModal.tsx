@@ -160,20 +160,20 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
       </HeroModal.Header>
 
         {/* Modal Filter Tabs Bar */}
-        <div className="px-5 pt-3 pb-3 border-b border-divider dark:border-white/10 bg-default-50/50 dark:bg-content1/50 flex flex-wrap items-center justify-between gap-3 font-sans">
+        <div className="px-5 pt-3 pb-3 border-b border-divider dark:border-white/10 bg-zinc-50/50 dark:bg-zinc-900/50 flex flex-wrap items-center justify-between gap-3 font-sans">
           {/* Status Tabs */}
-          <div className="flex items-center gap-1 bg-default-100 dark:bg-content2/80 p-1 rounded-full border border-divider/40 dark:border-white/5 overflow-x-auto shadow-xs">
+          <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-full border border-zinc-200/50 dark:border-white/5 overflow-x-auto shadow-2xs">
             <button
               type="button"
               onClick={() => setFilter('ALL')}
-              className={`px-3.5 py-1 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97] ${
+              className={`px-3.5 py-1 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 cursor-pointer font-sans active:scale-[0.98] ${
                 filter === 'ALL'
-                  ? 'bg-white text-foreground dark:bg-content3 dark:text-white shadow-xs'
-                  : 'text-default-500 dark:text-default-400 hover:text-foreground'
+                  ? 'bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold'
+                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
               }`}
             >
               <span>All Alerts</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-semibold ${filter === 'ALL' ? 'bg-default-200 text-foreground dark:bg-zinc-600 dark:text-white' : 'bg-default-200/60 text-default-600'}`}>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold font-sans ${filter === 'ALL' ? 'bg-primary/10 text-primary' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'}`}>
                 {alertProductsList.length}
               </span>
             </button>
@@ -181,15 +181,15 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
             <button
               type="button"
               onClick={() => setFilter('OUT_OF_STOCK')}
-              className={`px-3.5 py-1 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97] ${
+              className={`px-3.5 py-1 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 cursor-pointer font-sans active:scale-[0.98] ${
                 filter === 'OUT_OF_STOCK'
-                  ? 'bg-rose-500 text-white shadow-xs'
+                  ? 'bg-rose-500 text-white shadow-[0_2px_8px_rgba(243,18,96,0.25)] font-bold'
                   : 'text-rose-600 dark:text-rose-400 hover:bg-rose-500/10'
               }`}
             >
               <X className="h-3.5 w-3.5" />
               <span>Out of Stock</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-semibold ${filter === 'OUT_OF_STOCK' ? 'bg-white/20 text-white' : 'bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold font-sans ${filter === 'OUT_OF_STOCK' ? 'bg-white/20 text-white' : 'bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
                 {stats.outOfStockCount}
               </span>
             </button>
@@ -197,15 +197,15 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
             <button
               type="button"
               onClick={() => setFilter('CRITICAL')}
-              className={`px-3.5 py-1 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97] ${
+              className={`px-3.5 py-1 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 cursor-pointer font-sans active:scale-[0.98] ${
                 filter === 'CRITICAL'
-                  ? 'bg-rose-500 text-white shadow-xs'
+                  ? 'bg-rose-500 text-white shadow-[0_2px_8px_rgba(243,18,96,0.25)] font-bold'
                   : 'text-rose-600 dark:text-rose-400 hover:bg-rose-500/10'
               }`}
             >
               <AlertCircle className="h-3.5 w-3.5" />
               <span>Critical Warns</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-semibold ${filter === 'CRITICAL' ? 'bg-white/20 text-white' : 'bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold font-sans ${filter === 'CRITICAL' ? 'bg-white/20 text-white' : 'bg-rose-500/20 text-rose-600 dark:text-rose-400'}`}>
                 {stats.criticalStockCount}
               </span>
             </button>
@@ -213,15 +213,15 @@ export const StockAlertsModal: React.FC<StockAlertsModalProps> = React.memo(({
             <button
               type="button"
               onClick={() => setFilter('LOW')}
-              className={`px-3.5 py-1 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.97] ${
+              className={`px-3.5 py-1 text-xs font-semibold rounded-full transition-all flex items-center gap-1.5 cursor-pointer font-sans active:scale-[0.98] ${
                 filter === 'LOW'
-                  ? 'bg-amber-500 text-black shadow-xs font-bold'
+                  ? 'bg-amber-500 text-white shadow-[0_2px_8px_rgba(245,165,36,0.25)] font-bold'
                   : 'text-amber-600 dark:text-amber-400 hover:bg-amber-500/10'
               }`}
             >
               <AlertTriangle className="h-3.5 w-3.5" />
               <span>Low Stock</span>
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-semibold ${filter === 'LOW' ? 'bg-black/20 text-black' : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'}`}>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold font-sans ${filter === 'LOW' ? 'bg-white/20 text-white' : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'}`}>
                 {stats.lowStockCount}
               </span>
             </button>
