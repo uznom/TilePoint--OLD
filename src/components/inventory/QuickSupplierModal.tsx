@@ -1,6 +1,7 @@
 import { Building2 } from 'lucide-react';
 import React from 'react';
 import { HeroButton } from '../common/ui/HeroButton';
+import { HeroInput } from '../common/ui/HeroInput';
 import { HeroModal } from '../common/ui/HeroModal';
 
 interface QuickSupplierModalProps {
@@ -41,94 +42,76 @@ export const QuickSupplierModal: React.FC<QuickSupplierModalProps> = ({
       size="md"
       zIndex={60}
     >
-      <form onSubmit={onSubmit} className="flex flex-col h-full overflow-hidden">
+      <form onSubmit={onSubmit} className="flex flex-col h-full overflow-hidden font-sans">
         <HeroModal.Header className="pb-3.5">
           <div className="flex items-center gap-2.5">
             <div className="p-2.5 rounded-2xl bg-primary/10 text-primary border border-primary/20 shrink-0">
               <Building2 className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-black text-foreground uppercase tracking-wider">
+              <h3 className="text-sm sm:text-base font-bold text-foreground tracking-tight">
                 Quick Add New Supplier
               </h3>
-              <p className="text-[10.5px] text-default-500 font-medium">Register vendor profile on-the-fly</p>
+              <p className="text-[11px] text-default-500 font-medium">Register vendor profile on-the-fly</p>
             </div>
           </div>
         </HeroModal.Header>
 
         <HeroModal.Body className="py-4 space-y-4 text-left">
-          <p className="text-xs text-default-500 font-medium leading-normal bg-content2/50 p-3 rounded-2xl border border-divider/30">
+          <p className="text-xs text-default-500 font-medium leading-relaxed bg-zinc-100/90 dark:bg-zinc-800/80 p-3.5 rounded-2xl border border-zinc-200/60 dark:border-white/5 shadow-2xs">
             This will register a new vendor profile in the database on-the-fly and link it directly to this product, without reloading your catalog form.
           </p>
 
           <div className="space-y-3 pt-1">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-default-500 uppercase tracking-wider pl-0.5">
-                Supplier Company Name *
-              </label>
-              <input
-                type="text"
-                required
-                value={quickSupName ?? ''}
-                onChange={e => setQuickSupName(e.target.value)}
-                placeholder="Supplier company name"
-                className="w-full bg-background border border-divider/50 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-bold"
-              />
-            </div>
+            <HeroInput
+              label="Supplier Company Name *"
+              required
+              value={quickSupName ?? ''}
+              onValueChange={val => setQuickSupName(val)}
+              placeholder="Supplier company name"
+              radius="lg"
+              variant="flat"
+            />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-default-500 uppercase tracking-wider pl-0.5">
-                  Primary Contact Agent
-                </label>
-                <input
-                  type="text"
-                  value={quickSupContact ?? ''}
-                  onChange={e => setQuickSupContact(e.target.value)}
-                  placeholder="Contact agent name"
-                  className="w-full bg-background border border-divider/50 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-medium"
-                />
-              </div>
+              <HeroInput
+                label="Primary Contact Agent"
+                value={quickSupContact ?? ''}
+                onValueChange={val => setQuickSupContact(val)}
+                placeholder="Contact agent name"
+                radius="lg"
+                variant="flat"
+              />
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-default-500 uppercase tracking-wider pl-0.5">
-                  Contact Phone
-                </label>
-                <input
-                  type="text"
-                  value={quickSupPhone ?? ''}
-                  onChange={e => setQuickSupPhone(e.target.value)}
-                  placeholder="Phone number"
-                  className="w-full bg-background border border-divider/50 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-medium"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-default-500 uppercase tracking-wider pl-0.5">
-                Corporate Email
-              </label>
-              <input
-                type="email"
-                value={quickSupEmail ?? ''}
-                onChange={e => setQuickSupEmail(e.target.value)}
-                placeholder="Corporate email address"
-                className="w-full bg-background border border-divider/50 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-medium"
+              <HeroInput
+                label="Contact Phone"
+                type="tel"
+                value={quickSupPhone ?? ''}
+                onValueChange={val => setQuickSupPhone(val)}
+                placeholder="Phone number"
+                radius="lg"
+                variant="flat"
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-default-500 uppercase tracking-wider pl-0.5">
-                Office Address
-              </label>
-              <input
-                type="text"
-                value={quickSupAddress ?? ''}
-                onChange={e => setQuickSupAddress(e.target.value)}
-                placeholder="Street, City, Province"
-                className="w-full bg-background border border-divider/50 focus:border-primary px-3.5 py-2 text-xs text-foreground focus:outline-none transition-colors rounded-xl font-medium"
-              />
-            </div>
+            <HeroInput
+              label="Corporate Email"
+              type="email"
+              value={quickSupEmail ?? ''}
+              onValueChange={val => setQuickSupEmail(val)}
+              placeholder="Corporate email address"
+              radius="lg"
+              variant="flat"
+            />
+
+            <HeroInput
+              label="Office Address"
+              value={quickSupAddress ?? ''}
+              onValueChange={val => setQuickSupAddress(val)}
+              placeholder="Street, City, Province"
+              radius="lg"
+              variant="flat"
+            />
           </div>
         </HeroModal.Body>
 
@@ -137,6 +120,7 @@ export const QuickSupplierModal: React.FC<QuickSupplierModalProps> = ({
             type="button"
             variant="flat"
             size="sm"
+            radius="full"
             onClick={onClose}
             className="font-bold text-xs"
           >
@@ -147,7 +131,8 @@ export const QuickSupplierModal: React.FC<QuickSupplierModalProps> = ({
             color="primary"
             variant="solid"
             size="sm"
-            className="font-bold text-xs uppercase tracking-wider"
+            radius="full"
+            className="font-bold text-xs shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
           >
             Save Supplier
           </HeroButton>
