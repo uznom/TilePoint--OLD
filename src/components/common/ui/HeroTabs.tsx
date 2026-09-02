@@ -149,7 +149,7 @@ export const HeroTabs: React.FC<HeroTabsProps> = ({
         return 'p-0 bg-transparent border-b border-divider rounded-none gap-4';
       case 'solid':
       default:
-        return 'p-1 bg-default-100 dark:bg-content2/80 border border-divider/40 dark:border-white/5';
+        return 'p-1 bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200/50 dark:border-white/5';
     }
   };
 
@@ -171,18 +171,18 @@ export const HeroTabs: React.FC<HeroTabsProps> = ({
     }
     switch (color) {
       case 'primary':
-        return 'bg-primary text-primary-foreground shadow-sm shadow-primary/20 font-semibold';
+        return 'bg-primary text-primary-foreground shadow-[0_2px_8px_rgba(0,111,238,0.25)] font-semibold';
       case 'secondary':
-        return 'bg-secondary text-secondary-foreground shadow-sm shadow-secondary/20 font-semibold';
+        return 'bg-secondary text-secondary-foreground shadow-[0_2px_8px_rgba(120,40,200,0.25)] font-semibold';
       case 'success':
-        return 'bg-success text-success-foreground shadow-sm shadow-success/20 font-semibold';
+        return 'bg-success text-success-foreground shadow-[0_2px_8px_rgba(23,201,100,0.25)] font-semibold';
       case 'warning':
-        return 'bg-warning text-warning-foreground shadow-sm shadow-warning/20 font-semibold';
+        return 'bg-warning text-warning-foreground shadow-[0_2px_8px_rgba(245,165,36,0.25)] font-semibold';
       case 'danger':
-        return 'bg-danger text-danger-foreground shadow-sm shadow-danger/20 font-semibold';
+        return 'bg-danger text-danger-foreground shadow-[0_2px_8px_rgba(243,18,96,0.25)] font-semibold';
       case 'default':
       default:
-        return 'bg-white text-foreground dark:bg-content3 dark:text-white shadow-xs font-semibold';
+        return 'bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.4)] font-semibold';
     }
   };
 
@@ -190,7 +190,7 @@ export const HeroTabs: React.FC<HeroTabsProps> = ({
     if (variant === 'underlined') {
       return 'text-default-500 hover:text-foreground font-medium';
     }
-    return 'text-default-600 dark:text-default-400 hover:text-foreground hover:bg-default-200/50 dark:hover:bg-content3/50 font-medium';
+    return 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50 font-medium';
   };
 
   return (

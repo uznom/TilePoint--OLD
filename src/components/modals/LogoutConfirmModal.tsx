@@ -44,6 +44,7 @@ export const LogoutConfirmModal: React.FC<LogoutConfirmModalProps> = ({
           type="button"
           variant="flat"
           size="sm"
+          radius="full"
           onClick={onClose}
           className="font-bold text-xs"
         >
@@ -54,11 +55,12 @@ export const LogoutConfirmModal: React.FC<LogoutConfirmModalProps> = ({
           variant="solid"
           color="danger"
           size="sm"
+          radius="full"
           onClick={() => {
             onClose();
             onConfirm();
           }}
-          className="font-black text-xs uppercase tracking-wider"
+          className="font-bold text-xs shadow-[0_2px_8px_rgba(243,18,96,0.25)]"
         >
           Yes, Sign Out
         </HeroButton>

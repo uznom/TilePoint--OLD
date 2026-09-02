@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { HeroModal } from '../common/ui/HeroModal';
 import { HeroButton } from '../common/ui/HeroButton';
+import { HeroInput } from '../common/ui/HeroInput';
 import { HeroDropdownSelect } from '../common/ui/HeroDropdown';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { Product, Sale, SaleItem } from '../../types/db';
@@ -254,20 +255,20 @@ export const TopAndSlowSellingModal: React.FC<TopAndSlowSellingModalProps> = ({
 
       {/* Tabs & Filters */}
       <div className="px-5 pt-4 pb-3 border-b border-divider bg-content2/40 flex flex-wrap items-center justify-between gap-3">
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+        {/* Navigation Tabs (Tactile Segmented Rail) */}
+        <div className="flex items-center gap-1.5 p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-full border border-zinc-200/50 dark:border-white/5 shadow-2xs overflow-x-auto">
           <button
             type="button"
             onClick={() => setActiveTab('top20')}
-            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-tight transition-all flex items-center gap-2 cursor-pointer font-sans active:scale-[0.98] ${
               activeTab === 'top20'
-                ? 'bg-primary text-white shadow-sm'
-                : 'bg-content2 text-default-600 hover:bg-default-200'
+                ? 'bg-primary text-white shadow-[0_2px_8px_rgba(0,111,238,0.25)] font-bold'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 font-medium'
             }`}
           >
             <TrendingUp className="h-3.5 w-3.5" />
             <span>Top 20 Best Selling</span>
-            <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${activeTab === 'top20' ? 'bg-white/20 text-white' : 'bg-default-200 text-default-700'}`}>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${activeTab === 'top20' ? 'bg-white/20 text-white' : 'bg-default-200 text-default-700'}`}>
               {analyticsData.top20.length}
             </span>
           </button>
@@ -275,15 +276,15 @@ export const TopAndSlowSellingModal: React.FC<TopAndSlowSellingModalProps> = ({
           <button
             type="button"
             onClick={() => setActiveTab('slow10')}
-            className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-tight transition-all flex items-center gap-2 cursor-pointer font-sans active:scale-[0.98] ${
               activeTab === 'slow10'
-                ? 'bg-amber-600 text-white shadow-sm'
-                : 'bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border border-amber-500/20'
+                ? 'bg-amber-500 text-white shadow-[0_2px_8px_rgba(245,165,36,0.25)] font-bold'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 font-medium'
             }`}
           >
             <TrendingDown className="h-3.5 w-3.5" />
             <span>Top 10 Slow Selling</span>
-            <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${activeTab === 'slow10' ? 'bg-white/20 text-white' : 'bg-amber-500/20 text-amber-700'}`}>
+            <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${activeTab === 'slow10' ? 'bg-white/20 text-white' : 'bg-amber-500/20 text-amber-700'}`}>
               {analyticsData.slow10.length}
             </span>
           </button>
@@ -291,14 +292,15 @@ export const TopAndSlowSellingModal: React.FC<TopAndSlowSellingModalProps> = ({
 
         {/* Search & Category */}
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-56">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-default-400" />
-            <input
-              type="text"
+          <div className="flex-1 sm:w-56">
+            <HeroInput
               placeholder="Search product code, item..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 bg-content2 border border-divider text-foreground rounded-xl text-xs font-bold focus:outline-none focus:border-primary"
+              onValueChange={(val) => setSearchQuery(val)}
+              startContent={<Search className="h-3.5 w-3.5 text-default-400" />}
+              size="sm"
+              radius="full"
+              variant="flat"
             />
           </div>
 

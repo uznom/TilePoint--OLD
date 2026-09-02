@@ -31,13 +31,13 @@ export const InventoryHeaderNav: React.FC<InventoryHeaderNavProps> = ({
   const pendingTransfersCount = stockTransfers.filter(t => t.status === 'Pending').length;
 
   return (
-    <div className="flex flex-wrap gap-1.5 border border-divider/40 dark:border-white/5 items-center sticky top-0 bg-default-100/80 dark:bg-content2/80 backdrop-blur-md z-30 p-1 rounded-full shadow-xs font-sans">
+    <div className="flex flex-wrap gap-1.5 border border-zinc-200/60 dark:border-white/5 items-center sticky top-0 bg-zinc-100/90 dark:bg-zinc-800/80 backdrop-blur-md z-30 p-1 rounded-full shadow-2xs font-sans">
       <button
         onClick={() => changeActiveSubTab('catalog')}
         className={`flex items-center gap-2 py-1.5 px-4 text-xs font-semibold tracking-tight transition-all duration-200 rounded-full cursor-pointer active:scale-[0.97] ${
           activeSubTab === 'catalog'
-            ? 'bg-white text-foreground dark:bg-content3 dark:text-white shadow-xs'
-            : 'text-default-500 dark:text-default-400 hover:text-foreground hover:bg-default-200/50 dark:hover:bg-content3/50'
+            ? 'bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold'
+            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50'
         }`}
       >
         <Package className="h-4 w-4" />
@@ -48,8 +48,8 @@ export const InventoryHeaderNav: React.FC<InventoryHeaderNavProps> = ({
         onClick={() => changeActiveSubTab('movements')}
         className={`flex items-center gap-2 py-1.5 px-4 text-xs font-semibold tracking-tight transition-all duration-200 rounded-full cursor-pointer active:scale-[0.97] ${
           activeSubTab === 'movements'
-            ? 'bg-white text-foreground dark:bg-content3 dark:text-white shadow-xs'
-            : 'text-default-500 dark:text-default-400 hover:text-foreground hover:bg-default-200/50 dark:hover:bg-content3/50'
+            ? 'bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold'
+            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50'
         }`}
       >
         <Activity className="h-4 w-4" />
@@ -60,8 +60,8 @@ export const InventoryHeaderNav: React.FC<InventoryHeaderNavProps> = ({
         onClick={() => changeActiveSubTab('transfers')}
         className={`flex items-center gap-2 py-1.5 px-4 text-xs font-semibold tracking-tight transition-all duration-200 rounded-full cursor-pointer relative active:scale-[0.97] ${
           activeSubTab === 'transfers'
-            ? 'bg-white text-foreground dark:bg-content3 dark:text-white shadow-xs'
-            : 'text-default-500 dark:text-default-400 hover:text-foreground hover:bg-default-200/50 dark:hover:bg-content3/50'
+            ? 'bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold'
+            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50'
         }`}
       >
         <ArrowRightLeft className="h-4 w-4" />
@@ -77,8 +77,8 @@ export const InventoryHeaderNav: React.FC<InventoryHeaderNavProps> = ({
         onClick={() => changeActiveSubTab('ledger')}
         className={`flex items-center gap-2 py-1.5 px-4 text-xs font-semibold tracking-tight transition-all duration-200 rounded-full cursor-pointer active:scale-[0.97] ${
           activeSubTab === 'ledger'
-            ? 'bg-white text-foreground dark:bg-content3 dark:text-white shadow-xs'
-            : 'text-default-500 dark:text-default-400 hover:text-foreground hover:bg-default-200/50 dark:hover:bg-content3/50'
+            ? 'bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold'
+            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50'
         }`}
       >
         <Sliders className="h-4 w-4" />
@@ -89,8 +89,8 @@ export const InventoryHeaderNav: React.FC<InventoryHeaderNavProps> = ({
         onClick={() => changeActiveSubTab('import')}
         className={`flex items-center gap-2 py-1.5 px-4 text-xs font-semibold tracking-tight transition-all duration-200 rounded-full cursor-pointer active:scale-[0.97] ${
           activeSubTab === 'import'
-            ? 'bg-white text-foreground dark:bg-content3 dark:text-white shadow-xs'
-            : 'text-default-500 dark:text-default-400 hover:text-foreground hover:bg-default-200/50 dark:hover:bg-content3/50'
+            ? 'bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold'
+            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50'
         }`}
       >
         <Database className="h-4 w-4 text-emerald-500" />
@@ -101,8 +101,8 @@ export const InventoryHeaderNav: React.FC<InventoryHeaderNavProps> = ({
         onClick={() => changeActiveSubTab('branch-prices')}
         className={`flex items-center gap-2 py-1.5 px-4 text-xs font-semibold tracking-tight transition-all duration-200 rounded-full cursor-pointer active:scale-[0.97] ${
           activeSubTab === 'branch-prices'
-            ? 'bg-white text-foreground dark:bg-content3 dark:text-white shadow-xs'
-            : 'text-default-500 dark:text-default-400 hover:text-foreground hover:bg-default-200/50 dark:hover:bg-content3/50'
+            ? 'bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold'
+            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50'
         }`}
       >
         <DollarSign className="h-4 w-4 text-primary" />
@@ -113,8 +113,8 @@ export const InventoryHeaderNav: React.FC<InventoryHeaderNavProps> = ({
         onClick={() => changeActiveSubTab('expiry')}
         className={`flex items-center gap-2 py-1.5 px-4 text-xs font-semibold tracking-tight transition-all duration-200 rounded-full cursor-pointer active:scale-[0.97] ${
           activeSubTab === 'expiry'
-            ? 'bg-white text-foreground dark:bg-content3 dark:text-white shadow-xs'
-            : 'text-default-500 dark:text-default-400 hover:text-foreground hover:bg-default-200/50 dark:hover:bg-content3/50'
+            ? 'bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold'
+            : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50'
         }`}
       >
         <Clock className="h-4 w-4 text-rose-500" />

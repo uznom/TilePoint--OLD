@@ -104,25 +104,40 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
       </HeroModal.Header>
 
       <HeroModal.Body className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-        <div className="flex border-b border-divider/10 my-4 p-1 bg-content1/50 rounded-xl">
+        <div className="flex my-4 p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-full border border-zinc-200/50 dark:border-white/5 shadow-2xs">
           <button
+            type="button"
             onClick={() => setBackupActiveSubTab("scheduler")}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${backupActiveSubTab === "scheduler" ? "bg-primary text-primary-foreground shadow-sm font-black" : "text-default-500 hover:bg-primary/10 hover:text-primary"}`}
+            className={`flex-1 py-1.5 px-3 text-xs font-semibold rounded-full transition-all cursor-pointer text-center font-sans active:scale-[0.98] ${
+              backupActiveSubTab === "scheduler"
+                ? "bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold"
+                : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+            }`}
           >
-            Auto-Backup Configuration
+            Auto-Backup Config
           </button>
           <button
+            type="button"
             onClick={() => setBackupActiveSubTab("ledger")}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 ${backupActiveSubTab === "ledger" ? "bg-primary text-primary-foreground shadow-sm font-black" : "text-default-500 hover:bg-primary/10 hover:text-primary"}`}
+            className={`flex-1 py-1.5 px-3 text-xs font-semibold rounded-full transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 font-sans active:scale-[0.98] ${
+              backupActiveSubTab === "ledger"
+                ? "bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold"
+                : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+            }`}
           >
-            Recovery Ledger
-            <span className="bg-primary-50 text-primary-700 text-[10px] font-bold px-1.5 py-0.2 rounded-full font-sans">
+            <span>Recovery Ledger</span>
+            <span className="bg-primary/10 text-primary text-[10px] font-bold px-1.5 py-0.5 rounded-full font-sans">
               {dbSnapshots.length}
             </span>
           </button>
           <button
+            type="button"
             onClick={() => setBackupActiveSubTab("import-export")}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer text-center ${backupActiveSubTab === "import-export" ? "bg-primary text-primary-foreground shadow-sm font-black" : "text-default-500 hover:bg-primary/10 hover:text-primary"}`}
+            className={`flex-1 py-1.5 px-3 text-xs font-semibold rounded-full transition-all cursor-pointer text-center font-sans active:scale-[0.98] ${
+              backupActiveSubTab === "import-export"
+                ? "bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] font-bold"
+                : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+            }`}
           >
             Offline Backups & JSON
           </button>

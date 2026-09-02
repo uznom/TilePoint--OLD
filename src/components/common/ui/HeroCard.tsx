@@ -35,14 +35,14 @@ export const HeroCard: React.FC<HeroCardProps> & {
   const getVariantStyles = () => {
     switch (variant) {
       case 'flat':
-        return 'bg-content2 border-none shadow-none text-foreground';
+        return 'bg-content2/80 dark:bg-content2/60 border border-transparent shadow-none text-foreground';
       case 'elevated':
-        return 'bg-content1 border border-divider shadow-md text-foreground';
+        return 'bg-content1 border border-zinc-200/80 dark:border-white/10 shadow-elevation-soft text-foreground';
       case 'shadow':
-        return 'bg-content1 border border-divider shadow-xl text-foreground';
+        return 'bg-content1 border border-zinc-200/60 dark:border-white/10 shadow-[0_12px_32px_-4px_rgba(0,0,0,0.08)] dark:shadow-[0_12px_32px_-4px_rgba(0,0,0,0.6)] text-foreground';
       case 'bordered':
       default:
-        return 'bg-content1 border border-divider shadow-xs text-foreground';
+        return 'bg-content1 border border-zinc-200/70 dark:border-white/10 shadow-elevation-soft text-foreground';
     }
   };
 

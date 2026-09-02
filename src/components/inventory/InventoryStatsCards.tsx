@@ -9,8 +9,9 @@ import {
   DollarSign,
   AlertTriangle,
   AlertCircle,
-  X
+  XCircle,
 } from 'lucide-react';
+import { formatCurrency } from '../../utils/formatters';
 
 interface InventoryStats {
   totalSKUs: number;
@@ -32,7 +33,7 @@ export const InventoryStatsCards: React.FC<InventoryStatsCardsProps> = ({
   return (
     <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 font-sans">
       {/* Total SKUs */}
-      <div className="p-5 rounded-2xl bg-content1 border border-divider flex items-center gap-3.5 relative shadow-xs overflow-hidden transition-all duration-200 hover:border-default-400">
+      <div className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 flex items-center gap-3.5 relative shadow-elevation-soft overflow-hidden transition-all duration-200 hover:border-default-400">
         <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
           <Package className="h-5 w-5" />
         </div>
@@ -45,14 +46,14 @@ export const InventoryStatsCards: React.FC<InventoryStatsCardsProps> = ({
       </div>
 
       {/* Global Valuation */}
-      <div className="p-5 rounded-2xl bg-content1 border border-divider flex items-center gap-3.5 relative shadow-xs overflow-hidden transition-all duration-200 hover:border-default-400">
+      <div className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 flex items-center gap-3.5 relative shadow-elevation-soft overflow-hidden transition-all duration-200 hover:border-default-400">
         <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0">
           <DollarSign className="h-5 w-5" />
         </div>
         <div className="min-w-0">
           <span className="text-xs font-medium text-default-500 tracking-tight block">Value of Stock</span>
           <div className="text-xl sm:text-2xl font-bold tracking-tight text-foreground tabular-nums truncate">
-            ₱{stats.totalValuation.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            {formatCurrency(stats.totalValuation)}
           </div>
         </div>
       </div>
@@ -60,10 +61,10 @@ export const InventoryStatsCards: React.FC<InventoryStatsCardsProps> = ({
       {/* Low Stock Alerts */}
       <div 
         onClick={() => onOpenStockAlertsModal('LOW')}
-        className={`p-5 rounded-2xl border flex items-center gap-3.5 relative shadow-xs overflow-hidden shrink-0 cursor-pointer hover:border-amber-500/50 transition-all active:scale-[0.98] ${
+        className={`p-5 rounded-2xl border flex items-center gap-3.5 relative shadow-elevation-soft overflow-hidden shrink-0 cursor-pointer hover:border-amber-500/50 transition-all active:scale-[0.98] ${
           stats.lowStockCount > 0 
-            ? 'bg-amber-500/5 border-amber-500/25 dark:bg-amber-500/10' 
-            : 'bg-content1 border-divider'
+            ? 'bg-amber-500/5 border-amber-500/30 dark:bg-amber-500/10' 
+            : 'bg-white dark:bg-zinc-900 border-zinc-200/70 dark:border-white/10'
         }`}
         title="Click to view all Low Stock items in Stock Alert Diagnostics Modal"
       >
@@ -85,10 +86,10 @@ export const InventoryStatsCards: React.FC<InventoryStatsCardsProps> = ({
       {/* Critical Stock Alerts */}
       <div 
         onClick={() => onOpenStockAlertsModal('CRITICAL')}
-        className={`p-5 rounded-2xl border flex items-center gap-3.5 relative shadow-xs overflow-hidden shrink-0 cursor-pointer hover:border-rose-500/50 transition-all active:scale-[0.98] ${
+        className={`p-5 rounded-2xl border flex items-center gap-3.5 relative shadow-elevation-soft overflow-hidden shrink-0 cursor-pointer hover:border-rose-500/50 transition-all active:scale-[0.98] ${
           stats.criticalStockCount > 0 
-            ? 'bg-rose-500/5 border-rose-500/25 dark:bg-rose-500/10' 
-            : 'bg-content1 border-divider'
+            ? 'bg-rose-500/5 border-rose-500/30 dark:bg-rose-500/10' 
+            : 'bg-white dark:bg-zinc-900 border-zinc-200/70 dark:border-white/10'
         }`}
         title="Click to view all Critical Stock items in Stock Alert Diagnostics Modal"
       >
@@ -110,18 +111,18 @@ export const InventoryStatsCards: React.FC<InventoryStatsCardsProps> = ({
       {/* Out of Stock Alerts */}
       <div 
         onClick={() => onOpenStockAlertsModal('OUT_OF_STOCK')}
-        className={`p-5 rounded-2xl border col-span-2 lg:col-span-1 flex items-center gap-3.5 relative shadow-xs overflow-hidden shrink-0 cursor-pointer hover:border-rose-500/50 transition-all active:scale-[0.98] ${
+        className={`p-5 rounded-2xl border col-span-2 lg:col-span-1 flex items-center gap-3.5 relative shadow-elevation-soft overflow-hidden shrink-0 cursor-pointer hover:border-rose-500/50 transition-all active:scale-[0.98] ${
           stats.outOfStockCount > 0 
-            ? 'bg-rose-500/5 border-rose-500/25 dark:bg-rose-500/10' 
-            : 'bg-content1 border-divider'
+            ? 'bg-rose-500/5 border-rose-500/30 dark:bg-rose-500/10' 
+            : 'bg-white dark:bg-zinc-900 border-zinc-200/70 dark:border-white/10'
         }`}
         title="Click to view all Out of Stock items in Stock Alert Diagnostics Modal"
       >
         <div className="p-2.5 rounded-xl bg-default-100 dark:bg-content2 text-default-500 shrink-0">
-          <X className="h-5 w-5" />
+          <XCircle className="h-5 w-5 text-rose-500" />
         </div>
         <div className="min-w-0">
-          <span className="text-xs font-medium text-default-500 tracking-tight block">Out of Stock</span>
+          <span className="text-xs font-medium text-default-500 tracking-tight block">Depleted SKUs</span>
           <div className={`text-xl sm:text-2xl font-bold tracking-tight tabular-nums truncate ${stats.outOfStockCount > 0 ? 'text-rose-500' : 'text-foreground'}`}>
             {stats.outOfStockCount}
           </div>

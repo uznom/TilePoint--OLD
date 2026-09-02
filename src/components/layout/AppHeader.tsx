@@ -111,7 +111,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   const queuedWrites = serverDegradedState?.queuedWritesCount ?? 0;
 
   return (
-    <header className="h-14 min-h-[56px] bg-background/80 dark:bg-background/90 backdrop-blur-md border-b border-divider/30 px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2 sm:gap-4 sticky top-0 z-30 select-none transition-colors duration-200 shrink-0">
+    <header className="h-14 min-h-[56px] bg-white/80 dark:bg-zinc-950/80 backdrop-blur-md border-b border-zinc-200/60 dark:border-white/10 px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2 sm:gap-4 sticky top-0 z-30 select-none transition-colors duration-200 shrink-0">
       {/* Left Zone: Sidebar Toggles & Dynamic Breadcrumbs */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {/* Mobile Hamburger Trigger */}
@@ -163,7 +163,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         <button
           type="button"
           onClick={onOpenQuickSwitcher}
-          className="w-full flex items-center justify-between gap-3 px-3.5 py-1.5 rounded-xl bg-content2/70 hover:bg-content2 border border-divider/40 text-default-400 hover:text-default-600 transition-all duration-200 cursor-pointer shadow-2xs group active:scale-[0.99]"
+          className="w-full flex items-center justify-between gap-3 px-3.5 py-1.5 rounded-xl bg-zinc-100/90 hover:bg-zinc-200/80 dark:bg-zinc-800/80 dark:hover:bg-zinc-800 border border-zinc-200/60 dark:border-white/5 text-default-500 hover:text-foreground transition-all duration-200 cursor-pointer shadow-2xs group active:scale-[0.99]"
           title="Search commands, modules, and workflows (Ctrl + K)"
         >
           <div className="flex items-center gap-2 text-xs font-medium truncate">
@@ -171,7 +171,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             <span className="truncate">Quick jump, catalog or commands...</span>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-background/80 border border-divider/40 text-default-500 rounded-md shadow-2xs">
+            <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-white dark:bg-zinc-900 border border-zinc-200/60 dark:border-white/10 text-default-600 dark:text-default-400 rounded-md shadow-2xs">
               ⌘K
             </kbd>
           </div>

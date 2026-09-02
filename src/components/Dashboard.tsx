@@ -22,6 +22,7 @@ import {
 import { useDb } from '../context/DbContext';
 import { HeroCard } from './common/ui/HeroCard';
 import { HeroButton } from './common/ui/HeroButton';
+import { HeroInput } from './common/ui/HeroInput';
 import { HeroModal } from './common/ui/HeroModal';
 import { HeroTable } from './common/ui/HeroTable';
 import { HeroDropdownSelect, HeroDropdownItem } from './common/ui/HeroDropdown';
@@ -800,7 +801,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </div>
 
               {/* Time Range Pills (HeroUI Style Segmented Pill) */}
-              <div className="flex items-center bg-default-100 dark:bg-content2/80 p-1 rounded-full border border-divider/40 dark:border-white/5 self-start sm:self-auto shadow-xs">
+              <div className="flex items-center bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-full border border-zinc-200/50 dark:border-white/5 self-start sm:self-auto shadow-2xs">
                 {(['1D', '1W', '1M', '3M', '1Y', 'All'] as const).map((r) => (
                   <button
                     key={r}
@@ -808,8 +809,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     onClick={() => setTimeRange(r)}
                     className={`px-3 py-1 text-xs font-semibold rounded-full transition-all cursor-pointer font-sans active:scale-[0.97] ${
                       timeRange === r
-                        ? 'bg-white text-foreground dark:bg-content3 dark:text-white shadow-xs'
-                        : 'text-default-500 dark:text-default-400 hover:text-foreground'
+                        ? 'bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.4)] font-bold'
+                        : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 font-medium'
                     }`}
                   >
                     {r}
@@ -1395,14 +1396,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </div>
           </div>
 
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-default-400" />
-            <input
-              type="text"
+          <div className="pb-1">
+            <HeroInput
               value={stockSearchQuery}
-              onChange={(e) => setStockSearchQuery(e.target.value)}
+              onValueChange={(val) => setStockSearchQuery(val)}
               placeholder="Search by product code, name, size, or brand..."
-              className="w-full bg-content2 dark:bg-content1/70 border border-divider/30 text-foreground text-xs rounded-xl pl-9 pr-3 py-2.5 outline-none focus:border-primary/50"
+              startContent={<Search className="h-4 w-4 text-default-400" />}
+              radius="lg"
+              variant="flat"
+              size="md"
             />
           </div>
 
@@ -1450,25 +1452,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-default-500 font-bold block mb-1">Room Length (Meters)</label>
-              <input
+              <HeroInput
+                label="Room Length (Meters)"
                 type="number"
                 min="0.5"
                 step="0.1"
-                value={calcLength}
-                onChange={(e) => setCalcLength(Number(e.target.value))}
-                className="w-full bg-content2 dark:bg-content1/70 border border-divider/30 rounded-xl px-3 py-2 text-foreground font-bold"
+                value={String(calcLength)}
+                onValueChange={(val) => setCalcLength(Number(val) || 0)}
+                radius="lg"
+                variant="flat"
               />
             </div>
             <div>
-              <label className="text-default-500 font-bold block mb-1">Room Width (Meters)</label>
-              <input
+              <HeroInput
+                label="Room Width (Meters)"
                 type="number"
                 min="0.5"
                 step="0.1"
-                value={calcWidth}
-                onChange={(e) => setCalcWidth(Number(e.target.value))}
-                className="w-full bg-content2 dark:bg-content1/70 border border-divider/30 rounded-xl px-3 py-2 text-foreground font-bold"
+                value={String(calcWidth)}
+                onValueChange={(val) => setCalcWidth(Number(val) || 0)}
+                radius="lg"
+                variant="flat"
               />
             </div>
           </div>

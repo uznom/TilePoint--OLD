@@ -3,6 +3,7 @@ import { Eye, EyeOff, LockKeyhole, Settings } from "lucide-react";
 import { User, UserRole } from "../../types/db";
 import { HeroModal } from "../common/ui/HeroModal";
 import { HeroButton } from "../common/ui/HeroButton";
+import { HeroInput } from "../common/ui/HeroInput";
 
 export interface UserProfileModalProps {
   isOpen: boolean;
@@ -101,44 +102,24 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
         }
       }
 
-      if (!editFullName.trim()) {
-        setProfileModalError("Validation Error: Full Name is required.");
-        setIsUpdatingProfile(false);
-        return;
+      if (currentUser) {
+        const profileUpdates: Partial<User> = {
+          fullName: editFullName.trim() || currentUser.fullName,
+          username: editUsername.trim() || currentUser.username,
+          ...(editProfilePicture !== null ? { profilePicture: editProfilePicture } : {}),
+          ...passwordUpdates
+        };
+
+        updateUser(currentUser.id, profileUpdates);
+        updateCurrentUser(profileUpdates);
+        showToastMsg("Account profile credentials successfully updated.", "success");
       }
-      if (!editUsername.trim()) {
-        setProfileModalError("Validation Error: Username is required.");
-        setIsUpdatingProfile(false);
-        return;
-      }
 
-      const cleanUsername = editUsername.trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
-      const initials = editFullName
-        .split(" ")
-        .map((p) => (p ? p[0] : ""))
-        .join("")
-        .toUpperCase()
-        .slice(0, 2) || "AD";
-
-      const updatedData: Partial<User> = {
-        fullName: editFullName.trim(),
-        username: cleanUsername,
-        profilePicture: editProfilePicture || undefined,
-        avatarInitials: initials,
-        ...passwordUpdates,
-      };
-
-      if (currentUser?.id) {
-        updateUser(currentUser.id, updatedData);
-      }
-      updateCurrentUser(updatedData);
-
+      setIsUpdatingProfile(false);
       handleClose();
-      showToastMsg("Account details successfully updated!");
     } catch (err: any) {
-      console.error(err);
-      setProfileModalError("Dynamic crypt engine error: unable to update profile.");
-    } finally {
+      console.error("Failed to update profile:", err);
+      setProfileModalError(err.message || "Failed to update profile. Please check server logs.");
       setIsUpdatingProfile(false);
     }
   };
@@ -150,18 +131,18 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
       size="md"
       zIndex={60}
     >
-      <form onSubmit={handleSaveProfile} className="flex flex-col h-full overflow-hidden">
+      <form onSubmit={handleSaveProfile} className="flex flex-col h-full overflow-hidden font-sans">
         <HeroModal.Header className="pb-4 border-b border-divider/15">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-warning/10 text-warning rounded-2xl">
+            <div className="p-2.5 bg-primary/10 text-primary rounded-2xl border border-primary/20">
               <LockKeyhole className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-black uppercase tracking-wider text-foreground">
+              <h3 className="text-base font-bold tracking-tight text-foreground">
                 Account Profile & Security
               </h3>
-              <p className="text-[10px] text-default-500 uppercase tracking-widest font-bold">
-                Personal Credentials & Security Vault
+              <p className="text-[11px] text-default-500 font-medium">
+                Personal credentials & security settings
               </p>
             </div>
           </div>
@@ -169,108 +150,89 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
         <HeroModal.Body className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
           <div className="space-y-3">
-            <div className="space-y-1">
-              <label className="text-[10px] font-extrabold text-default-500 uppercase tracking-widest pl-1">
-                Full Name
-              </label>
-              <input
-                type="text"
-                required
-                value={editFullName}
-                onChange={(e) => setEditFullName(e.target.value)}
-                placeholder="e.g. John Doe"
-                className="w-full bg-background border border-divider/50 px-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-xl font-bold"
-              />
-            </div>
+            <HeroInput
+              label="Full Name"
+              required
+              value={editFullName}
+              onValueChange={(val) => setEditFullName(val)}
+              placeholder="e.g. John Doe"
+              radius="lg"
+              variant="flat"
+            />
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-extrabold text-default-500 uppercase tracking-widest pl-1">
-                Username
-              </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-2 text-default-400 text-xs select-none">@</span>
-                <input
-                  type="text"
-                  required
-                  value={editUsername}
-                  onChange={(e) => setEditUsername(e.target.value)}
-                  placeholder="Username"
-                  className="w-full bg-background border border-divider/50 pl-7 pr-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-xl font-medium"
-                />
-              </div>
-            </div>
+            <HeroInput
+              label="Username"
+              required
+              value={editUsername}
+              onValueChange={(val) => setEditUsername(val)}
+              placeholder="Username"
+              startContent={<span className="text-default-400 text-xs select-none">@</span>}
+              radius="lg"
+              variant="flat"
+            />
           </div>
 
-          <div className="space-y-3 pt-2 border-t border-divider/15">
-            <div className="text-[11px] font-black text-warning uppercase tracking-wider flex items-center gap-1 pl-1">
+          <div className="space-y-3 pt-3 border-t border-divider/15">
+            <div className="text-xs font-bold text-foreground tracking-tight flex items-center gap-1 pl-1">
               <span>Update Security Password (Optional)</span>
             </div>
 
-            <div className="space-y-1 relative">
-              <label className="text-[10px] font-extrabold text-default-500 uppercase tracking-widest pl-1">
-                Current Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showCurrentPassword ? "text" : "password"}
-                  value={currentPasswordInput}
-                  onChange={(e) => setCurrentPasswordInput(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-background border border-divider/50 px-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-xl pr-9 font-medium"
-                />
+            <HeroInput
+              label="Current Password"
+              type={showCurrentPassword ? "text" : "password"}
+              value={currentPasswordInput}
+              onValueChange={(val) => setCurrentPasswordInput(val)}
+              placeholder="••••••••"
+              radius="lg"
+              variant="flat"
+              endContent={
                 <button
                   type="button"
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-2.5 top-2 text-default-400 hover:text-foreground cursor-pointer"
+                  className="text-default-400 hover:text-foreground cursor-pointer"
                 >
                   {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
-              </div>
-            </div>
+              }
+            />
 
-            <div className="space-y-1 relative">
-              <label className="text-[10px] font-extrabold text-default-500 uppercase tracking-widest pl-1">
-                New Password (Min 8 Characters)
-              </label>
-              <div className="relative">
-                <input
-                  type={showNewPassword ? "text" : "password"}
-                  value={newPasswordInput}
-                  onChange={(e) => setNewPasswordInput(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-background border border-divider/50 px-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-xl pr-9 font-medium"
-                />
+            <HeroInput
+              label="New Password (Min 8 Characters)"
+              type={showNewPassword ? "text" : "password"}
+              value={newPasswordInput}
+              onValueChange={(val) => setNewPasswordInput(val)}
+              placeholder="••••••••"
+              radius="lg"
+              variant="flat"
+              endContent={
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-2.5 top-2 text-default-400 hover:text-foreground cursor-pointer"
+                  className="text-default-400 hover:text-foreground cursor-pointer"
                 >
                   {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
-              </div>
-            </div>
+              }
+            />
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-extrabold text-default-500 uppercase tracking-widest pl-1">
-                Confirm New Password
-              </label>
-              <input
-                type="password"
-                value={confirmPasswordInput}
-                onChange={(e) => setConfirmPasswordInput(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-background border border-divider/50 px-3.5 py-2 text-xs text-foreground focus:outline-none focus:border-primary transition-colors rounded-xl font-medium"
-              />
-            </div>
+            <HeroInput
+              label="Confirm New Password"
+              type="password"
+              value={confirmPasswordInput}
+              onValueChange={(val) => setConfirmPasswordInput(val)}
+              placeholder="••••••••"
+              radius="lg"
+              variant="flat"
+            />
           </div>
 
           <div className="pt-1">
             {profileModalError ? (
-              <p className="text-[10px] font-bold text-danger px-1 leading-normal">
+              <p className="text-[11px] font-bold text-danger px-1 leading-normal">
                 {profileModalError}
               </p>
             ) : (
-              <p className="text-[10px] text-default-500 px-1 leading-normal font-medium">
+              <p className="text-[11px] text-default-500 px-1 leading-normal font-medium">
                 Your account security credentials will be encrypted and updated securely.
               </p>
             )}
@@ -284,13 +246,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   handleClose();
                   onOpenSystemSettings();
                 }}
-                className="w-full flex items-center justify-between px-3.5 py-2.5 bg-content2/60 hover:bg-content2 border border-divider/30 rounded-xl text-xs font-bold text-foreground transition-all cursor-pointer group"
+                className="w-full flex items-center justify-between px-3.5 py-2.5 bg-zinc-100/90 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200/60 dark:border-white/5 rounded-xl text-xs font-semibold text-foreground transition-all cursor-pointer group active:scale-[0.98]"
               >
                 <div className="flex items-center gap-2">
                   <Settings className="h-4 w-4 text-primary" />
                   <span>System Settings & Config</span>
                 </div>
-                <span className="text-[10px] text-default-400 group-hover:text-foreground">Configure &rarr;</span>
+                <span className="text-[11px] text-default-400 group-hover:text-foreground">Configure &rarr;</span>
               </button>
             </div>
           )}
@@ -301,6 +263,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
             type="button"
             variant="flat"
             size="sm"
+            radius="full"
             onClick={handleClose}
             className="font-bold text-xs"
           >
@@ -309,13 +272,14 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           <HeroButton
             type="submit"
             variant="solid"
-            color="warning"
+            color="primary"
             size="sm"
+            radius="full"
             isLoading={isUpdatingProfile}
             loadingText="Updating..."
-            className="font-bold text-xs uppercase tracking-wider text-black"
+            className="font-bold text-xs shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
           >
-            Update Password
+            Update Profile & Password
           </HeroButton>
         </HeroModal.Footer>
       </form>

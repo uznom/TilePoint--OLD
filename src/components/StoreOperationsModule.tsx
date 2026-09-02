@@ -11,6 +11,9 @@ import { Member, Expense, ProductReturn, CustomCorporateBill, UserRole } from ".
 import { ConfirmationModal } from "./ConfirmationModal";
 import { useReceiptFontSize } from "./ReceiptFontSizeControl";
 import { debouncedSetItem } from "../utils/debouncedStorage";
+import { formatCurrency } from "../utils/formatters";
+import { HeroModal } from "./common/ui/HeroModal";
+import { HeroButton } from "./common/ui/HeroButton";
 
 // Extracted Sub-Components
 import { MembersDirectoryTab } from "./operations/members/MembersDirectoryTab";
@@ -421,12 +424,12 @@ export default function StoreOperationsModule({
 
       {/* Slip / Receipt Print Modal */}
       {printReceiptData && (
-        <div className="fixed inset-0 z-50 overflow-y-auto flex items-start justify-center bg-black/60 backdrop-blur-sm p-4 md:items-center">
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className={`w-full max-w-sm bg-white text-foreground rounded-2xl shadow-2xl p-5 text-xs border border-divider/30 relative max-h-[85vh] overflow-y-auto bir-receipt-container scrollbar-thin ${receiptFontClass}`}
-          >
+        <HeroModal
+          isOpen={Boolean(printReceiptData)}
+          onClose={() => setPrintReceiptData(null)}
+          size="sm"
+        >
+          <div className={`p-5 sm:p-6 space-y-4 font-sans text-xs text-foreground text-left bir-receipt-container ${receiptFontClass}`}>
             <div className="text-center pb-3 border-b-2 border-dashed border-divider/40">
               <h3 className="font-extrabold text-sm tracking-wide">
                 {branches.find((b) => b.id === printReceiptData.branchId)?.name || localStorage.getItem("tilepoint_company_name_v1") || branches[0]?.name || "STORE RECEIPT"}
@@ -438,46 +441,46 @@ export default function StoreOperationsModule({
               <p className="text-[9px] text-default-500">
                 Contact: 0000 • TIN 000-111-222
               </p>
-              <p className="text-[10.5px] font-bold mt-2 uppercase">
+              <p className="text-[11px] font-bold mt-2 uppercase text-primary">
                 {printReceiptData.title}
               </p>
             </div>
 
-            <div className="py-4 space-y-1.5 border-b-2 border-dashed border-divider/40 text-[11px]">
+            <div className="py-3 space-y-1.5 border-b-2 border-dashed border-divider/40 text-[11px]">
               <div className="flex justify-between">
-                <span>Receipt No:</span>
-                <span className="font-bold">{printReceiptData.receiptNo}</span>
+                <span className="text-default-500">Receipt No:</span>
+                <span className="font-bold text-foreground">{printReceiptData.receiptNo}</span>
               </div>
               <div className="flex justify-between">
-                <span>Date Tracked:</span>
+                <span className="text-default-500">Date Tracked:</span>
                 <span>{printReceiptData.date}</span>
               </div>
               <div className="flex justify-between">
-                <span>Client Name:</span>
-                <span className="font-bold">{printReceiptData.customer}</span>
+                <span className="text-default-500">Client Name:</span>
+                <span className="font-bold text-foreground">{printReceiptData.customer}</span>
               </div>
-              <div className="h-px bg-content2 my-2" />
+              <div className="h-px bg-divider/30 my-2" />
               {printReceiptData.prevBalance !== undefined && (
                 <div className="flex justify-between">
-                  <span>Previous A/R Bal:</span>
-                  <span>₱{printReceiptData.prevBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                  <span className="text-default-500">Previous A/R Bal:</span>
+                  <span>{formatCurrency(printReceiptData.prevBalance)}</span>
                 </div>
               )}
               <div className="flex justify-between text-emerald-600 font-extrabold">
                 <span>Pymt Tendered:</span>
-                <span>₱{printReceiptData.paid.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                <span>{formatCurrency(printReceiptData.paid)}</span>
               </div>
               {printReceiptData.newBalance !== undefined && (
                 <div className="flex justify-between font-bold border-t border-divider/30 pt-1">
                   <span>New Balance Due:</span>
-                  <span>₱{printReceiptData.newBalance.toLocaleString("en-US", { minimumFractionDigits: 2 })}</span>
+                  <span>{formatCurrency(printReceiptData.newBalance)}</span>
                 </div>
               )}
             </div>
 
-            <div className="text-center pt-3 space-y-3">
+            <div className="text-center pt-2 space-y-3">
               {printReceiptData.pointsGained > 0 && (
-                <div className="bg-emerald-50 text-emerald-800 p-2 rounded-lg text-[10px] font-bold">
+                <div className="bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 p-2 rounded-xl text-[10px] font-bold border border-emerald-500/20">
                   Loyalty points accredited: +{printReceiptData.pointsGained} pts
                 </div>
               )}
@@ -485,25 +488,33 @@ export default function StoreOperationsModule({
                 BIR Permitted System - Official Receipt copy.
               </p>
 
-              <div className="flex gap-2 bir-report-no-print">
-                <button
+              <div className="flex gap-2 bir-report-no-print pt-1">
+                <HeroButton
                   type="button"
+                  variant="flat"
+                  size="sm"
+                  radius="full"
+                  startIcon={<Printer className="h-3.5 w-3.5" />}
                   onClick={() => window.print()}
-                  className="flex-1 py-1.5 rounded-lg bg-content2 hover:bg-content2 font-bold transition flex items-center justify-center gap-1 cursor-pointer active:scale-95"
+                  className="flex-1 font-bold"
                 >
-                  <Printer className="h-3 w-3" /> Print
-                </button>
-                <button
+                  Print
+                </HeroButton>
+                <HeroButton
                   type="button"
+                  color="primary"
+                  variant="solid"
+                  size="sm"
+                  radius="full"
                   onClick={() => setPrintReceiptData(null)}
-                  className="flex-1 py-1.5 rounded-lg bg-content1 hover:bg-content2 text-white font-bold transition cursor-pointer active:scale-[0.98]"
+                  className="flex-1 font-bold shadow-[0_2px_8px_rgba(0,111,238,0.25)]"
                 >
                   Close
-                </button>
+                </HeroButton>
               </div>
             </div>
-          </motion.div>
-        </div>
+          </div>
+        </HeroModal>
       )}
 
       {/* Z-Reading Generation Confirmation Modal */}
