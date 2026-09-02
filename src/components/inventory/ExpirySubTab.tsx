@@ -6,7 +6,6 @@ import { HeroButton } from '../common/ui/HeroButton';
 import { HeroTooltip } from '../common/ui/HeroTooltip';
 import { HeroTable } from '../common/ui/HeroTable';
 import { useMultiSort } from '../../hooks/useMultiSort';
-import { MultiSortBadgeBar } from '../common/ui/MultiSortBadgeBar';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -91,8 +90,6 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
     handleSort: handleBatchSort,
     getSortDirection: getBatchSortDir,
     getSortRank: getBatchSortRank,
-    removeSort: removeBatchSort,
-    clearSort: clearBatchSort,
     sortData: sortBatchData
   } = useMultiSort<BatchExpiration>({
     customGetters: {
@@ -381,23 +378,6 @@ export const ExpirySubTab: React.FC<ExpirySubTabProps> = ({
             Register Chemical Stock Batch
           </HeroButton>
         </div>
-
-        {/* Multi-Sort Active Badge Bar */}
-        <MultiSortBadgeBar
-          sortDescriptors={batchSortDescriptors}
-          onRemoveSort={removeBatchSort}
-          onClearSort={clearBatchSort}
-          columnLabels={{
-            productName: 'Product / Code',
-            batchNumber: 'Batch Number',
-            quantity: 'Quantity',
-            manufactureDate: 'Mfg Date',
-            expiryDate: 'Expiry Date',
-            branchId: 'Branch Allocation',
-            status: 'Status',
-            remarks: 'Remarks / Notes',
-          }}
-        />
 
         <div className="overflow-x-auto rounded-2xl border border-zinc-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-elevation-soft">
           <HeroTable isStriped className="min-w-full text-xs">

@@ -15,8 +15,9 @@ export const HeroNavbar: React.FC<HeroNavbarProps> & {
   return (
     <nav
       id={id}
-      className={`w-full h-14 sm:h-16 px-4 sm:px-6 bg-content1/80 backdrop-blur-md flex items-center justify-between gap-4 sticky top-0 z-40 transition-colors ${
-        isBordered ? 'border-b border-divider' : ''
+      data-slot="navbar"
+      className={`navbar w-full h-14 sm:h-16 px-4 sm:px-6 bg-content1/80 backdrop-blur-md flex items-center justify-between gap-4 sticky top-0 z-40 transition-colors ${
+        isBordered ? 'border-b border-divider/40' : ''
       } ${className}`}
       {...props}
     >
@@ -26,7 +27,7 @@ export const HeroNavbar: React.FC<HeroNavbarProps> & {
 };
 
 HeroNavbar.Brand = ({ children, className = '', ...props }) => (
-  <div className={`flex items-center gap-3 shrink-0 ${className}`} {...props}>
+  <div data-slot="brand" className={`navbar__brand flex items-center gap-3 shrink-0 ${className}`} {...props}>
     {children}
   </div>
 );
@@ -45,7 +46,7 @@ HeroNavbar.Content = ({ children, justify = 'start', className = '', ...props })
   };
 
   return (
-    <div className={`flex items-center gap-3 flex-1 min-w-0 ${getJustify()} ${className}`} {...props}>
+    <div data-slot="content" className={`navbar__content flex items-center gap-3 flex-1 min-w-0 ${getJustify()} ${className}`} {...props}>
       {children}
     </div>
   );
@@ -53,7 +54,8 @@ HeroNavbar.Content = ({ children, justify = 'start', className = '', ...props })
 
 HeroNavbar.Item = ({ children, isActive = false, className = '', ...props }) => (
   <div
-    className={`flex items-center text-xs font-semibold transition-colors ${
+    data-slot="item"
+    className={`navbar__item flex items-center text-xs font-semibold transition-colors ${
       isActive ? 'text-primary font-bold' : 'text-default-600 hover:text-foreground'
     } ${className}`}
     {...props}

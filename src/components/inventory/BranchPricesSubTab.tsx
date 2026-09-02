@@ -4,7 +4,6 @@ import { Branch, Product } from '../../types/db';
 import { formatCurrency } from '../../utils/formatters';
 import { HeroTable } from '../common/ui/HeroTable';
 import { useMultiSort } from '../../hooks/useMultiSort';
-import { MultiSortBadgeBar } from '../common/ui/MultiSortBadgeBar';
 
 interface BranchPricesSubTabProps {
   branches: Branch[];
@@ -34,8 +33,6 @@ export const BranchPricesSubTab: React.FC<BranchPricesSubTabProps> = ({
     handleSort: handlePriceSort,
     getSortDirection: getPriceSortDir,
     getSortRank: getPriceSortRank,
-    removeSort: removePriceSort,
-    clearSort: clearPriceSort,
     sortData: sortPriceData
   } = useMultiSort<Product>({
     customGetters: {
@@ -65,18 +62,6 @@ export const BranchPricesSubTab: React.FC<BranchPricesSubTabProps> = ({
           </p>
         </div>
       </div>
-
-      {/* Multi-Sort Active Badge Bar */}
-      <MultiSortBadgeBar
-        sortDescriptors={priceSortDescriptors}
-        onRemoveSort={removePriceSort}
-        onClearSort={clearPriceSort}
-        columnLabels={{
-          productName: 'Product Code / Name',
-          category: 'Category',
-          sellingPrice: 'Central Base SRP',
-        }}
-      />
 
       <div className="overflow-x-auto rounded-2xl border border-zinc-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-elevation-soft">
         <HeroTable isStriped className="min-w-full text-xs">

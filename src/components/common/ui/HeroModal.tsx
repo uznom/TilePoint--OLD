@@ -106,7 +106,7 @@ export const HeroModal: React.FC<HeroModalProps> & {
             transition={{ duration: 0.2 }}
             onClick={isDismissable ? onClose : undefined}
             data-slot="backdrop"
-            className={`modal__backdrop fixed inset-0 ${getBackdropClasses()}`}
+            className={`modal__backdrop fixed inset-0 z-0 ${getBackdropClasses()}`}
           />
 
           {/* Modal Card */}
@@ -116,7 +116,7 @@ export const HeroModal: React.FC<HeroModalProps> & {
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             data-slot="dialog"
-            className={`modal__dialog relative w-full ${getSizeClasses()} bg-white dark:bg-zinc-900 rounded-3xl shadow-elevation-modal border border-zinc-200/80 dark:border-white/10 overflow-hidden z-10 flex flex-col max-h-[90vh] ${className}`}
+            className={`modal__dialog relative z-10 w-full ${getSizeClasses()} bg-white dark:bg-zinc-900 rounded-3xl shadow-elevation-modal border border-zinc-200/80 dark:border-white/10 overflow-hidden flex flex-col max-h-[90vh] ${className}`}
           >
             {!hideCloseButton && (
               <button

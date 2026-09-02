@@ -14,7 +14,6 @@ import { HeroDropdownSelect } from './common/ui/HeroDropdown';
 import { HeroTable } from './common/ui/HeroTable';
 import { ToastNotification } from './ToastNotification';
 import { useMultiSort } from '../hooks/useMultiSort';
-import { MultiSortBadgeBar } from './common/ui/MultiSortBadgeBar';
 
 import {
   Users,
@@ -145,8 +144,6 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
     handleSort: handleUsersSort,
     getSortDirection: getUsersSortDir,
     getSortRank: getUsersSortRank,
-    removeSort: removeUsersSort,
-    clearSort: clearUsersSort,
     sortData: sortUsersData
   } = useMultiSort<User>({
     customGetters: {
@@ -220,8 +217,6 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
     handleSort: handleSessionsSort,
     getSortDirection: getSessionsSortDir,
     getSortRank: getSessionsSortRank,
-    removeSort: removeSessionsSort,
-    clearSort: clearSessionsSort,
     sortData: sortSessionsData
   } = useMultiSort<any>({
     customGetters: {
@@ -937,19 +932,6 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
           ) : (
             /* Table View with high-contrast formatting */
             <div className="space-y-3 mb-6">
-              <MultiSortBadgeBar
-                sortDescriptors={usersSortDescriptors}
-                onRemoveSort={removeUsersSort}
-                onClearSort={clearUsersSort}
-                columnLabels={{
-                  fullName: 'Employee Profile',
-                  role: 'Role Classification',
-                  branchAssignmentId: 'Branch Station',
-                  email: 'Corporate Email',
-                  status: 'Account Status',
-                }}
-              />
-
               <HeroTable isStriped className="min-w-[860px]">
                 <HeroTable.Header>
                   <tr className="border-b border-divider/20 bg-content2/50 text-default-500 font-black uppercase tracking-wider text-[10px]">
@@ -1196,19 +1178,6 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
           ) : viewMode === 'table' ? (
             /* Table View for active sessions */
             <div className="space-y-3 mb-6">
-              <MultiSortBadgeBar
-                sortDescriptors={sessionsSortDescriptors}
-                onRemoveSort={removeSessionsSort}
-                onClearSort={clearSessionsSort}
-                columnLabels={{
-                  fullName: 'Staff Member',
-                  username: 'User ID',
-                  branchId: 'Active Branch',
-                  deviceName: 'Terminal Device',
-                  lastActive: 'Last Contact',
-                }}
-              />
-
               <div className="overflow-x-auto">
                 <HeroTable isStriped className="min-w-[800px]">
                 <HeroTable.Header>

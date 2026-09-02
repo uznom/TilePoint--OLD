@@ -46,6 +46,7 @@ import { PosShiftModal } from "./pos/modals/PosShiftModal";
 import { PosCloseShiftModal } from "./pos/modals/PosCloseShiftModal";
 import { PosReceiptModal } from "./pos/modals/PosReceiptModal";
 import { PosTileCalculatorModal } from "./pos/modals/PosTileCalculatorModal";
+import { useFeatureFlags } from "../utils/featureFlags";
 
 interface PosModuleProps {
   darkMode: boolean;
@@ -125,6 +126,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  darkMode,
  onNavigate: _onNavigate, viewMode,
 }) => {
+ const { flags: featureFlags } = useFeatureFlags();
  const rawProducts = useDbProducts();
  const branchStock = useDbBranchStock();
  const {
@@ -2541,7 +2543,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
       </span>
       <h3 className="text-xs font-bold text-foreground tracking-tight uppercase">
-        Yard Staged Queue ({branchParkedSales.length})
+        {featureFlags.yardHoldQueue ? `Yard Staged Queue (${branchParkedSales.length})` : `Held Carts Queue (${branchParkedSales.length})`}
       </h3>
     </div>
     <div className="flex items-center gap-1.5">

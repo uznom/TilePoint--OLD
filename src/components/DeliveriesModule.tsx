@@ -37,7 +37,6 @@ import { HeroSelect } from './common/ui/HeroSelect';
 import { HeroDropdownSelect } from './common/ui/HeroDropdown';
 import { HeaderBar } from './common/HeaderBar';
 import { useMultiSort } from '../hooks/useMultiSort';
-import { MultiSortBadgeBar } from './common/ui/MultiSortBadgeBar';
 import { Delivery } from '../types/db';
 
 interface DeliveriesModuleProps {
@@ -320,8 +319,6 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
     handleSort: handleDelivSort,
     getSortDirection: getDelivSortDir,
     getSortRank: getDelivSortRank,
-    removeSort: removeDelivSort,
-    clearSort: clearDelivSort,
     sortData: sortDelivData
   } = useMultiSort<Delivery>({
     customGetters: {
@@ -870,20 +867,6 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* LEFT COMPONENT: MASTER TABULAR LIST */}
           <div className={`col-span-1 lg:col-span-8 space-y-4`}>
-        {/* Multi-Sort Active Badge Bar */}
-        <MultiSortBadgeBar
-          sortDescriptors={delivSortDescriptors}
-          onRemoveSort={removeDelivSort}
-          onClearSort={clearDelivSort}
-          columnLabels={{
-            id: 'Reference Ref',
-            customerName: 'Invoice / Buyer',
-            barangay: 'Destination Barangay',
-            deliveryDate: 'Cargo Date',
-            driver: 'Personnel',
-            status: 'Fulfill Status',
-          }}
-        />
 
         <div className="border border-divider/30 rounded-2xl bg-content1 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">

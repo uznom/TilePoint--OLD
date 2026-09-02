@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { User, UserRole } from '../types/db';
 import { SidebarCategoryItem } from './Sidebar';
+import { useFeatureFlags } from '../utils/featureFlags';
 
 interface HeaderNavTabsProps {
   activeTab: string;
@@ -165,18 +166,24 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
     return null;
   }, [categories, activeTab]);
 
+  const { flags: featureFlags } = useFeatureFlags();
+
   // Sub-navigation tabs for the currently active category only
   const currentSubTabs = useMemo(() => {
     if (!activeCategory || !activeCategory.subItems || activeCategory.subItems.length <= 1) {
       return [];
     }
 
-    // Filter subItems by user role
+    // Filter subItems by user role and business feature flags
     return activeCategory.subItems.filter((sub) => {
+      if (!featureFlags.tileCalculator && sub.id === 'calculator') return false;
+      if (!featureFlags.cargoDeliveries && sub.id === 'deliveries-panel') return false;
+      if (!featureFlags.damageRegister && sub.id === 'inventory-damage') return false;
+      if (!featureFlags.birCompliance && (sub.id === 'reconciliation-transmission' || sub.id.startsWith('bir-'))) return false;
       if (!sub.roles || sub.roles.length === 0) return true;
       return sub.roles.includes(currentRole);
     });
-  }, [activeCategory, currentRole]);
+  }, [activeCategory, currentRole, featureFlags]);
 
   // Check scroll position to display overflow indicator buttons
   const checkScroll = () => {

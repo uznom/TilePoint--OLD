@@ -5,20 +5,26 @@
 
 import {
 AlertTriangle,
+Calculator,
 CreditCard,
 Edit2,
+Layers,
 Percent,
 Plus,
 Ruler,
+Sliders,
 Sparkles,
 Tag,
-Trash2
+Trash2,
+Truck
 } from 'lucide-react';
 import React,{ useState } from 'react';
 import { HeroSelect } from './common/ui/HeroSelect';
 import { HeroModal } from './common/ui/HeroModal';
 import { HeroButton } from './common/ui/HeroButton';
+import { HeroSwitch } from './common/ui/HeroSwitch';
 import { useDb } from '../context/DbContext';
+import { useFeatureFlags } from '../utils/featureFlags';
 import {
 CustomPaymentMethod,
 DamageActionTaken,
@@ -30,7 +36,7 @@ UnitType,
 UserRole,
 } from '../types/db';
 
-export type DynamicConfigTab = 'categories' | 'units' | 'payments' | 'discounts' | 'damages';
+export type DynamicConfigTab = 'categories' | 'units' | 'payments' | 'discounts' | 'damages' | 'features';
 
 interface DynamicEntityConfigModalProps {
   isOpen: boolean;
@@ -68,6 +74,8 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
     updateDamageReason,
     deleteDamageReason,
   } = useDb();
+
+  const { flags: featureFlags, updateFlag: updateFeatureFlag } = useFeatureFlags();
 
   const isAuthorized = currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.MANAGER;
   const [activeTab, setActiveTab] = useState<DynamicConfigTab>(initialTab);
@@ -498,6 +506,24 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                 activeTab === 'damages' ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
               }`}>
                 {damageReasonsList.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('features')}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-200 flex items-center gap-2 shrink-0 whitespace-nowrap cursor-pointer ${
+                activeTab === 'features'
+                  ? 'bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
+                  : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
+              }`}
+            >
+              <Sliders className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <span>Feature Modules</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold font-mono ${
+                activeTab === 'features' ? 'bg-primary/10 text-primary' : 'bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300'
+              }`}>
+                Custom
               </span>
             </button>
           </div>
@@ -1511,6 +1537,136 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 6: BUSINESS INDUSTRY & FEATURE MODULES */}
+          {activeTab === 'features' && (
+            <div className="space-y-5">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-wide text-foreground">
+                  Business Industry & Feature Modules
+                </h3>
+                <p className="text-xs text-default-500">
+                  Enable or disable specialized modules to adapt TilePoint for general retail, grocery, hardware, apparel, or specialized trade stores.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 1. Tile Area Calculator */}
+                <div className="p-4 rounded-2xl border border-divider/30 bg-content1 shadow-2xs flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Calculator className="h-4 w-4 text-primary shrink-0" />
+                      <span className="text-xs font-extrabold text-foreground">Tile Coverage & Area Calculator</span>
+                    </div>
+                    <p className="text-[11px] text-default-400">
+                      Calculates square meter coverage, box quantity needs, and wastage percentages. Disable for non-flooring businesses (apparel, grocery, electronics).
+                    </p>
+                  </div>
+                  <HeroSwitch
+                    isSelected={featureFlags.tileCalculator}
+                    onValueChange={(val) => updateFeatureFlag('tileCalculator', val)}
+                    color="primary"
+                    size="sm"
+                  />
+                </div>
+
+                {/* 2. Yard Logistics & Hold Queue */}
+                <div className="p-4 rounded-2xl border border-divider/30 bg-content1 shadow-2xs flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Layers className="h-4 w-4 text-sky-500 shrink-0" />
+                      <span className="text-xs font-extrabold text-foreground">Warehouse Yard Logistics & Hold Queue</span>
+                    </div>
+                    <p className="text-[11px] text-default-400">
+                      Enables physical warehouse loading dock hold queues and customer pickup coordination.
+                    </p>
+                  </div>
+                  <HeroSwitch
+                    isSelected={featureFlags.yardHoldQueue}
+                    onValueChange={(val) => updateFeatureFlag('yardHoldQueue', val)}
+                    color="primary"
+                    size="sm"
+                  />
+                </div>
+
+                {/* 3. Cargo Deliveries & Freight Dispatch */}
+                <div className="p-4 rounded-2xl border border-divider/30 bg-content1 shadow-2xs flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Truck className="h-4 w-4 text-emerald-500 shrink-0" />
+                      <span className="text-xs font-extrabold text-foreground">Cargo Deliveries & Freight Dispatch</span>
+                    </div>
+                    <p className="text-[11px] text-default-400">
+                      Multi-branch delivery scheduling, driver assignment, trip receipts, and delivery status tracking.
+                    </p>
+                  </div>
+                  <HeroSwitch
+                    isSelected={featureFlags.cargoDeliveries}
+                    onValueChange={(val) => updateFeatureFlag('cargoDeliveries', val)}
+                    color="primary"
+                    size="sm"
+                  />
+                </div>
+
+                {/* 4. Tile Unit Area Converters */}
+                <div className="p-4 rounded-2xl border border-divider/30 bg-content1 shadow-2xs flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Ruler className="h-4 w-4 text-amber-500 shrink-0" />
+                      <span className="text-xs font-extrabold text-foreground">Area per Box Converters (sqm/box)</span>
+                    </div>
+                    <p className="text-[11px] text-default-400">
+                      Enables automatic sqm-to-box unit conversions in catalog management and POS cart line items.
+                    </p>
+                  </div>
+                  <HeroSwitch
+                    isSelected={featureFlags.tileUnitConverters}
+                    onValueChange={(val) => updateFeatureFlag('tileUnitConverters', val)}
+                    color="primary"
+                    size="sm"
+                  />
+                </div>
+
+                {/* 5. Damage & Breakage Register */}
+                <div className="p-4 rounded-2xl border border-divider/30 bg-content1 shadow-2xs flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0" />
+                      <span className="text-xs font-extrabold text-foreground">Damage & Breakage Register</span>
+                    </div>
+                    <p className="text-[11px] text-default-400">
+                      Records broken, cracked, chipped, or defective items with cause auditing and inventory reduction.
+                    </p>
+                  </div>
+                  <HeroSwitch
+                    isSelected={featureFlags.damageRegister}
+                    onValueChange={(val) => updateFeatureFlag('damageRegister', val)}
+                    color="primary"
+                    size="sm"
+                  />
+                </div>
+
+                {/* 6. BIR Tax Compliance & Reports */}
+                <div className="p-4 rounded-2xl border border-divider/30 bg-content1 shadow-2xs flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-purple-500 shrink-0" />
+                      <span className="text-xs font-extrabold text-foreground">BIR Tax Reports & Transmission</span>
+                    </div>
+                    <p className="text-[11px] text-default-400">
+                      BIR X/Z reading reports, senior/PWD tax exemption logs, and sales transmittal archiving.
+                    </p>
+                  </div>
+                  <HeroSwitch
+                    isSelected={featureFlags.birCompliance}
+                    onValueChange={(val) => updateFeatureFlag('birCompliance', val)}
+                    color="primary"
+                    size="sm"
+                  />
+                </div>
               </div>
             </div>
           )}

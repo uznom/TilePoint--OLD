@@ -20,6 +20,7 @@ import {
   Store,
   Settings
 } from "lucide-react";
+import { useFeatureFlags } from "../utils/featureFlags";
 
 export interface SidebarCategoryItem {
   id: string;
@@ -123,12 +124,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
   );
   const showTransfersAlert = stockTransfers && stockTransfers.some((t) => t.status === "Pending");
 
-  // Filter categories and sub-items based on RBAC
+  const { flags: featureFlags } = useFeatureFlags();
+
+  // Filter categories and sub-items based on RBAC and Business Feature Flags
   const filteredCategories = useMemo(() => {
     return categories
+      .filter((cat) => {
+        if (!featureFlags.cargoDeliveries && (cat.id === "deliveries" || cat.id === "deliveries-panel")) return false;
+        if (!featureFlags.damageRegister && cat.id === "damage-register") return false;
+        if (!featureFlags.birCompliance && cat.id === "transmittals") return false;
+        return true;
+      })
       .map((cat) => {
-        // Filter sub-items by role
+        // Filter sub-items by role and feature flags
         const allowedSubs = cat.subItems.filter((sub) => {
+          if (!featureFlags.tileCalculator && sub.id === "calculator") return false;
+          if (!featureFlags.cargoDeliveries && sub.id === "deliveries-panel") return false;
+          if (!featureFlags.damageRegister && sub.id === "inventory-damage") return false;
+          if (!featureFlags.birCompliance && (sub.id === "reconciliation-transmission" || sub.id.startsWith("bir-"))) return false;
           if (!sub.roles || sub.roles.length === 0) return true;
           return sub.roles.includes(currentUser.role);
         });
@@ -139,7 +152,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         };
       })
       .filter((cat) => cat.subItems.length > 0);
-  }, [categories, currentUser.role]);
+  }, [categories, currentUser.role, featureFlags]);
 
   // Handle module click - switches directly to the first accessible sub-item or category ID
   const handleCategoryClick = (cat: SidebarCategoryItem) => {

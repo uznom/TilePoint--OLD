@@ -31,8 +31,8 @@ import { HeroPagination } from './common/ui/HeroPagination';
 import { Sale } from '../types/db';
 import { isSameBranch } from '../lib/branchUtils';
 import { useMultiSort } from '../hooks/useMultiSort';
-import { MultiSortBadgeBar } from './common/ui/MultiSortBadgeBar';
 import { formatCurrency } from '../utils/formatters';
+import { useFeatureFlags } from '../utils/featureFlags';
 const LazyTopAndSlowSellingModal = React.lazy(() =>
   import('./dashboard/TopAndSlowSellingModal').then((m) => ({ default: m.TopAndSlowSellingModal }))
 );
@@ -43,6 +43,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
+  const { flags: featureFlags } = useFeatureFlags();
   const {
     currentUser,
     sales,
@@ -448,8 +449,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     handleSort: handleSalesSort,
     getSortDirection: getSalesSortDir,
     getSortRank: getSalesSortRank,
-    removeSort: removeSalesSort,
-    clearSort: clearSalesSort,
     sortData: sortSalesData
   } = useMultiSort<Sale>({
     customGetters: {
@@ -497,19 +496,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     
     products.forEach((p) => {
       if (p.isDeleted) return;
-      const cat = p.category || 'General Tiles';
+      const cat = (p.category || 'General').trim() || 'General';
       if (!catMap[cat]) {
         catMap[cat] = { count: 0, totalQty: 0, value: 0 };
       }
+      const qty = Number(p.stockQuantity) || 0;
+      const price = Number(p.sellingPrice) || Number(p.costPrice) || 0;
       catMap[cat].count += 1;
-      catMap[cat].totalQty += p.stockQuantity || 0;
-      catMap[cat].value += (p.stockQuantity || 0) * (p.sellingPrice || 0);
+      catMap[cat].totalQty += qty;
+      catMap[cat].value += qty * price;
     });
 
     return Object.entries(catMap)
       .map(([name, data]) => ({ name, ...data }))
       .sort((a, b) => b.value - a.value)
-      .slice(0, 5);
+      .slice(0, 6);
   }, [products]);
 
   // Filtered products for Quick Stock Lookup Modal
@@ -607,16 +608,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </HeroButton>
 
           {/* Tile Coverage Calculator */}
-          <HeroButton
-            onClick={() => setIsQuickCalcOpen(true)}
-            variant="flat"
-            size="md"
-            radius="full"
-            startIcon={<Calculator className="h-4 w-4 text-amber-500" />}
-            className="font-semibold"
-          >
-            Tile Calc
-          </HeroButton>
+          {featureFlags.tileCalculator && (
+            <HeroButton
+              onClick={() => setIsQuickCalcOpen(true)}
+              variant="flat"
+              size="md"
+              radius="full"
+              startIcon={<Calculator className="h-4 w-4 text-amber-500" />}
+              className="font-semibold"
+            >
+              Tile Calc
+            </HeroButton>
+          )}
 
           {/* Refresh & Period Filter Dropdown (HeroUI v3 Segmented Capsule Pill) */}
           <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
@@ -963,21 +966,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </div>
             </div>
 
-            {/* Multi-Sort Active Badge Bar */}
-            <MultiSortBadgeBar
-              sortDescriptors={salesSortDescriptors}
-              onRemoveSort={removeSalesSort}
-              onClearSort={clearSalesSort}
-              columnLabels={{
-                saleNumber: 'Invoice #',
-                customerName: 'Customer',
-                cashierName: 'Cashier',
-                paymentMethod: 'Payment Method',
-                grandTotal: 'Grand Total',
-              }}
-              className="mb-3"
-            />
-
             {/* HeroTable Implementation */}
             <HeroTable isStriped isCompact={false} className="min-w-full">
               <HeroTable.Header>
@@ -1150,7 +1138,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           <HeroCard className="p-6" variant="bordered">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-sm font-extrabold text-foreground">Tile Categories</h3>
+                <h3 className="text-sm font-extrabold text-foreground">Categories</h3>
                 <p className="text-[11px] text-default-400">Stock distribution by catalog grouping</p>
               </div>
               <HeroButton
@@ -1172,8 +1160,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 return (
                   <div key={idx} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-foreground">{cat.name}</span>
-                      <span className="text-default-400 font-semibold">{cat.totalQty} Units</span>
+                      <span className="font-bold text-foreground truncate max-w-[140px]">{cat.name}</span>
+                      <span className="text-default-400 font-semibold tabular-nums text-[11px]">
+                        {cat.totalQty.toLocaleString()} {cat.totalQty === 1 ? 'Unit' : 'Units'} ({cat.count} {cat.count === 1 ? 'SKU' : 'SKUs'})
+                      </span>
                     </div>
                     <div className="w-full h-2 rounded-full bg-default-100 overflow-hidden">
                       <div
@@ -1202,58 +1192,60 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </HeroCard>
 
           {/* Logistics & Deliveries Pulse */}
-          <HeroCard className="p-6" variant="bordered">
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h3 className="text-sm font-extrabold text-foreground">Cargo Deliveries</h3>
-                <p className="text-[11px] text-default-400">Active dispatches & cargo tracking</p>
-              </div>
-              <HeroButton
-                onClick={() => onNavigate('deliveries-panel')}
-                variant="light"
-                size="sm"
-                className="text-sky-500 text-xs font-bold"
-              >
-                Dispatch →
-              </HeroButton>
-            </div>
-
-            <div className="space-y-2.5">
-              {deliveries.slice(0, 4).map((del) => (
-                <div
-                  key={del.id}
+          {featureFlags.cargoDeliveries && (
+            <HeroCard className="p-6" variant="bordered">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-extrabold text-foreground">Cargo Deliveries</h3>
+                  <p className="text-[11px] text-default-400">Active dispatches & cargo tracking</p>
+                </div>
+                <HeroButton
                   onClick={() => onNavigate('deliveries-panel')}
-                  className="p-2.5 rounded-xl bg-default-100/50 hover:bg-default-100 cursor-pointer transition-colors flex items-center justify-between active:scale-[0.98]"
+                  variant="light"
+                  size="sm"
+                  className="text-sky-500 text-xs font-bold"
                 >
-                  <div className="min-w-0 pr-2">
-                    <div className="text-xs font-bold text-foreground truncate">
-                      {del.customerName || 'Customer Delivery'}
-                    </div>
-                    <div className="text-[10px] text-default-400 truncate">
-                      {del.barangay ? `${del.barangay}, ${del.cityMunicipality}` : 'Local Branch Dispatch'}
-                    </div>
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[9.5px] font-extrabold shrink-0 uppercase ${
-                      del.status === 'Delivered'
-                        ? 'bg-emerald-500/10 text-emerald-500'
-                        : del.status === 'Out For Delivery'
-                        ? 'bg-sky-500/10 text-sky-500'
-                        : 'bg-amber-500/10 text-amber-500'
-                    }`}
-                  >
-                    {del.status || 'Pending'}
-                  </span>
-                </div>
-              ))}
+                  Dispatch →
+                </HeroButton>
+              </div>
 
-              {deliveries.length === 0 && (
-                <div className="p-4 text-center text-default-400 text-xs font-medium">
-                  No active cargo shipments currently queued.
-                </div>
-              )}
-            </div>
-          </HeroCard>
+              <div className="space-y-2.5">
+                {deliveries.slice(0, 4).map((del) => (
+                  <div
+                    key={del.id}
+                    onClick={() => onNavigate('deliveries-panel')}
+                    className="p-2.5 rounded-xl bg-default-100/50 hover:bg-default-100 cursor-pointer transition-colors flex items-center justify-between active:scale-[0.98]"
+                  >
+                    <div className="min-w-0 pr-2">
+                      <div className="text-xs font-bold text-foreground truncate">
+                        {del.customerName || 'Customer Delivery'}
+                      </div>
+                      <div className="text-[10px] text-default-400 truncate">
+                        {del.barangay ? `${del.barangay}, ${del.cityMunicipality}` : 'Local Branch Dispatch'}
+                      </div>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[9.5px] font-extrabold shrink-0 uppercase ${
+                        del.status === 'Delivered'
+                          ? 'bg-emerald-500/10 text-emerald-500'
+                          : del.status === 'Out For Delivery'
+                          ? 'bg-sky-500/10 text-sky-500'
+                          : 'bg-amber-500/10 text-amber-500'
+                      }`}
+                    >
+                      {del.status || 'Pending'}
+                    </span>
+                  </div>
+                ))}
+
+                {deliveries.length === 0 && (
+                  <div className="p-4 text-center text-default-400 text-xs font-medium">
+                    No active cargo shipments currently queued.
+                  </div>
+                )}
+              </div>
+            </HeroCard>
+          )}
 
           {/* Quick Shift Session Status */}
           <HeroCard className="p-5" variant="bordered">

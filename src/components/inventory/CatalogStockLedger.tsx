@@ -33,7 +33,6 @@ import { HeroTable } from '../common/ui/HeroTable';
 import { HeroChip } from '../common/ui/HeroChip';
 import { HeroDropdownSelect, HeroDropdownItem } from '../common/ui/HeroDropdown';
 import { useMultiSort } from '../../hooks/useMultiSort';
-import { MultiSortBadgeBar } from '../common/ui/MultiSortBadgeBar';
 
 export interface CatalogStockLedgerProps {
   branchProducts: Product[];
@@ -143,8 +142,6 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
     handleSort: handleTableSort,
     getSortDirection: getTableSortDir,
     getSortRank: getTableSortRank,
-    removeSort,
-    clearSort,
     sortData
   } = useMultiSort<Product>({
     customGetters: {
@@ -311,7 +308,6 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
     if (!hasActiveShift) count++; // checkbox
     count++; // expand toggle
     count++; // Code / SKU
-    if (!isCompactColumns) count++; // Identifier codes
     count++; // Product Details
     if (!isCompactColumns) count++; // Category / Brand
     if (!isCompactColumns) count++; // Packaging
@@ -319,6 +315,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
     count++; // Sale Price
     count++; // Stock
     if (!isCompactColumns) count++; // Threshold
+    count++; // Status
     count++; // Controls
     return count;
   }, [hasActiveShift, isCompactColumns, canSeeFinancialCostsAndSources]);
@@ -533,22 +530,6 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
         </div>
       )}
 
-      {/* Multi-Sort Active Badge Bar */}
-      <MultiSortBadgeBar
-        sortDescriptors={sortDescriptors}
-        onRemoveSort={removeSort}
-        onClearSort={clearSort}
-        columnLabels={{
-          sku: 'Code / SKU',
-          name: 'Product Details',
-          category: 'Category / Brand',
-          cost: 'Unit Cost',
-          price: 'Sale Price',
-          stock: 'Stock Quantity',
-          threshold: 'Low Stock Threshold',
-        }}
-      />
-
       {/* Database Catalog HeroTable Ledger */}
       <div className="overflow-x-auto rounded-2xl border border-zinc-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-elevation-soft">
         <HeroTable
@@ -583,11 +564,6 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
               >
                 Code / SKU
               </HeroTable.Column>
-              {!isCompactColumns && (
-                <HeroTable.Column className="py-3.5 px-4 font-bold">
-                  Identifier Codes
-                </HeroTable.Column>
-              )}
               <HeroTable.Column
                 allowsSorting
                 sortDirection={getTableSortDir('name') !== 'none' ? getTableSortDir('name') : (sortBy === 'alpha-asc' ? 'ascending' : sortBy === 'alpha-desc' ? 'descending' : 'none')}
@@ -676,7 +652,6 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                     )}
                     <HeroTable.Cell align="center" className="py-4 px-2 text-center"><div className="h-4 w-4 bg-default-200 rounded mx-auto" /></HeroTable.Cell>
                     <HeroTable.Cell className="py-4 px-4"><div className="h-4 w-28 bg-default-200 rounded mb-1.5" /><div className="h-3 w-20 bg-default-100 rounded" /></HeroTable.Cell>
-                    {!isCompactColumns && <HeroTable.Cell className="py-4 px-4"><div className="h-4 w-20 bg-default-200 rounded" /></HeroTable.Cell>}
                     <HeroTable.Cell className="py-4 px-4"><div className="h-4 w-36 bg-default-200 rounded mb-1.5" /><div className="h-3 w-16 bg-default-100 rounded" /></HeroTable.Cell>
                     {!isCompactColumns && <HeroTable.Cell className="py-4 px-4"><div className="h-5 w-24 bg-default-200 rounded-full" /></HeroTable.Cell>}
                     {!isCompactColumns && <HeroTable.Cell align="center" className="py-4 px-4"><div className="h-4 w-16 bg-default-200 mx-auto rounded" /></HeroTable.Cell>}
@@ -793,16 +768,11 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
 
                         {/* Code / SKU details */}
                         <HeroTable.Cell className="py-3.5 px-4">
-                          <div className="font-bold text-primary font-mono">{p.productCode}</div>
-                          <div className="text-[10px] text-default-500 font-mono font-medium">{p.sku}</div>
+                          <div className="font-bold text-primary font-mono">{p.productCode || p.sku}</div>
+                          {p.barcode && p.barcode !== p.productCode && (
+                            <div className="text-[10px] text-default-400 font-mono">BC: {p.barcode}</div>
+                          )}
                         </HeroTable.Cell>
-
-                        {/* Scannable keys info */}
-                        {!isCompactColumns && (
-                          <HeroTable.Cell className="py-3.5 px-4 text-[10px] text-default-500 font-mono select-all">
-                            <div>BC: {p.barcode}</div>
-                          </HeroTable.Cell>
-                        )}
 
                         {/* Primary specifications block */}
                         <HeroTable.Cell className="py-3.5 px-4">

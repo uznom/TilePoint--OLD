@@ -20,7 +20,6 @@ import { HeroSelect } from "./common/ui/HeroSelect";
 import { HeroDropdownSelect } from "./common/ui/HeroDropdown";
 import { HeaderBar } from "./common/HeaderBar";
 import { useMultiSort } from "../hooks/useMultiSort";
-import { MultiSortBadgeBar } from "./common/ui/MultiSortBadgeBar";
 
 interface AdminProfitModuleProps {
  darkMode: boolean;
@@ -513,8 +512,6 @@ export function AdminProfitModule({
     handleSort: handleProfitSort,
     getSortDirection: getProfitSortDir,
     getSortRank: getProfitSortRank,
-    removeSort: removeProfitSort,
-    clearSort: clearProfitSort,
     sortData: sortProfitData
   } = useMultiSort<any>({
     customGetters: {
@@ -782,23 +779,6 @@ export function AdminProfitModule({
                 <span>Consolidated All</span>
               </button>
             </div>
-
-            {/* Multi-Sort Active Badge Bar */}
-            <MultiSortBadgeBar
-              sortDescriptors={profitSortDescriptors}
-              onRemoveSort={removeProfitSort}
-              onClearSort={clearProfitSort}
-              columnLabels={{
-                name: 'Branch Profile',
-                gross: 'Gross Revenue',
-                cogs: 'COGS',
-                opex: 'Operating Expenses',
-                loss: 'System Loss',
-                net: 'Net Profit',
-                margin: 'Margin %',
-              }}
-              className="mb-3"
-            />
 
             <div className="overflow-x-auto">
               <HeroTable isStriped className="min-w-full text-xs">

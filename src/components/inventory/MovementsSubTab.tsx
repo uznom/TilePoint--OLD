@@ -5,7 +5,6 @@ import { HeroButton } from '../common/ui/HeroButton';
 import { HeroTable } from '../common/ui/HeroTable';
 import { HeroDropdownSelect } from '../common/ui/HeroDropdown';
 import { useMultiSort } from '../../hooks/useMultiSort';
-import { MultiSortBadgeBar } from '../common/ui/MultiSortBadgeBar';
 
 interface MovementsSubTabProps {
   setShowAdjustModal: (v: boolean) => void;
@@ -34,8 +33,6 @@ export const MovementsSubTab: React.FC<MovementsSubTabProps> = ({
     handleSort: handleMovementSort,
     getSortDirection: getMovementSortDir,
     getSortRank: getMovementSortRank,
-    removeSort: removeMovementSort,
-    clearSort: clearMovementSort,
     sortData: sortMovementData
   } = useMultiSort<InventoryMovement>({
     customGetters: {
@@ -143,22 +140,6 @@ export const MovementsSubTab: React.FC<MovementsSubTabProps> = ({
           />
         </div>
       </div>
-
-      {/* Multi-Sort Active Badge Bar */}
-      <MultiSortBadgeBar
-        sortDescriptors={movementSortDescriptors}
-        onRemoveSort={removeMovementSort}
-        onClearSort={clearMovementSort}
-        columnLabels={{
-          timestamp: 'Timestamp',
-          branchId: 'Branch / Yard',
-          productName: 'Product Item',
-          type: 'Operation Type',
-          quantity: 'Delta Quantity',
-          referenceId: 'Ticket Ref',
-          username: 'Operator / User',
-        }}
-      />
 
       {/* Primary Log Table */}
       <div className="overflow-x-auto rounded-2xl border border-zinc-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-elevation-soft">

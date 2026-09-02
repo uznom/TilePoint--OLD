@@ -13,7 +13,6 @@ import { ToastNotification } from './ToastNotification';
 import { HeroTable } from './common/ui/HeroTable';
 import { HeroButton } from './common/ui/HeroButton';
 import { useMultiSort } from '../hooks/useMultiSort';
-import { MultiSortBadgeBar } from './common/ui/MultiSortBadgeBar';
 import { Shift } from '../types/db';
 import {
   Lock,
@@ -74,8 +73,6 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
     handleSort: handleShiftSort,
     getSortDirection: getShiftSortDir,
     getSortRank: getShiftSortRank,
-    removeSort: removeShiftSort,
-    clearSort: clearShiftSort,
     sortData: sortShiftData
   } = useMultiSort<Shift>({
     customGetters: {
@@ -373,22 +370,6 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
         <h4 className="text-xs font-bold text-foreground uppercase tracking-wider mb-1 flex items-center gap-1.5 font-mono">
           <Coins className="h-4.5 w-4.5 text-primary" /> Historic Shift Audit Ledgers ({shifts.length})
         </h4>
-
-        <MultiSortBadgeBar
-          sortDescriptors={shiftSortDescriptors}
-          onRemoveSort={removeShiftSort}
-          onClearSort={clearShiftSort}
-          columnLabels={{
-            id: 'Shift ID',
-            cashierName: 'Cashier Assignee',
-            startCash: 'Start Fund',
-            expectedEndCash: 'Expected Drawer',
-            countedDrawer: 'Counted Drawer',
-            variance: 'Discrepancy',
-            status: 'Status',
-          }}
-          className="mb-2"
-        />
 
         <div className="overflow-x-auto text-xs">
           <HeroTable isStriped className="min-w-full">

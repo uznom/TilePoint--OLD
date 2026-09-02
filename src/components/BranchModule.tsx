@@ -43,7 +43,6 @@ import { HeroChip } from './common/ui/HeroChip';
 import { HeroSelect } from './common/ui/HeroSelect';
 import { HeaderBar } from './common/HeaderBar';
 import { useMultiSort } from '../hooks/useMultiSort';
-import { MultiSortBadgeBar } from './common/ui/MultiSortBadgeBar';
 import { User } from '../types/db';
 
 
@@ -335,8 +334,6 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
     handleSort: handlePersonnelSort,
     getSortDirection: getPersonnelSortDir,
     getSortRank: getPersonnelSortRank,
-    removeSort: removePersonnelSort,
-    clearSort: clearPersonnelSort,
     sortData: sortPersonnelData
   } = useMultiSort<User>({
     customGetters: {
@@ -1445,20 +1442,6 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  <span>Active Personnel Database Live Logs</span>
  </div>
  </div>
-
-            {/* Multi-Sort Badge Bar */}
-            <MultiSortBadgeBar
-              sortDescriptors={personnelSortDescriptors}
-              onRemoveSort={removePersonnelSort}
-              onClearSort={clearPersonnelSort}
-              columnLabels={{
-                fullName: 'Authorized Personnel',
-                role: 'Role Classification',
-                branchAssignmentId: 'Branch Location',
-                email: 'Communication Contact',
-              }}
-              className="mb-3"
-            />
 
             {/* Directory Table Grid */}
             <div className="space-y-3 mb-4">

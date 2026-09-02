@@ -4,7 +4,6 @@ import { Branch, StockTransfer } from '../../types/db';
 import { HeroButton } from '../common/ui/HeroButton';
 import { HeroTable } from '../common/ui/HeroTable';
 import { useMultiSort } from '../../hooks/useMultiSort';
-import { MultiSortBadgeBar } from '../common/ui/MultiSortBadgeBar';
 
 interface TransfersSubTabProps {
   setShowCreateTransfer: (v: boolean) => void;
@@ -34,8 +33,6 @@ export const TransfersSubTab: React.FC<TransfersSubTabProps> = ({
     handleSort: handleTransferSort,
     getSortDirection: getTransferSortDir,
     getSortRank: getTransferSortRank,
-    removeSort: removeTransferSort,
-    clearSort: clearTransferSort,
     sortData: sortTransferData
   } = useMultiSort<StockTransfer>({
     customGetters: {
@@ -111,23 +108,6 @@ export const TransfersSubTab: React.FC<TransfersSubTabProps> = ({
           </div>
         </div>
       </div>
-
-      {/* Multi-Sort Active Badge Bar */}
-      <MultiSortBadgeBar
-        sortDescriptors={transferSortDescriptors}
-        onRemoveSort={removeTransferSort}
-        onClearSort={clearTransferSort}
-        columnLabels={{
-          transferNo: 'Transfer Ref #',
-          createdAt: 'Date & Time',
-          fromBranchId: 'Source Origin',
-          toBranchId: 'Destination Store',
-          itemCount: 'Items Count',
-          status: 'Status',
-          requestedBy: 'Requested By',
-          reason: 'Reason / Notes',
-        }}
-      />
 
       {/* Transfers List Table */}
       <div className="overflow-x-auto rounded-2xl border border-zinc-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-elevation-soft">

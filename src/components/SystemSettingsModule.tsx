@@ -582,7 +582,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
         </div>
 
         {/* Quick entity overview chips */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 pt-2 border-t border-primary/10">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 pt-2 border-t border-primary/10">
           <button
             type="button"
             onClick={() => {
@@ -653,7 +653,7 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
               setDynamicConfigTab('damages');
               setShowDynamicConfig(true);
             }}
-            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer col-span-2 sm:col-span-1 active:scale-[0.98]"
+            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer active:scale-[0.98]"
           >
             <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1 active:scale-[0.98]">
               <AlertTriangle className="h-3.5 w-3.5" />
@@ -661,6 +661,22 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
             </div>
             <div className="text-[11px] font-bold text-foreground">Damage Causes</div>
             <div className="text-[9px] text-default-400">Breakage, Defects...</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setDynamicConfigTab('features');
+              setShowDynamicConfig(true);
+            }}
+            className="p-2.5 rounded-xl border border-primary/30 bg-primary/10 hover:border-primary hover:bg-primary/15 transition-all text-left group cursor-pointer active:scale-[0.98]"
+          >
+            <div className="flex items-center justify-between text-primary mb-1 active:scale-[0.98]">
+              <Sliders className="h-3.5 w-3.5" />
+              <span className="text-[9px] font-black px-1 py-0.2 rounded-full bg-primary/20">Custom</span>
+            </div>
+            <div className="text-[11px] font-bold text-foreground">Feature Modules</div>
+            <div className="text-[9px] text-default-400">Enable/Disable</div>
           </button>
         </div>
       </div>

@@ -274,31 +274,23 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                   <span className="text-xs font-bold uppercase tracking-wider text-primary">1. General Product Identification</span>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <HeroInput
-                    label="Product Core Code *"
+                    label="Product Code / SKU *"
                     required
                     value={productCode ?? ''}
-                    onValueChange={val => setProductCode(val)}
+                    onValueChange={val => {
+                      setProductCode(val);
+                      setSku(val);
+                    }}
                     placeholder="e.g. TILE-6060-GR"
-                    radius="lg"
-                    variant="flat"
-                  />
-
-                  <HeroInput
-                    label="Warehouse SKU ID *"
-                    required
-                    value={sku ?? ''}
-                    onValueChange={val => setSku(val)}
-                    placeholder="e.g. SKU-10492"
                     radius="lg"
                     variant="flat"
                   />
 
                   <div className="space-y-1">
                     <HeroInput
-                      label="Barcode Sequence ID"
-                      required
+                      label="Barcode (Scannable / EAN-13)"
                       value={barcode ?? ''}
                       onValueChange={val => setBarcode(val)}
                       placeholder="e.g. 4801122334455"
@@ -381,7 +373,7 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                     variant="flat"
                   />
 
-                  <div className="md:col-span-3">
+                  <div className="md:col-span-2 lg:col-span-3">
                     <HeroInput
                       label="Product Full Descriptive Name *"
                       required
