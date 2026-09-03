@@ -116,7 +116,7 @@ export const HeroModal: React.FC<HeroModalProps> & {
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             data-slot="dialog"
-            className={`modal__dialog relative z-10 w-full ${getSizeClasses()} bg-white dark:bg-zinc-900 rounded-3xl shadow-elevation-modal border border-zinc-200/80 dark:border-white/10 overflow-hidden flex flex-col max-h-[90vh] ${className}`}
+            className={`modal__dialog modal__dialog--scroll-inside relative z-10 w-full ${getSizeClasses()} bg-white dark:bg-zinc-900 rounded-3xl shadow-elevation-modal border border-zinc-200/80 dark:border-white/10 overflow-hidden flex flex-col max-h-[90vh] min-h-0 ${className}`}
           >
             {!hideCloseButton && (
               <button
@@ -146,7 +146,7 @@ export const HeroModal: React.FC<HeroModalProps> & {
 HeroModal.Header = ({ children, className = '', ...props }) => (
   <div
     data-slot="header"
-    className={`modal__header px-6 py-5 border-b border-divider font-semibold text-base sm:text-lg text-foreground flex items-center gap-3 font-sans tracking-tight ${className}`}
+    className={`modal__header px-6 pr-14 py-5 border-b border-divider font-semibold text-base sm:text-lg text-foreground flex items-center gap-3 font-sans tracking-tight shrink-0 ${className}`}
     {...props}
   >
     {children}
@@ -154,13 +154,13 @@ HeroModal.Header = ({ children, className = '', ...props }) => (
 );
 
 HeroModal.Body = ({ children, className = '', ...props }) => (
-  <div data-slot="body" className={`modal__body px-6 py-5 overflow-y-auto flex-1 text-foreground font-sans ${className}`} {...props}>
+  <div data-slot="body" className={`modal__body modal__body--scroll-inside scrollbar px-6 py-5 overflow-y-auto flex-1 text-foreground font-sans ${className}`} {...props}>
     {children}
   </div>
 );
 
 HeroModal.Content = ({ children, className = '', ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div data-slot="modal-content" className={`flex flex-col flex-1 overflow-hidden ${className}`} {...props}>
+  <div data-slot="modal-content" className={`flex flex-col flex-1 min-h-0 overflow-hidden ${className}`} {...props}>
     {children}
   </div>
 );

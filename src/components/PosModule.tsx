@@ -3099,20 +3099,6 @@ export const PosModule: React.FC<PosModuleProps> = ({
           })}
         </span>
       </div>
-
-      <HeroButton
-        variant="flat"
-        color="primary"
-        radius="xl"
-        onClick={() => {
-          setDiscountInput("");
-          setShowDiscountModal(true);
-        }}
-        startIcon={<Sparkles className="h-3.5 w-3.5" />}
-        className="w-full font-semibold text-xs mt-1"
-      >
-        Apply Cardholder Discount (F6)
-      </HeroButton>
     </div>
 
     {/* Right Column: Settlement Panel */}
@@ -4237,7 +4223,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </h4>
  <div className="border border-divider/15 rounded-xl overflow-hidden bg-content1">
  <table className="w-full text-left text-[11px] font-sans">
- <thead className="bg-content1/50 text-[9px] uppercase font-bold text-default-500 border-b border-divider/15">
+ <thead className="text-[9px] uppercase font-bold text-default-500 border-b border-divider/15">
  <tr>
  <th className="py-2.5 px-3">Product Description</th>
  <th className="py-2.5 px-3 text-right">Unit Price</th>

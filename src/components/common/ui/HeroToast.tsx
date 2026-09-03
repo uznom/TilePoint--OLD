@@ -129,28 +129,28 @@ export const HeroToast: React.FC<HeroToastProps> = ({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0, y: 16, scale: 0.95 }}
+          initial={{ opacity: 0, y: 16, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 12, scale: 0.95 }}
-          transition={{ duration: 0.2, ease: [0.25, 1, 0.5, 1] }}
-          className={`relative overflow-hidden rounded-2xl border p-4 max-w-sm w-full backdrop-blur-md pointer-events-auto flex items-start gap-3 select-none ${variantClass} ${className}`}
+          exit={{ opacity: 0, y: 12, scale: 0.96 }}
+          transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+          className={`toast ${className}`}
           role="status"
           aria-live="polite"
         >
-          {/* Icon */}
-          <div className="shrink-0 mt-0.5">
-            {icon || <VariantIcon className={`h-4.5 w-4.5 ${variant === 'solid' ? 'text-current' : styleConfig.iconColor}`} />}
+          {/* Indicator Icon */}
+          <div data-slot="indicator" className={`toast__indicator ${variantClass}`}>
+            {icon || <VariantIcon className="h-4 w-4 text-current" />}
           </div>
 
           {/* Content */}
-          <div className="flex-1 min-w-0 pr-4">
+          <div data-slot="content" className="toast__content font-sans">
             {title && (
-              <div className="text-xs font-bold leading-tight truncate">
+              <div data-slot="title" className="toast__title">
                 {title}
               </div>
             )}
             {description && (
-              <div className={`text-[11px] leading-normal font-medium mt-0.5 ${variant === 'solid' ? 'opacity-90' : 'text-default-500'}`}>
+              <div data-slot="description" className="toast__description mt-0.5">
                 {description}
               </div>
             )}
@@ -159,7 +159,7 @@ export const HeroToast: React.FC<HeroToastProps> = ({
               <button
                 type="button"
                 onClick={action.onClick}
-                className="mt-2 text-[10px] font-black uppercase tracking-wider underline hover:opacity-80 transition-opacity cursor-pointer block"
+                className="mt-2 text-[10px] font-black uppercase tracking-wider underline text-primary hover:opacity-80 transition-opacity cursor-pointer block"
               >
                 {action.label}
               </button>
@@ -169,8 +169,9 @@ export const HeroToast: React.FC<HeroToastProps> = ({
           {/* Close button */}
           <button
             type="button"
+            data-slot="close-button"
             onClick={onDismiss}
-            className="p-1 -mr-1 -mt-1 rounded-full opacity-60 hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+            className="toast__close-button"
             aria-label="Dismiss notification"
           >
             <X className="h-3.5 w-3.5" />

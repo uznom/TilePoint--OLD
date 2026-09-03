@@ -12,6 +12,7 @@ import { DbSnapshot } from "../../context/DbContext";
 import { User, UserRole } from "../../types/db";
 import { HeroModal } from "../common/ui/HeroModal";
 import { HeroButton } from "../common/ui/HeroButton";
+import { HeroSwitch } from "../common/ui/HeroSwitch";
 import { HeroDropdownSelect } from "../common/ui/HeroDropdown";
 import { saveFileToBackup, verifyAndUnwrapBackup } from "../../lib/fileBackupHelper";
 
@@ -143,7 +144,7 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto pr-1 space-y-4 max-h-[50vh]">
+        <div className="flex-1 overflow-y-auto pr-1 space-y-4 max-h-[50vh] scrollbar modal__body--scroll-inside">
           {backupActiveSubTab === "scheduler" && (
             <div className="space-y-4">
               <div className="p-3.5 rounded-2xl bg-primary/5 border border-primary/10 flex justify-between items-center text-xs">
@@ -169,21 +170,20 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
                     <div className="text-xs font-bold">Hourly Data Preservation</div>
                     <div className="text-[10px] text-default-400 mt-0.5">Protect inventory journals and sales invoices against localStorage eviction.</div>
                   </div>
-                  <button
-                    type="button"
-                    disabled={currentUser?.role !== UserRole.ADMIN}
-                    onClick={() => {
+                  <HeroSwitch
+                    isDisabled={currentUser?.role !== UserRole.ADMIN}
+                    isSelected={autoBackupEnabled}
+                    color="success"
+                    size="sm"
+                    onValueChange={(val) => {
                       if (currentUser?.role !== UserRole.ADMIN) {
                         showToastMsg("Access Denied: Admin authorization required.");
                         return;
                       }
-                      setAutoBackupEnabled(!autoBackupEnabled);
-                      showToastMsg(`Automated backup scheduler is now ${autoBackupEnabled ? "DISABLED" : "ENABLED"}`);
+                      setAutoBackupEnabled(val);
+                      showToastMsg(`Automated backup scheduler is now ${val ? "ENABLED" : "DISABLED"}`);
                     }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${autoBackupEnabled ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-content2 text-default-400"}`}
-                  >
-                    {autoBackupEnabled ? "Enabled" : "Disabled"}
-                  </button>
+                  />
                 </div>
 
                 <div className="flex items-center justify-between pt-3 border-t border-divider/10">
@@ -227,21 +227,20 @@ export const DatabaseBackupModal: React.FC<DatabaseBackupModalProps> = ({
                       </p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    disabled={currentUser?.role !== UserRole.ADMIN}
-                    onClick={() => {
+                  <HeroSwitch
+                    isDisabled={currentUser?.role !== UserRole.ADMIN}
+                    isSelected={dbMaintenanceEnabled}
+                    color="success"
+                    size="sm"
+                    onValueChange={(val) => {
                       if (currentUser?.role !== UserRole.ADMIN) {
                         showToastMsg("Access Denied: Admin authorization required.");
                         return;
                       }
-                      setDbMaintenanceEnabled(!dbMaintenanceEnabled);
-                      showToastMsg(`Idle maintenance is now ${dbMaintenanceEnabled ? "DISABLED" : "ENABLED"}`);
+                      setDbMaintenanceEnabled(val);
+                      showToastMsg(`Idle maintenance is now ${val ? "ENABLED" : "DISABLED"}`);
                     }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${dbMaintenanceEnabled ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-content2 text-default-400"}`}
-                  >
-                    {dbMaintenanceEnabled ? "Enabled" : "Disabled"}
-                  </button>
+                  />
                 </div>
 
                 <div className="flex items-center justify-between pt-3 border-t border-divider/10">

@@ -6,11 +6,13 @@ import { HeroButton } from '../common/ui/HeroButton';
 import { HeroModal } from '../common/ui/HeroModal';
 import { HeroTooltip } from '../common/ui/HeroTooltip';
 
+export type LabelSize = '50x30' | '100x60' | '40x25';
+
 interface BarcodeModalProps {
   isOpen: boolean;
   onClose: () => void;
   product: Product | null;
-  onSimulatePrint: () => void;
+  onSimulatePrint: (size?: LabelSize) => void;
   printingCode: boolean;
   showToast: (msg: string) => void;
 }
@@ -23,6 +25,8 @@ export const BarcodeModal: React.FC<BarcodeModalProps> = React.memo(({
   printingCode,
   showToast,
 }) => {
+  const [selectedSize, setSelectedSize] = React.useState<LabelSize>('50x30');
+
   if (!isOpen || !product) return null;
 
   const isTile = (product.category || '').toLowerCase().includes('tile');
@@ -112,6 +116,39 @@ export const BarcodeModal: React.FC<BarcodeModalProps> = React.memo(({
           </div>
         </div>
 
+        {/* Label Dimension & Format Selector */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-default-600">
+              Thermal Label Dimensions:
+            </span>
+            <span className="text-[9px] font-mono text-primary font-bold">
+              {selectedSize === '50x30' ? '50mm × 30mm (2" × 1.2")' : selectedSize === '100x60' ? '100mm × 60mm (4" × 2.4")' : '40mm × 25mm (1.5" × 1")'}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: '50x30' as LabelSize, label: '50×30mm', sub: 'Shelf / Retail Tag' },
+              { id: '100x60' as LabelSize, label: '100×60mm', sub: 'Box / Crate Master' },
+              { id: '40x25' as LabelSize, label: '40×25mm', sub: 'Compact Tag' },
+            ].map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setSelectedSize(s.id)}
+                className={`py-2 px-2 rounded-xl text-center border transition-all cursor-pointer ${
+                  selectedSize === s.id
+                    ? 'border-primary bg-primary/10 text-primary shadow-xs'
+                    : 'border-divider/40 bg-content1 hover:bg-content2 text-default-600'
+                }`}
+              >
+                <span className="block text-xs font-bold leading-tight">{s.label}</span>
+                <span className="block text-[8.5px] opacity-75 leading-tight mt-0.5">{s.sub}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Visual barcode layout */}
         <div className="flex flex-col items-center justify-center space-y-2 py-2 bg-content1 rounded-2xl border border-divider/20 p-4">
           <span className="text-[10px] font-black uppercase tracking-widest text-default-500 flex items-center gap-1.5">
@@ -154,7 +191,7 @@ export const BarcodeModal: React.FC<BarcodeModalProps> = React.memo(({
           </HeroButton>
           <HeroButton
             type="button"
-            onClick={onSimulatePrint}
+            onClick={() => onSimulatePrint(selectedSize)}
             isLoading={printingCode}
             color="primary"
             variant="solid"

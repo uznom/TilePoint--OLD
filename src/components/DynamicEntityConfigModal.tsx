@@ -530,7 +530,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
         </div>
 
         {/* Tab Content Body */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-6">
+        <div className="p-6 overflow-y-auto flex-1 space-y-6 scrollbar modal__body--scroll-inside">
           {/* TAB 1: PRODUCT CATEGORIES */}
           {activeTab === 'categories' && (
             <div className="space-y-5">

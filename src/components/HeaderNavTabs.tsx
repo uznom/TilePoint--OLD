@@ -205,7 +205,8 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
     if (!el) return;
     const activeBtn = el.querySelector('[data-active="true"]') as HTMLElement | null;
     if (activeBtn) {
-      activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      const targetScroll = activeBtn.offsetLeft - el.clientWidth / 2 + activeBtn.clientWidth / 2;
+      el.scrollTo({ left: Math.max(0, targetScroll), behavior: 'smooth' });
     }
     checkScroll();
   }, [activeTab]);
@@ -249,7 +250,8 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
   }
 
   return (
-    <div className="relative flex items-center w-full select-none shrink-0 group/nav">
+    <div className="px-3 sm:px-4 md:px-6 pt-2 pb-0 shrink-0 bg-background/50">
+      <div className="relative flex items-center w-full select-none shrink-0 group/nav">
       {/* Left scroll chevron */}
       {showLeftArrow && (
         <button
@@ -361,6 +363,7 @@ export const HeaderNavTabs: React.FC<HeaderNavTabsProps> = ({
           <ChevronRight className="h-4 w-4" />
         </button>
       )}
+    </div>
     </div>
   );
 };

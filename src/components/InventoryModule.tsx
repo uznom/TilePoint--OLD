@@ -1373,160 +1373,162 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
  setShowCodesModal(true);
  };
 
- const handleSimulatePrint = () => {
- if (!codesProduct) return;
- setPrintingCode(true);
+  const handleSimulatePrint = (labelSize: '50x30' | '100x60' | '40x25' = '50x30') => {
+    if (!codesProduct) return;
+    setPrintingCode(true);
 
- const isTile = (codesProduct.category || '').toLowerCase().includes('tile');
- const dimLabel = isTile ? 'DIMENSION' : 'SPEC/SIZE';
- const dimVal = codesProduct.size || (isTile ? 'N/A' : 'Standard');
- const qtyLabel = isTile ? 'BOX QTY' : 'PACK QTY';
- const qtyVal = isTile
- ? `${codesProduct.boxQuantity || 1} tiles/box`
- : `${codesProduct.boxQuantity || 1} ${codesProduct.unit || 'pcs'}`;
+    const isTile = (codesProduct.category || '').toLowerCase().includes('tile');
+    const dimLabel = isTile ? 'DIM' : 'SPEC';
+    const dimVal = codesProduct.size || (isTile ? 'N/A' : 'Standard');
+    const qtyLabel = isTile ? 'BOX QTY' : 'PACK';
+    const qtyVal = isTile
+      ? `${codesProduct.boxQuantity || 1} tiles/box`
+      : `${codesProduct.boxQuantity || 1} ${codesProduct.unit || 'pcs'}`;
 
- const printHtmlContents = `
- <html>
- <head>
- <title>Label Print - ${codesProduct.sku}</title>
- <style>
- @page {
- size: 4in 2.5in;
- margin: 0;
- }
- body {
- font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
- margin: 0;
- padding: 10px;
- background: #ffffff;
- color: #000000;
- width: 4in;
- height: 2.5in;
- box-sizing: border-box;
- display: flex;
- flex-direction: column;
- justify-content: space-between;
- -webkit-print-color-adjust: exact;
- print-color-adjust: exact;
- }
- .header {
- border-bottom: 2px solid #000;
- padding-bottom: 3px;
- margin-bottom: 4px;
- display: flex;
- justify-content: space-between;
- align-items: center;
- }
- .logo {
- font-weight: 900;
- font-size: 13px;
- letter-spacing: 1px;
- }
- .category {
- font-size: 8px;
- text-transform: uppercase;
- background: #000;
- color: #fff;
- padding: 1px 4px;
- font-weight: bold;
- }
- .details {
- font-size: 11px;
- font-weight: 800;
- line-height: 1.2;
- margin-bottom: 2px;
- display: -webkit-box;
- -webkit-line-clamp: 2;
- -webkit-box-orient: vertical;
- overflow: hidden;
- }
- .brand-desc {
- font-size: 8px;
- color: #333;
- margin-bottom: 4px;
- text-transform: uppercase;
- font-weight: 600;
- }
- .meta-grid {
- display: grid;
- grid-template-cols: 1fr 1fr;
- gap: 2px 8px;
- font-size: 9px;
- margin-bottom: 6px;
- border-top: 1px dashed #777;
- border-bottom: 1px dashed #777;
- padding: 3px 0;
- }
- .meta-item strong {
- font-weight: 900;
- }
- .codes-area {
- display: flex;
- justify-content: space-between;
- align-items: center;
- gap: 4px;
- }
- .barcode-section {
- flex: 1;
- display: flex;
- flex-direction: column;
- align-items: center;
- }
- .barcode-lines {
- display: flex;
- gap: 1px;
- height: 32px;
- align-items: flex-end;
- margin-bottom: 2px;
- }
- .line {
- background: #000;
- height: 100%;
- }
- .barcode-text {
- font-family: monospace;
- font-size: 8.5px;
- letter-spacing: 1.5px;
- font-weight: bold;
- }
- </style>
- </head>
- <body>
- <div>
- <div class="header">
- <span class="logo">TILEPOINT</span>
- <span class="category">${codesProduct.category || 'TILE'}</span>
- </div>
- <div class="details">${codesProduct.productName}</div>
- <div class="brand-desc">Brand: ${codesProduct.brand || 'Unbranded'} • Design: ${codesProduct.designName || 'N/A'}</div>
- 
- <div class="meta-grid">
- <div class="meta-item">SKU: <strong>${codesProduct.sku}</strong></div>
- <div class="meta-item">${dimLabel}: <strong>${dimVal}</strong></div>
- <div class="meta-item">CODE: <strong>${codesProduct.productCode}</strong></div>
- <div class="meta-item">${qtyLabel}: <strong>${qtyVal}</strong></div>
- </div>
- </div>
+    const sizeConfig = {
+      '50x30': { width: '50mm', height: '30mm', barH: 26, fontSize: '8px', titleSize: '9.5px', brandH: '7.5px' },
+      '100x60': { width: '100mm', height: '60mm', barH: 42, fontSize: '11px', titleSize: '13px', brandH: '9px' },
+      '40x25': { width: '40mm', height: '25mm', barH: 20, fontSize: '7.5px', titleSize: '8.5px', brandH: '7px' },
+    }[labelSize] || { width: '50mm', height: '30mm', barH: 26, fontSize: '8px', titleSize: '9.5px', brandH: '7.5px' };
 
- <div class="codes-area">
- <div class="barcode-section">
- <div style="width: 100%; max-width: 180px; height: 34px;">
- ${generateCode128SvgHtml(codesProduct.barcode, 34)}
- </div>
- <div class="barcode-text">${codesProduct.barcode}</div>
- </div>
- </div>
+    const printHtmlContents = `
+    <html>
+      <head>
+        <title>Label Print - ${codesProduct.sku}</title>
+        <style>
+          @page {
+            size: ${sizeConfig.width} ${sizeConfig.height};
+            margin: 0;
+          }
+          * {
+            box-sizing: border-box;
+          }
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 1.5mm 2mm;
+            background: #ffffff;
+            color: #000000;
+            width: ${sizeConfig.width};
+            height: ${sizeConfig.height};
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .header {
+            border-bottom: 1.5px solid #000;
+            padding-bottom: 2px;
+            margin-bottom: 2px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          .logo {
+            font-weight: 900;
+            font-size: ${sizeConfig.titleSize};
+            letter-spacing: 0.5px;
+          }
+          .category {
+            font-size: ${sizeConfig.brandH};
+            text-transform: uppercase;
+            background: #000;
+            color: #fff;
+            padding: 1px 3px;
+            font-weight: bold;
+            border-radius: 2px;
+          }
+          .details {
+            font-size: ${sizeConfig.fontSize};
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          .brand-desc {
+            font-size: ${sizeConfig.brandH};
+            color: #333;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px 4px;
+            font-size: ${sizeConfig.brandH};
+            border-top: 1px dashed #666;
+            border-bottom: 1px dashed #666;
+            padding: 1.5px 0;
+            margin-bottom: 2px;
+          }
+          .meta-item strong {
+            font-weight: 900;
+          }
+          .barcode-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+          }
+          .barcode-svg-wrap {
+            width: 100%;
+            height: ${sizeConfig.barH}px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .barcode-text {
+            font-family: monospace;
+            font-size: ${sizeConfig.brandH};
+            letter-spacing: 1px;
+            font-weight: 900;
+            margin-top: 1px;
+          }
+        </style>
+      </head>
+      <body>
+        <div>
+          <div class="header">
+            <span class="logo">TILEPOINT</span>
+            <span class="category">${codesProduct.category || 'TILE'}</span>
+          </div>
+          <div class="details">${codesProduct.productName}</div>
+          <div class="brand-desc">Brand: ${codesProduct.brand || 'TilePoint'} • ${dimLabel}: ${dimVal}</div>
+          
+          <div class="meta-grid">
+            <div class="meta-item">SKU: <strong>${codesProduct.sku}</strong></div>
+            <div class="meta-item">CODE: <strong>${codesProduct.productCode}</strong></div>
+            <div class="meta-item">${qtyLabel}: <strong>${qtyVal}</strong></div>
+            <div class="meta-item">PRICE: <strong>₱${Number(codesProduct.sellingPrice || 0).toLocaleString()}</strong></div>
+          </div>
+        </div>
 
- <script>
- window.onload = function() {
- window.focus();
- window.print();
- setTimeout(function() { window.close(); }, 800);
- }
- </script>
- </body>
- </html>
- `;
+        <div class="barcode-section">
+          <div class="barcode-svg-wrap">
+            ${generateCode128SvgHtml(codesProduct.barcode, sizeConfig.barH)}
+          </div>
+          <div class="barcode-text">${codesProduct.barcode}</div>
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.focus();
+            window.print();
+            setTimeout(function() { window.close(); }, 800);
+          }
+        </script>
+      </body>
+    </html>
+    `;
 
  let popupOpened = false;
  try {

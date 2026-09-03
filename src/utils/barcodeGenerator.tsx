@@ -182,10 +182,11 @@ export function getCode128Modules(rawCode: string | undefined | null): boolean[]
 export function generateCode128SvgHtml(rawCode: string | undefined | null, height: number = 36): string {
   const code = (rawCode || "").trim() || "4801000000000";
   const modules = getCode128Modules(code);
-  const totalWidth = modules.length;
+  const quietZone = 10;
+  const totalWidth = modules.length + quietZone * 2;
 
   let rects = "";
-  let currentX = 0;
+  let currentX = quietZone;
 
   for (let i = 0; i < modules.length; i++) {
     if (modules[i]) {
@@ -194,14 +195,14 @@ export function generateCode128SvgHtml(rawCode: string | undefined | null, heigh
         barWidth++;
         i++;
       }
-      rects += `<rect x="${currentX}" y="0" width="${barWidth}" height="${height}" fill="#000000" />`;
+      rects += `<rect x="${currentX}" y="0" width="${barWidth}" height="${height}" fill="#000000" shape-rendering="crispEdges" />`;
       currentX += barWidth;
     } else {
       currentX += 1;
     }
   }
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${height}" preserveAspectRatio="none" style="width:100%;height:${height}px;display:block;">${rects}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${height}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:${height}px;display:block;">${rects}</svg>`;
 }
 
 interface StyledBarcodeProps {
@@ -216,10 +217,11 @@ interface StyledBarcodeProps {
 export const StyledBarcode: React.FC<StyledBarcodeProps> = ({ code, height = 44, showText = true }) => {
   const displayCode = (code || "").trim() || "N/A";
   const modules = getCode128Modules(displayCode);
-  const totalWidth = modules.length;
+  const quietZone = 10;
+  const totalWidth = modules.length + quietZone * 2;
 
   const rects: React.ReactNode[] = [];
-  let currentX = 0;
+  let currentX = quietZone;
 
   for (let i = 0; i < modules.length; i++) {
     if (modules[i]) {
@@ -236,6 +238,7 @@ export const StyledBarcode: React.FC<StyledBarcodeProps> = ({ code, height = 44,
           width={barWidth}
           height={height}
           fill="currentColor"
+          shapeRendering="crispEdges"
         />
       );
       currentX += barWidth;
@@ -249,7 +252,7 @@ export const StyledBarcode: React.FC<StyledBarcodeProps> = ({ code, height = 44,
       <div className="w-full max-w-[220px] text-zinc-950 dark:text-zinc-50 flex items-center justify-center overflow-hidden">
         <svg
           viewBox={`0 0 ${totalWidth} ${height}`}
-          preserveAspectRatio="none"
+          preserveAspectRatio="xMidYMid meet"
           className="w-full h-11"
         >
           {rects}

@@ -24,8 +24,7 @@ TrendingUp,
 Upload,
 UserCheck,
 UserPlus,
-Users,
-X
+Users
 } from 'lucide-react';
 import { AnimatePresence,motion } from 'motion/react';
 import React,{ useEffect,useState } from 'react';
@@ -1585,9 +1584,6 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
  <Building2 className="h-5 w-5" />
  <span>{isEditMode ? 'Modify Branch Records' : 'Launch New Store Location'}</span>
  </h3>
- <button type="button" onClick={() => setShowModal(false)} className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full hover:bg-default-100 active:scale-95">
- <X className="h-5 w-5" />
- </button>
  </div>
 
  {/* Custom Branch ID and Brand Logo fields */}
@@ -2095,13 +2091,6 @@ export const BranchModule: React.FC<BranchModuleProps> = ({ darkMode: _darkMode 
             <UserPlus className="h-5 w-5" />
             <span>Enlist New Employee</span>
           </h3>
-          <button
-            type="button"
-            onClick={() => setShowEnlistModal(false)}
-            className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full hover:bg-default-100 active:scale-95"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
 
         <div className="space-y-1 relative">

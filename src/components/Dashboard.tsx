@@ -509,8 +509,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
     return Object.entries(catMap)
       .map(([name, data]) => ({ name, ...data }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 6);
+      .sort((a, b) => b.value - a.value);
   }, [products]);
 
   // Filtered products for Quick Stock Lookup Modal
@@ -1151,11 +1150,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               </HeroButton>
             </div>
 
-            <div className="space-y-3.5">
+            <div className="space-y-3.5 max-h-[380px] overflow-y-auto pr-2 scrollbar modal__body--scroll-inside">
               {categoryBreakdown.map((cat, idx) => {
                 const percent = totalInventoryValuation > 0
                   ? Math.min(100, Math.round((cat.value / totalInventoryValuation) * 100))
                   : 20;
+
+                const colorClasses = [
+                  'bg-primary',
+                  'bg-sky-500',
+                  'bg-emerald-500',
+                  'bg-amber-500',
+                  'bg-purple-500',
+                  'bg-rose-500',
+                  'bg-cyan-500',
+                  'bg-indigo-500',
+                  'bg-teal-500',
+                  'bg-orange-500',
+                ];
+                const catColor = colorClasses[idx % colorClasses.length];
 
                 return (
                   <div key={idx} className="space-y-1">
@@ -1167,17 +1180,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     </div>
                     <div className="w-full h-2 rounded-full bg-default-100 overflow-hidden">
                       <div
-                        className={`h-full rounded-full ${
-                          idx === 0
-                            ? 'bg-primary'
-                            : idx === 1
-                            ? 'bg-sky-500'
-                            : idx === 2
-                            ? 'bg-emerald-500'
-                            : idx === 3
-                            ? 'bg-amber-500'
-                            : 'bg-indigo-500'
-                        }`}
+                        className={`h-full rounded-full ${catColor}`}
                         style={{ width: `${Math.max(5, percent)}%` }}
                       />
                     </div>
@@ -1326,7 +1329,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 <h4 className="font-bold text-default-600 text-xs uppercase tracking-wider">Line Items</h4>
                 <div className="rounded-xl border border-divider/20 overflow-hidden">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-default-100/60 text-default-500 font-semibold text-[10px] uppercase">
+                    <thead className="text-default-500 font-semibold text-[10px] uppercase border-b border-divider/20">
                       <tr>
                         <th className="py-2 px-3">Product Name</th>
                         <th className="py-2 px-3 text-center">Qty</th>

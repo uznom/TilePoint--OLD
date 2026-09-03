@@ -10,6 +10,7 @@ import {
   Boxes,
   LayoutDashboard,
   Clock,
+  Menu,
   LucideIcon
 } from "lucide-react";
 
@@ -36,6 +37,7 @@ interface NavItem {
 export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   activeTab,
   changeTab,
+  onOpenMobileMenu,
   cartCount = 0,
   hasInventoryAlert = false,
   hasSaleAlert = false
@@ -75,6 +77,13 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       icon: Clock,
       isActive: (tab) => tab === "shift" || tab === "users" || tab === "daily-reconciliation",
       action: () => changeTab("shift")
+    },
+    {
+      id: "menu",
+      label: "More",
+      icon: Menu,
+      isActive: () => false,
+      action: () => onOpenMobileMenu?.()
     }
   ];
 

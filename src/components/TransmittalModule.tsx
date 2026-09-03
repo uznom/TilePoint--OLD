@@ -20,7 +20,6 @@ import {
  Upload,
  CheckSquare,
  Plus,
- X,
  FileCheck,
  Printer,
 } from "lucide-react";
@@ -1352,13 +1351,6 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <Send className="h-4.5 w-4.5" />
  <span>Dispatch Form Package</span>
  </h3>
- <button
- type="button"
- onClick={() => setShowModal(false)}
- className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full active:scale-95"
- >
- <X className="h-5 w-5" />
- </button>
  </div>
 
  <div className="space-y-1 relative">
@@ -1464,12 +1456,6 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  Transmittal Slip Details
  </span>
  </h3>
- <button
- onClick={() => setActiveTrans(null)}
- className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full active:scale-95"
- >
- <X className="h-5 w-5" />
- </button>
  </div>
 
  {/* Modal Navigation Tabs */}
@@ -1823,13 +1809,6 @@ export const TransmittalModule: React.FC<TransmittalModuleProps> = ({
  <h3 className="text-base font-bold text-primary flex items-center gap-2">
  <Upload className="h-5 w-5" /> Import JSON Slip
  </h3>
- <button
- type="button"
- onClick={() => setShowImportModal(false)}
- className="text-default-500 hover:text-foreground cursor-pointer p-1 rounded-full active:scale-95"
- >
- <X className="h-5 w-5" />
- </button>
  </div>
 
  <div className="space-y-1">

@@ -1,6 +1,11 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { ShieldCheck, AlertCircle, Info, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 export type ToastPosition = 
   | 'top-right' 
@@ -18,6 +23,9 @@ export interface ToastNotificationProps {
   icon?: React.ReactNode;
 }
 
+/**
+ * ToastNotification Component (1:1 with HeroUI v3 Toast)
+ */
 export const ToastNotification: React.FC<ToastNotificationProps> = ({
   message,
   type = 'success',
@@ -31,47 +39,47 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({
     switch (type) {
       case 'error':
         return {
-          icon: <AlertCircle className="h-4.5 w-4.5 text-danger" />,
-          badgeBg: 'bg-danger/15 text-danger border-danger/25',
-          accentBorder: 'border-danger/30'
+          icon: <AlertCircle className="h-4 w-4 text-rose-500" />,
+          indicatorBg: 'bg-rose-500/10 text-rose-500 border border-rose-500/20',
+          titleColor: 'text-foreground'
         };
       case 'warning':
         return {
-          icon: <AlertCircle className="h-4.5 w-4.5 text-warning" />,
-          badgeBg: 'bg-warning/15 text-warning border-warning/25',
-          accentBorder: 'border-warning/30'
+          icon: <AlertTriangle className="h-4 w-4 text-amber-500" />,
+          indicatorBg: 'bg-amber-500/10 text-amber-500 border border-amber-500/20',
+          titleColor: 'text-foreground'
         };
       case 'info':
         return {
-          icon: <Info className="h-4.5 w-4.5 text-primary" />,
-          badgeBg: 'bg-primary/15 text-primary border-primary/25',
-          accentBorder: 'border-primary/30'
+          icon: <Info className="h-4 w-4 text-primary" />,
+          indicatorBg: 'bg-primary/10 text-primary border border-primary/20',
+          titleColor: 'text-foreground'
         };
       case 'success':
       default:
         return {
-          icon: <ShieldCheck className="h-4.5 w-4.5 text-secondary" />,
-          badgeBg: 'bg-secondary/15 text-secondary border-secondary/25',
-          accentBorder: 'border-secondary/30'
+          icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
+          indicatorBg: 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20',
+          titleColor: 'text-foreground'
         };
     }
   };
 
-  const getPositionClasses = (pos: ToastPosition) => {
+  const getRegionClass = (pos: ToastPosition) => {
     switch (pos) {
       case 'top-left':
-        return 'top-0 left-0 items-start';
+        return 'toast-region--top-start';
       case 'top-center':
-        return 'top-0 left-1/2 -translate-x-1/2 items-center';
+        return 'toast-region--top-center';
       case 'bottom-left':
-        return 'bottom-0 left-0 items-start';
+        return 'toast-region--bottom-start';
       case 'bottom-center':
-        return 'bottom-0 left-1/2 -translate-x-1/2 items-center';
+        return 'toast-region--bottom-center';
       case 'bottom-right':
-        return 'bottom-0 right-0 items-end';
+        return 'toast-region--bottom-end';
       case 'top-right':
       default:
-        return 'top-0 right-0 items-end';
+        return 'toast-region--top-end';
     }
   };
 
@@ -81,36 +89,39 @@ export const ToastNotification: React.FC<ToastNotificationProps> = ({
     <div 
       role="region" 
       aria-label="Notification Center"
-      className="fixed inset-0 pointer-events-none z-[999999] overflow-hidden"
+      className={`toast-region ${getRegionClass(position)}`}
     >
-      <div className={`absolute p-4 sm:p-6 flex flex-col pointer-events-none max-w-full ${getPositionClasses(position)}`}>
-        <div 
-          role="status" 
-          aria-live="polite" 
-          className="pointer-events-auto bg-content1/95 text-foreground backdrop-blur-xl border border-divider/50 shadow-2xl rounded-large p-3.5 sm:p-4 flex items-center justify-between gap-3 max-w-sm sm:max-w-md w-auto min-w-[280px] transition-all animate-fade-in ring-1 ring-black/5 dark:ring-white/5"
-        >
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className={`h-9 w-9 rounded-medium flex items-center justify-center shrink-0 border ${style.badgeBg} shadow-sm`}>
-              {icon || style.icon}
-            </div>
-            <span className="text-foreground text-xs md:text-sm font-semibold leading-snug break-words">
-              {message}
-            </span>
-          </div>
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close notification"
-              className="text-default-400 hover:text-foreground p-1.5 rounded-medium hover:bg-default/10 transition-colors shrink-0 cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+      <div 
+        role="status" 
+        aria-live="polite" 
+        data-slot="toast"
+        className="toast animate-in fade-in-0 zoom-in-95 duration-200"
+      >
+        <div data-slot="indicator" className={`toast__indicator ${style.indicatorBg}`}>
+          {icon || style.icon}
         </div>
+
+        <div data-slot="content" className="toast__content font-sans">
+          <span data-slot="title" className={`toast__title ${style.titleColor}`}>
+            {message}
+          </span>
+        </div>
+
+        {onClose && (
+          <button
+            type="button"
+            data-slot="close-button"
+            onClick={onClose}
+            aria-label="Close notification"
+            className="toast__close-button"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
     </div>,
     document.body
   );
 };
 
+export default ToastNotification;

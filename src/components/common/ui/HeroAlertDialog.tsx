@@ -96,7 +96,7 @@ export const AlertDialog: React.FC<AlertDialogProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className={`alert-dialog__dialog relative w-full max-w-md bg-content1 rounded-2xl shadow-2xl border border-divider/40 overflow-hidden z-10 p-6 flex flex-col gap-4 ${className}`}
+            className={`alert-dialog__dialog relative w-full max-w-md bg-content1 rounded-2xl shadow-2xl border border-divider/40 overflow-hidden z-10 p-6 flex flex-col gap-4 max-h-[90vh] overflow-y-auto scrollbar modal__body--scroll-inside ${className}`}
           >
             <div className="flex items-start gap-4">
               <div data-slot="icon" className="shrink-0 p-2.5 rounded-full bg-default-100 dark:bg-default-50/10">

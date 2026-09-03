@@ -1313,7 +1313,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
     {/* CENTRAL REGISTRY TABLE */}
     <div className="border border-zinc-200/70 dark:border-white/10 rounded-2xl overflow-hidden bg-white dark:bg-zinc-900">
       <table className="w-full border-collapse text-left text-xs">
-        <thead className="bg-zinc-100/50 dark:bg-zinc-800/50 text-[10px] uppercase tracking-wider font-bold text-default-500 border-b border-divider/15 font-mono">
+        <thead className="text-[10px] uppercase tracking-wider font-bold text-default-500 border-b border-divider/15 font-mono">
           <tr>
             <th className="py-3 px-4">Report ID</th>
             <th className="py-3 px-3">Branch</th>
@@ -2023,7 +2023,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
 
  <div className="border border-divider/15 rounded-2xl overflow-hidden bg-background">
  <table className="w-full text-left text-[11px] border-collapse">
- <thead className="bg-content1 text-[9px] uppercase tracking-wider text-default-500 dark:text-default-500 border-b border-divider/15">
+ <thead className="text-[9px] uppercase tracking-wider text-default-500 dark:text-default-500 border-b border-divider/15">
  <tr>
  <th className="py-2.5 px-3">TILE SPECIFICATION</th>
  <th className="py-2.5 px-3 text-right">UNIT PRICE</th>
@@ -2581,7 +2581,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  </h4>
  <div className="border border-divider/40 rounded-xl overflow-hidden">
  <table className="w-full text-left text-[11px] border-collapse">
- <thead className="bg-content2 text-default-700 text-[9px] uppercase tracking-wider border-b border-divider/40">
+ <thead className="text-default-700 text-[9px] uppercase tracking-wider border-b border-divider/40">
  <tr>
  <th className="py-2.5 px-3">INVOICE NUMBER</th>
  <th className="py-2.5 px-3">CUSTOMER NAME</th>

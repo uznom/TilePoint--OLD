@@ -1457,12 +1457,6 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  <p className="text-[10px] text-default-500 font-medium">Ready for warehouse dispatch & customer sign-off</p>
  </div>
  </div>
- <button
- onClick={() => setShowDeliveryReceiptModal(false)}
- className="p-1.5 rounded-full hover:bg-default-100 text-default-500 cursor-pointer active:scale-95"
- >
- <X className="h-5 w-5" />
- </button>
  </div>
 
  
@@ -1521,12 +1515,6 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
               Select an existing POS transaction invoice to dispatch via Freight Cargo
             </p>
           </div>
-          <button
-            onClick={() => setShowSchedulePosModal(false)}
-            className="p-1 rounded-full hover:bg-default-100 text-default-500 cursor-pointer active:scale-95"
-          >
-            <X className="h-5 w-5" />
-          </button>
         </div>
 
         <form onSubmit={handleSchedulePosDeliverySubmit} className="space-y-4">

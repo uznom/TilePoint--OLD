@@ -74,7 +74,7 @@ export interface HeroTableProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export const HeroTable = ({
-  variant = 'primary',
+  variant = 'secondary',
   isStriped = false,
   isCompact = false,
   sortDescriptor,

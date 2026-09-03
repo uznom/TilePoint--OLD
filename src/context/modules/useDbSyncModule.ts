@@ -222,12 +222,16 @@ export function useDbSyncModule({
   const [outboxItems, setOutboxItems] = useState(() => transactionOutboxService.getItems());
 
   useEffect(() => {
+    transactionOutboxService.initialize(
+      (url, init) => fetch(url, init),
+      getAuthHeaders
+    );
     const unsub = transactionOutboxService.subscribe((stats, items) => {
       setOutboxStats(stats);
       setOutboxItems(items);
     });
     return () => unsub();
-  }, []);
+  }, [getAuthHeaders]);
 
 
   const [isSystemProcessing, setIsSystemProcessing] = useState<boolean>(false);

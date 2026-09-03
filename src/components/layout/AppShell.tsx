@@ -8,7 +8,6 @@ import { AnimatePresence, motion } from 'motion/react';
 import { ChevronRight } from 'lucide-react';
 import { User, Branch } from '../../types/db';
 import { Sidebar, SidebarCategoryItem } from '../Sidebar';
-import { AppHeader } from './AppHeader';
 import { HeaderNavTabs } from '../HeaderNavTabs';
 import { AppAlertBanners, AppAlertBannersProps } from './AppAlertBanners';
 import { MobileBottomNav } from '../MobileBottomNav';
@@ -131,47 +130,23 @@ export const AppShell: React.FC<AppShellProps> = ({
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/[0.04] dark:bg-primary/[0.07] rounded-full blur-[140px] pointer-events-none -z-0 translate-x-1/3 -translate-y-1/3" />
           <div className="absolute bottom-0 left-0 w-[450px] h-[450px] bg-secondary/[0.03] dark:bg-purple-600/[0.05] rounded-full blur-[130px] pointer-events-none -z-0 -translate-x-1/3 translate-y-1/3" />
 
-          {/* UNIFIED TOP APP HEADER */}
-          <AppHeader
+          {/* DOCKED SUB-NAVIGATION TABS (Only rendered if the active module has multiple sub-tabs) */}
+          <HeaderNavTabs
             activeTab={activeTab}
-            onNavigate={onChangeTab}
+            onChangeTab={onChangeTab}
             currentUser={currentUser}
-            branches={branches}
-            selectedBranchId={selectedBranchId}
-            onSelectBranch={onSelectBranch}
-            getBranchName={getBranchName}
+            parkedSalesCount={parkedSalesCount}
+            pendingDeliveriesCount={pendingDeliveriesCount}
+            pendingTransfersCount={pendingTransfersCount}
             categories={categories}
-            isSidebarExpanded={isSidebarExpanded}
-            onToggleSidebar={() => setIsSidebarExpanded(!isSidebarExpanded)}
-            onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
-            onOpenQuickSwitcher={onOpenQuickSwitcher}
-            onOpenKeyboardShortcuts={onOpenKeyboardShortcuts}
-            darkMode={darkMode}
-            onToggleDarkMode={() => onToggleDarkMode(!darkMode)}
-            onOpenProfileModal={onOpenAccountSettings}
-            serverDegradedState={alertBannersProps.serverDegradedState}
-            onRefreshServerStatus={alertBannersProps.refreshServerStatus}
           />
-
-          {/* DOCKED SUB-NAVIGATION TABS */}
-          <div className="px-3 sm:px-4 md:px-6 pt-2 pb-0 shrink-0 bg-background/50">
-            <HeaderNavTabs
-              activeTab={activeTab}
-              onChangeTab={onChangeTab}
-              currentUser={currentUser}
-              parkedSalesCount={parkedSalesCount}
-              pendingDeliveriesCount={pendingDeliveriesCount}
-              pendingTransfersCount={pendingTransfersCount}
-              categories={categories}
-            />
-          </div>
 
           {/* MODULE VIEWPORT CANVAS */}
           <main
             className={`flex-1 relative flex flex-col text-foreground transition-all duration-200 overflow-x-hidden min-h-0 ${
               activeTab === 'pos' || activeTab === 'ledger'
-                ? 'p-2 sm:p-3 md:p-4 pb-20 md:pb-4 overflow-y-auto lg:overflow-hidden h-full max-h-full'
-                : 'p-2.5 sm:p-4 md:p-6 pb-20 md:pb-6 overflow-y-auto scroll-smooth mobile-scroll-container'
+                ? 'p-1.5 sm:p-2.5 md:p-3 pb-16 md:pb-2 overflow-y-auto lg:overflow-hidden h-full max-h-full'
+                : 'p-3 sm:p-5 md:p-6 pb-20 md:pb-6 overflow-y-auto scroll-smooth mobile-scroll-container'
             }`}
           >
             <div className="flex-1 min-h-0 flex flex-col">
@@ -183,7 +158,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
                   style={{ willChange: 'transform, opacity' }}
-                  className="h-full flex flex-col min-h-0"
+                  className="h-full w-full flex flex-col min-h-0 overflow-x-hidden"
                 >
                   {children}
                 </motion.div>

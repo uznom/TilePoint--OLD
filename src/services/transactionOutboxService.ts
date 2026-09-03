@@ -84,17 +84,18 @@ class TransactionOutboxService {
   private items: OutboxRecord[] = [];
   private isProcessing = false;
   private subscribers: Set<(stats: OutboxStats, items: OutboxRecord[]) => void> = new Set();
-  private fetchFn: ((url: string, init?: RequestInit) => Promise<Response>) | null = null;
+  private fetchFn: ((url: string, init?: RequestInit) => Promise<Response>) | null =
+    typeof window !== 'undefined' ? window.fetch.bind(window) : null;
   private authHeadersFn: (() => Record<string, string>) | null = null;
   private flushTimer: any = null;
-  private isInitialized = false;
+  private isInitialized = typeof window !== 'undefined';
 
   constructor() {
     this.loadFromStorage();
-      }
+  }
 
   public get isReady(): boolean {
-    return this.isInitialized;
+    return this.isInitialized || !!this.fetchFn;
   }
 
   /**
@@ -196,14 +197,26 @@ class TransactionOutboxService {
     }
 
     if (!this.fetchFn) {
-      console.warn('[Outbox Service] Cannot flush - fetch client not initialized yet.');
-      return { successCount: 0, failCount: 0 };
+      if (typeof window !== 'undefined') {
+        this.fetchFn = window.fetch.bind(window);
+      } else {
+        console.warn('[Outbox Service] Cannot flush - fetch client not initialized yet.');
+        return { successCount: 0, failCount: 0 };
+      }
     }
 
-    const authHeaders = this.authHeadersFn ? this.authHeadersFn() : {};
+    let authHeaders = this.authHeadersFn ? this.authHeadersFn() : {};
     if (!authHeaders.Authorization && !authHeaders.authorization) {
-      console.log('[Outbox Service] Skipping flush - user is currently logged out.');
-      return { successCount: 0, failCount: 0 };
+      if (typeof window !== 'undefined') {
+        const token = sessionStorage.getItem("tp_session_token") || localStorage.getItem("tp_session_token");
+        if (token) {
+          authHeaders = {
+            ...authHeaders,
+            'Authorization': `Bearer ${token}`,
+            'x-session-token': token,
+          };
+        }
+      }
     }
 
     const pending = this.items

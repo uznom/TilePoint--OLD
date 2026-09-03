@@ -1260,12 +1260,12 @@ html.dark [data-slot="select-listbox"] {
 }
 
 .table-root--primary {
-  background-color: var(--color-surface-secondary, #f4f4f5);
-  padding: 4px;
-  border-radius: 20px;
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
 }
 :where(.dark, .dark *) .table-root--primary {
-  background-color: var(--color-surface-secondary, #27272a);
+  background-color: transparent;
 }
 
 .table-root--secondary {
@@ -1491,4 +1491,941 @@ html.dark [data-slot="select-listbox"] {
   padding: 10px 16px;
   font-size: 0.8125rem;
 }
+
+/* ==========================================================================
+   HeroUI v3 Scrolling Sliders & Custom Scrollbars
+   ========================================================================== */
+
+/* Universal Scrollbar Utility */
+.scrollbar,
+.modal__body,
+.modal-body,
+[data-slot="body"],
+.modal__dialog--scroll-inside .modal__body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(150, 150, 150, 0.35) transparent;
+  scrollbar-gutter: stable;
+}
+
+:where(.dark, .dark *) .scrollbar,
+:where(.dark, .dark *) .modal__body,
+:where(.dark, .dark *) .modal-body,
+:where(.dark, .dark *) [data-slot="body"] {
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+/* WebKit Custom Scrollbar (Chrome, Edge, Safari, Opera) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(150, 150, 150, 0.3);
+  border-radius: 9999px;
+  transition: background-color 150ms ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(150, 150, 150, 0.55);
+}
+
+:where(.dark, .dark *) ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+:where(.dark, .dark *) ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* Modal Body Dedicated Scrolling Slider */
+.modal__body--scroll-inside {
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal__body::-webkit-scrollbar,
+.modal-body::-webkit-scrollbar,
+[data-slot="body"]::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.modal__body::-webkit-scrollbar-track,
+.modal-body::-webkit-scrollbar-track,
+[data-slot="body"]::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 6px 0;
+}
+
+.modal__body::-webkit-scrollbar-thumb,
+.modal-body::-webkit-scrollbar-thumb,
+[data-slot="body"]::-webkit-scrollbar-thumb {
+  background: rgba(150, 150, 150, 0.35);
+  border-radius: 9999px;
+}
+
+.modal__body::-webkit-scrollbar-thumb:hover,
+.modal-body::-webkit-scrollbar-thumb:hover,
+[data-slot="body"]::-webkit-scrollbar-thumb:hover {
+  background: rgba(150, 150, 150, 0.65);
+}
+
+:where(.dark, .dark *) .modal__body::-webkit-scrollbar-thumb,
+:where(.dark, .dark *) .modal-body::-webkit-scrollbar-thumb,
+:where(.dark, .dark *) [data-slot="body"]::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+:where(.dark, .dark *) .modal__body::-webkit-scrollbar-thumb:hover,
+:where(.dark, .dark *) .modal-body::-webkit-scrollbar-thumb:hover,
+:where(.dark, .dark *) [data-slot="body"]::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.42);
+}
+
+/* ==========================================================================
+   HeroUI v3 Switch (1:1 with heroui/v3 switch.css)
+   ========================================================================== */
+
+.switch {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  --switch-control-bg: var(--color-default-200, #e4e4e7);
+  --switch-control-bg-hover: var(--color-default-300, #d4d4d8);
+  --switch-control-bg-checked: var(--color-primary, #006fee);
+  --switch-control-bg-checked-hover: var(--color-primary-600, #005bc4);
+}
+:where(.dark, .dark *) .switch {
+  --switch-control-bg: var(--color-default-100, #27272a);
+  --switch-control-bg-hover: var(--color-default-200, #3f3f46);
+}
+
+.switch[data-disabled="true"] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.switch__content {
+  position: relative;
+  display: inline-flex;
+  cursor: inherit;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-foreground, #18181b);
+  outline: none;
+  user-select: none;
+}
+:where(.dark, .dark *) .switch__content {
+  color: var(--color-foreground, #f4f4f5);
+}
+
+/* Track */
+.switch__control {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 0.75rem; /* rounded-xl */
+  height: 1.25rem; /* 20px */
+  width: 2.5rem;   /* 40px */
+  background-color: var(--switch-control-bg);
+  transition: background-color 250ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 150ms ease-out;
+}
+
+.switch:hover .switch__control,
+.switch[data-hovered="true"] .switch__control {
+  background-color: var(--switch-control-bg-hover);
+}
+
+.switch[data-selected="true"] .switch__control {
+  background-color: var(--switch-control-bg-checked);
+}
+
+.switch[data-selected="true"]:hover .switch__control,
+.switch[data-selected="true"][data-hovered="true"] .switch__control {
+  background-color: var(--switch-control-bg-checked-hover);
+}
+
+/* Control Sizes */
+.switch--sm .switch__control {
+  height: 1rem;    /* 16px */
+  width: 2rem;     /* 32px */
+  border-radius: 0.5rem; /* rounded-lg */
+}
+
+.switch--md .switch__control {
+  height: 1.25rem; /* 20px */
+  width: 2.5rem;   /* 40px */
+  border-radius: 0.75rem; /* rounded-xl */
+}
+
+.switch--lg .switch__control {
+  height: 1.5rem;  /* 24px */
+  width: 3rem;     /* 48px */
+  border-radius: 0.875rem;
+}
+
+/* Capsule / Pill Thumb (HeroUI v3 1.375 : 1 aspect ratio) */
+.switch__thumb {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 1rem;       /* 16px */
+  width: 1.375rem;    /* 22px */
+  border-radius: 0.5rem; /* rounded-lg */
+  background-color: #ffffff;
+  color: #000000;
+  margin-inline-start: 0.125rem; /* 2px */
+  box-shadow: 0px 0px 5px 0px rgba(0, 0, 0, 0.04), 0px 2px 10px 0px rgba(0, 0, 0, 0.08), 0px 0px 1px 0px rgba(0, 0, 0, 0.3);
+  transition: margin-inline-start 260ms cubic-bezier(0.16, 1, 0.3, 1), background-color 200ms ease-out, box-shadow 200ms ease-out;
+}
+
+/* Thumb checked position */
+.switch[data-selected="true"] .switch__thumb {
+  margin-inline-start: calc(100% - 1.5rem); /* 40px - 22px - 2px */
+  background-color: #ffffff;
+  color: var(--color-primary, #006fee);
+}
+
+/* Small Thumb */
+.switch--sm .switch__thumb {
+  height: 0.75rem;       /* 12px */
+  width: 1.03125rem;     /* 16.5px */
+  border-radius: 0.375rem;
+  margin-inline-start: 0.125rem;
+}
+.switch--sm[data-selected="true"] .switch__thumb {
+  margin-inline-start: calc(100% - 1.15625rem);
+}
+
+/* Large Thumb */
+.switch--lg .switch__thumb {
+  height: 1.25rem;       /* 20px */
+  width: 1.71875rem;     /* 27.5px */
+  border-radius: 0.625rem;
+  margin-inline-start: 0.125rem;
+}
+.switch--lg[data-selected="true"] .switch__thumb {
+  margin-inline-start: calc(100% - 1.84375rem);
+}
+
+.switch__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-foreground, #18181b);
+}
+:where(.dark, .dark *) .switch__label {
+  color: var(--color-foreground, #f4f4f5);
+}
+
+.switch__description {
+  font-size: 0.75rem;
+  color: var(--color-muted, #71717a);
+  margin-inline-start: calc(2.5rem + 0.75rem);
+}
+.switch--sm .switch__description {
+  margin-inline-start: calc(2rem + 0.75rem);
+}
+.switch--lg .switch__description {
+  margin-inline-start: calc(3rem + 0.75rem);
+}
+
+/* Switch Colors */
+.switch--primary {
+  --switch-control-bg-checked: var(--color-primary, #006fee);
+  --switch-control-bg-checked-hover: var(--color-primary-600, #005bc4);
+}
+.switch--secondary {
+  --switch-control-bg-checked: var(--color-secondary, #7828c8);
+  --switch-control-bg-checked-hover: var(--color-secondary-600, #6020a0);
+}
+.switch--success {
+  --switch-control-bg-checked: var(--color-success, #17c964);
+  --switch-control-bg-checked-hover: var(--color-success-600, #12a150);
+}
+.switch--warning {
+  --switch-control-bg-checked: var(--color-warning, #f5a524);
+  --switch-control-bg-checked-hover: var(--color-warning-600, #c4841d);
+}
+.switch--danger {
+  --switch-control-bg-checked: var(--color-danger, #f31260);
+  --switch-control-bg-checked-hover: var(--color-danger-600, #c20e4d);
+}
+
+/* ==========================================================================
+   HeroUI v3 Alert (1:1 with heroui/v3 alert.css)
+   ========================================================================== */
+
+.alert {
+  display: flex;
+  width: 100%;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem;
+  border-radius: min(32px, 1.25rem);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  transition: all 150ms ease-out;
+}
+
+.alert__indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0.125rem;
+  user-select: none;
+}
+
+.alert__content {
+  display: flex;
+  height: 100%;
+  flex-grow: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.alert__title {
+  font-size: 0.875rem;
+  line-height: 1.35rem;
+  font-weight: 600;
+  color: var(--color-foreground, #18181b);
+}
+:where(.dark, .dark *) .alert__title {
+  color: var(--color-foreground, #f4f4f5);
+}
+
+.alert__description {
+  font-size: 0.8125rem;
+  color: var(--color-muted, #71717a);
+  line-height: 1.35;
+}
+:where(.dark, .dark *) .alert__description {
+  color: var(--color-muted, #a1a1aa);
+}
+
+/* Alert Flat Variant */
+.alert--flat.alert--default {
+  background-color: var(--color-default-100, rgba(244, 244, 245, 0.8));
+  border: 1px solid var(--color-divider, rgba(0, 0, 0, 0.08));
+}
+.alert--flat.alert--accent,
+.alert--flat.alert--primary {
+  background-color: rgba(0, 111, 238, 0.08);
+  border: 1px solid rgba(0, 111, 238, 0.2);
+}
+.alert--flat.alert--success {
+  background-color: rgba(23, 201, 100, 0.08);
+  border: 1px solid rgba(23, 201, 100, 0.2);
+}
+.alert--flat.alert--warning {
+  background-color: rgba(245, 165, 36, 0.08);
+  border: 1px solid rgba(245, 165, 36, 0.2);
+}
+.alert--flat.alert--danger {
+  background-color: rgba(243, 18, 96, 0.08);
+  border: 1px solid rgba(243, 18, 96, 0.2);
+}
+
+/* Alert Bordered Variant */
+.alert--bordered {
+  background-color: transparent;
+  border-width: 1px;
+}
+.alert--bordered.alert--default {
+  border-color: var(--color-divider, rgba(0, 0, 0, 0.15));
+}
+.alert--bordered.alert--primary {
+  border-color: var(--color-primary, #006fee);
+}
+.alert--bordered.alert--success {
+  border-color: var(--color-success, #17c964);
+}
+.alert--bordered.alert--warning {
+  border-color: var(--color-warning, #f5a524);
+}
+.alert--bordered.alert--danger {
+  border-color: var(--color-danger, #f31260);
+}
+
+/* Alert Solid Variant */
+.alert--solid.alert--primary {
+  background-color: var(--color-primary, #006fee);
+  color: #ffffff;
+}
+.alert--solid.alert--primary .alert__title,
+.alert--solid.alert--primary .alert__indicator,
+.alert--solid.alert--primary .alert__description {
+  color: #ffffff;
+}
+.alert--solid.alert--success {
+  background-color: var(--color-success, #17c964);
+  color: #ffffff;
+}
+.alert--solid.alert--success .alert__title,
+.alert--solid.alert--success .alert__indicator,
+.alert--solid.alert--success .alert__description {
+  color: #ffffff;
+}
+.alert--solid.alert--warning {
+  background-color: var(--color-warning, #f5a524);
+  color: #000000;
+}
+.alert--solid.alert--warning .alert__title,
+.alert--solid.alert--warning .alert__indicator,
+.alert--solid.alert--warning .alert__description {
+  color: #000000;
+}
+.alert--solid.alert--danger {
+  background-color: var(--color-danger, #f31260);
+  color: #ffffff;
+}
+.alert--solid.alert--danger .alert__title,
+.alert--solid.alert--danger .alert__indicator,
+.alert--solid.alert--danger .alert__description {
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   HeroUI v3 Toast (1:1 with heroui/v3 toast.css)
+   ========================================================================== */
+
+.toast-region {
+  pointer-events: none;
+  position: fixed;
+  z-index: 99999;
+  outline: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+.toast-region--top-end,
+.toast-region--top-right {
+  top: 0;
+  inset-inline-end: 0;
+  align-items: flex-end;
+}
+.toast-region--top-start,
+.toast-region--top-left {
+  top: 0;
+  inset-inline-start: 0;
+  align-items: flex-start;
+}
+.toast-region--top-center {
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  align-items: center;
+}
+.toast-region--bottom-end,
+.toast-region--bottom-right {
+  bottom: 0;
+  inset-inline-end: 0;
+  align-items: flex-end;
+}
+.toast-region--bottom-start,
+.toast-region--bottom-left {
+  bottom: 0;
+  inset-inline-start: 0;
+  align-items: flex-start;
+}
+.toast-region--bottom-center {
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  align-items: center;
+}
+
+.toast {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  background-color: var(--color-surface, #ffffff);
+  padding: 0.875rem 1rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--color-divider, rgba(0, 0, 0, 0.08));
+  border-radius: min(32px, 1.25rem); /* rounded-3xl / 20px */
+  max-width: 24rem;
+  min-width: 17.5rem;
+  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+:where(.dark, .dark *) .toast {
+  background-color: var(--color-surface, #18181b);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+}
+
+.toast__indicator {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  user-select: none;
+}
+
+.toast__content {
+  display: flex;
+  height: 100%;
+  flex-grow: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.toast__title {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+  color: var(--color-foreground, #18181b);
+}
+:where(.dark, .dark *) .toast__title {
+  color: var(--color-foreground, #f4f4f5);
+}
+
+.toast__description {
+  font-size: 0.75rem;
+  color: var(--color-muted, #71717a);
+  line-height: 1.35;
+}
+:where(.dark, .dark *) .toast__description {
+  color: var(--color-muted, #a1a1aa);
+}
+
+.toast__close-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 9999px;
+  color: var(--color-muted, #71717a);
+  background-color: transparent;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+  border: none;
+  padding: 0;
+}
+.toast__close-button:hover {
+  color: var(--color-foreground, #18181b);
+  background-color: rgba(0, 0, 0, 0.05);
+}
+:where(.dark, .dark *) .toast__close-button:hover {
+  color: var(--color-foreground, #f4f4f5);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ==========================================================================
+   HeroUI v3 Checkbox (1:1 with heroui-inc/heroui/v3/packages/styles/components/checkbox.css)
+   ========================================================================== */
+
+.checkbox {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  outline: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: inherit;
+}
+
+.checkbox[data-disabled="true"],
+.checkbox:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.checkbox__content {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  cursor: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-foreground, #18181b);
+}
+:where(.dark, .dark *) .checkbox__content {
+  color: var(--color-foreground, #f4f4f5);
+}
+
+.checkbox__control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1.5px solid rgba(0, 0, 0, 0.25);
+  background-color: transparent;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  outline: none;
+  cursor: inherit;
+  flex-shrink: 0;
+  transition: background-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 100ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+:where(.dark, .dark *) .checkbox__control {
+  border-color: rgba(255, 255, 255, 0.2);
+  background-color: transparent;
+}
+
+/* Background indicator pseudo-element (scale-in animation 1:1) */
+.checkbox__control::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  transform-origin: center;
+  transform: scale(0.65);
+  border-radius: inherit;
+  opacity: 0;
+  background-color: var(--heroui-primary, #006FEE);
+  pointer-events: none;
+  transition: transform 120ms cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 180ms ease,
+              background-color 200ms ease;
+}
+
+/* Sizes */
+.checkbox--sm .checkbox__control {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 4px;
+}
+.checkbox--md .checkbox__control {
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 6px;
+}
+.checkbox--lg .checkbox__control {
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 8px;
+}
+
+/* Hover */
+.checkbox:not([data-disabled="true"]):hover .checkbox__control {
+  border-color: rgba(0, 0, 0, 0.45);
+}
+:where(.dark, .dark *) .checkbox:not([data-disabled="true"]):hover .checkbox__control {
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+/* Selected state */
+.checkbox[data-selected="true"] .checkbox__control,
+.checkbox[aria-checked="true"] .checkbox__control {
+  border-color: transparent !important;
+}
+
+.checkbox[data-selected="true"] .checkbox__control::before,
+.checkbox[aria-checked="true"] .checkbox__control::before {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* Indeterminate state */
+.checkbox[data-indeterminate="true"] .checkbox__control {
+  border-color: transparent !important;
+}
+.checkbox[data-indeterminate="true"] .checkbox__control::before {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* Color themes for checkbox__control::before */
+.checkbox--primary[data-selected="true"] .checkbox__control::before,
+.checkbox--primary[data-indeterminate="true"] .checkbox__control::before {
+  background-color: var(--heroui-primary, #006FEE);
+}
+.checkbox--secondary[data-selected="true"] .checkbox__control::before,
+.checkbox--secondary[data-indeterminate="true"] .checkbox__control::before {
+  background-color: #7828c8;
+}
+.checkbox--success[data-selected="true"] .checkbox__control::before,
+.checkbox--success[data-indeterminate="true"] .checkbox__control::before {
+  background-color: #17c964;
+}
+.checkbox--warning[data-selected="true"] .checkbox__control::before,
+.checkbox--warning[data-indeterminate="true"] .checkbox__control::before {
+  background-color: #f5a524;
+}
+.checkbox--danger[data-selected="true"] .checkbox__control::before,
+.checkbox--danger[data-indeterminate="true"] .checkbox__control::before {
+  background-color: #f31260;
+}
+.checkbox--default[data-selected="true"] .checkbox__control::before,
+.checkbox--default[data-indeterminate="true"] .checkbox__control::before {
+  background-color: #71717a;
+}
+
+/* Indicator & SVG Checkmark */
+.checkbox__indicator {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+.checkbox--warning[data-selected="true"] .checkbox__indicator {
+  color: #000000;
+}
+
+.checkbox__indicator svg {
+  width: 70%;
+  height: 70%;
+  stroke-width: 2.5;
+  transition: stroke-dashoffset 150ms linear 15ms;
+}
+
+/* Label & Description */
+.checkbox__label {
+  user-select: none;
+  cursor: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+}
+.checkbox--sm .checkbox__label {
+  font-size: 0.75rem;
+}
+.checkbox--lg .checkbox__label {
+  font-size: 1rem;
+}
+
+.checkbox__description {
+  user-select: none;
+  cursor: default;
+  font-size: 0.75rem;
+  color: var(--color-muted, #71717a);
+  padding-inline-start: 1.75rem;
+  margin-top: -0.125rem;
+}
+
+.checkbox[data-invalid="true"] .checkbox__control {
+  border-color: #f31260 !important;
+}
+.checkbox[data-invalid="true"][data-selected="true"] .checkbox__control::before {
+  background-color: #f31260 !important;
+}
+
+/* ==========================================================================
+   HeroUI v3 Radio (1:1 with heroui-inc/heroui/v3/packages/styles/components/radio.css)
+   ========================================================================== */
+
+.radio {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  outline: none;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.radio[data-disabled="true"],
+.radio:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.radio__content {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  cursor: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-foreground, #18181b);
+}
+:where(.dark, .dark *) .radio__content {
+  color: var(--color-foreground, #f4f4f5);
+}
+.radio__control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 9999px;
+  border: 1.5px solid rgba(0, 0, 0, 0.25);
+  background-color: transparent;
+  flex-shrink: 0;
+  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+:where(.dark, .dark *) .radio__control {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.radio__control::before {
+  content: "";
+  position: absolute;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--heroui-primary, #006FEE);
+  transform: scale(0);
+  opacity: 0;
+  transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1), opacity 150ms ease;
+}
+.radio[data-selected="true"] .radio__control {
+  border-color: var(--heroui-primary, #006FEE);
+}
+.radio[data-selected="true"] .radio__control::before {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* ==========================================================================
+   HeroUI v3 Chip (1:1 with heroui-inc/heroui/v3/packages/styles/components/chip.css)
+   ========================================================================== */
+
+.chip {
+  display: inline-flex;
+  width: fit-content;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 9999px;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+  background-color: var(--default, #f4f4f5);
+  color: var(--color-foreground, #18181b);
+  border: 1px solid transparent;
+}
+:where(.dark, .dark *) .chip {
+  background-color: var(--default, #27272a);
+  color: var(--color-foreground, #f4f4f5);
+}
+.chip__label {
+  padding: 0 0.125rem;
+}
+.chip--accent,
+.chip--primary {
+  background-color: rgba(0, 111, 238, 0.12);
+  color: #006FEE;
+  border-color: rgba(0, 111, 238, 0.25);
+}
+:where(.dark, .dark *) .chip--accent,
+:where(.dark, .dark *) .chip--primary {
+  background-color: rgba(0, 111, 238, 0.2);
+  color: #60a5fa;
+  border-color: rgba(0, 111, 238, 0.35);
+}
+.chip--success {
+  background-color: rgba(23, 201, 100, 0.12);
+  color: #17c964;
+  border-color: rgba(23, 201, 100, 0.25);
+}
+:where(.dark, .dark *) .chip--success {
+  background-color: rgba(23, 201, 100, 0.2);
+  color: #4ade80;
+  border-color: rgba(23, 201, 100, 0.35);
+}
+.chip--warning {
+  background-color: rgba(245, 165, 36, 0.15);
+  color: #d97706;
+  border-color: rgba(245, 165, 36, 0.3);
+}
+:where(.dark, .dark *) .chip--warning {
+  background-color: rgba(245, 165, 36, 0.2);
+  color: #fbbf24;
+  border-color: rgba(245, 165, 36, 0.35);
+}
+.chip--danger {
+  background-color: rgba(243, 18, 96, 0.12);
+  color: #f31260;
+  border-color: rgba(243, 18, 96, 0.25);
+}
+:where(.dark, .dark *) .chip--danger {
+  background-color: rgba(243, 18, 96, 0.2);
+  color: #fb7185;
+  border-color: rgba(243, 18, 96, 0.35);
+}
+
+/* ==========================================================================
+   Thermal POS Receipt Print Styles (80mm / 58mm POS receipt printers)
+   ========================================================================== */
+@media print {
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide app navigation, headers, backgrounds, modal dialog containers */
+  nav, aside, header, .bir-report-no-print, .modal__backdrop, .modal__close-button {
+    display: none !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .bir-receipt-container,
+  .bir-receipt-container *,
+  [data-receipt-print="true"],
+  [data-receipt-print="true"] * {
+    visibility: visible !important;
+  }
+
+  .bir-receipt-container,
+  [data-receipt-print="true"] {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 76mm !important; /* standard 80mm thermal roll printable width */
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+
+  @page {
+    size: 80mm auto;
+    margin: 2mm 1mm;
+  }
+}
+
+
 

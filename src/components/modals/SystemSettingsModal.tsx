@@ -27,7 +27,7 @@ export const SystemSettingsModal: React.FC<SystemSettingsModalProps> = ({
       zIndex={99999}
       className="max-h-[92vh]"
     >
-      <div className="p-4 sm:p-6">
+      <div className="p-4 sm:p-6 overflow-y-auto max-h-[85vh] scrollbar modal__body--scroll-inside">
         <SystemSettingsModule
           darkMode={darkMode}
           setDarkMode={onToggleDarkMode}
