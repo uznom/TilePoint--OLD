@@ -6,9 +6,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  Check,
-  Minus,
 } from 'lucide-react';
+import { HeroCheckbox } from './HeroCheckbox';
 
 export type TableVariant = 'primary' | 'secondary';
 export type TableSelectionMode = 'none' | 'single' | 'multiple';
@@ -858,31 +857,18 @@ export const TableCheckbox: React.FC<TableCheckboxProps> = ({
   className = '',
 }) => {
   return (
-    <label
-      className={`inline-flex items-center justify-center cursor-pointer select-none p-1 ${className}`}
+    <div
+      className={`inline-flex items-center justify-center p-0.5 ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
-      <input
-        type="checkbox"
-        checked={isSelected}
+      <HeroCheckbox
+        isSelected={isSelected}
+        isIndeterminate={isIndeterminate}
+        onValueChange={onChange}
         aria-label={ariaLabel}
-        onChange={(e) => onChange?.(e.target.checked)}
-        className="sr-only"
+        size="sm"
       />
-      <div
-        className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${
-          isSelected || isIndeterminate
-            ? 'bg-primary border-primary text-primary-foreground shadow-2xs'
-            : 'border-default-300 dark:border-white/20 bg-default-100/50 hover:border-default-400'
-        }`}
-      >
-        {isIndeterminate ? (
-          <Minus className="h-3 w-3 stroke-[3]" />
-        ) : isSelected ? (
-          <Check className="h-3 w-3 stroke-[3]" />
-        ) : null}
-      </div>
-    </label>
+    </div>
   );
 };
 TableCheckbox.displayName = 'TableCheckbox';

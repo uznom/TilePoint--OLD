@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useDb } from '../context/DbContext';
-import { Sparkles, Upload, CheckCircle, ArrowRight, X } from 'lucide-react';
+import { Sparkles, Upload, CheckCircle, ArrowRight } from 'lucide-react';
 import { Product } from '../types/db';
 import Papa from 'papaparse';
 import { HeroButton, HeroModal } from './common/ui';
@@ -387,18 +387,6 @@ export const OnboardingSetupWizard: React.FC<OnboardingSetupWizardProps> = ({ on
       zIndex={9999}
       className="p-6 sm:p-8 border border-divider/30 max-h-[90vh] overflow-y-auto text-left select-none"
     >
-        
-        {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute top-6 right-6 p-2 rounded-full hover:bg-content2 text-default-500 hover:text-white transition-all cursor-pointer z-50 border border-transparent hover:border-slate-700"
-            title="Close Setup Wizard"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        )}
-        
         {/* Wizard Header decor */}
         <div className="absolute top-0 right-12 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-12 w-40 h-40 bg-secondary/10 rounded-full blur-3xl pointer-events-none" />

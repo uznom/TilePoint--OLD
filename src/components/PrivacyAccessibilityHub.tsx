@@ -48,8 +48,7 @@ Type,
 Upload,
 Wifi,
 WifiOff,
-CheckCircle2,
-X
+  CheckCircle2
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { ToastNotification } from './ToastNotification';
@@ -579,12 +578,6 @@ export function PrivacyAccessibilityHub({
   </p>
   </div>
   </div>
-  <button
-  onClick={() => setIsOpen(false)}
-  className="p-2 text-default-500 hover:text-primary hover:bg-primary/10 rounded-xl transition-all cursor-pointer shrink-0"
-  >
-  <X className="h-5 w-5" />
-  </button>
   </div>
 
   {/* Sidebar navigation tabs inside Dialog */}
@@ -2991,17 +2984,6 @@ startxref
  </span>
  </div>
  </div>
- <button
- type="button"
- onClick={() => {
- setIsShowingHandbook(false);
- setIsOpen(true);
- }}
- className="p-1.5 rounded-full hover:bg-default-100 text-default-500 cursor-pointer transition-colors"
- aria-label="Close Handbook"
- >
- <X className="h-5 w-5" />
- </button>
  </div>
 
  {/* Quick search input header */}

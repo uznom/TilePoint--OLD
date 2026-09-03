@@ -13,6 +13,7 @@ History,
 Keyboard,
 Loader2,
 LockKeyhole,
+Receipt,
 RefreshCw,
 RotateCcw,
 Scissors,
@@ -3063,37 +3064,76 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
   {/* Summary Totals & Settlement Action Section */}
   <div className="flex-shrink-0 border-t border-divider/30 pt-3.5 grid grid-cols-1 xl:grid-cols-12 gap-4">
-    {/* Left Column: Totals Summary */}
-    <div className="xl:col-span-5 space-y-2 p-3.5 bg-content2/40 border border-divider/40 rounded-2xl">
-      <div className="flex justify-between text-xs font-medium text-default-500">
-        <span>
-          {discountType === "SENIOR" || discountType === "PWD"
-            ? "VAT-Exempt Sales"
-            : "VATable Sales (Net)"}
-        </span>
-        <span className="tabular-nums font-semibold text-foreground">{formatCurrency(grandTotal - vat)}</span>
-      </div>
-      <div className="flex justify-between text-xs font-medium text-default-500">
-        <span>
-          {discountType === "SENIOR" || discountType === "PWD"
-            ? "12% Output VAT (Exempt)"
-            : "12% Output VAT"}
-        </span>
-        <span className="tabular-nums font-semibold text-foreground">{formatCurrency(vat)}</span>
-      </div>
-
-      {discountAmount > 0 && (
-        <div className="flex justify-between text-xs font-semibold text-success">
-          <span>Discount Voucher Applied</span>
-          <span className="tabular-nums font-bold">-{formatCurrency(discountAmount)}</span>
+    {/* Left Column: Totals Summary (Refactored to modern HeroUI layout) */}
+    <div className="xl:col-span-5 flex flex-col justify-between p-4 bg-content1 dark:bg-content1/90 border border-divider/50 rounded-2xl shadow-xs space-y-3">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-divider/30 pb-2.5">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20">
+            <Receipt className="h-4 w-4" />
+          </div>
+          <span className="text-xs font-black uppercase tracking-wider text-foreground font-sans">
+            Billing Breakdown
+          </span>
         </div>
-      )}
+        <HeroChip
+          size="sm"
+          variant="flat"
+          color={cart.length > 0 ? "primary" : "default"}
+          className="text-[9.5px] font-bold"
+        >
+          {cart.reduce((sum, item) => sum + item.quantity, 0)} pcs ({cart.length} {cart.length === 1 ? "line" : "lines"})
+        </HeroChip>
+      </div>
 
-      <div className="flex justify-between items-baseline border-t border-divider pt-2 mt-1">
-        <span className="text-foreground text-xs font-bold tracking-tight">
-          GRAND TOTAL DUE
-        </span>
-        <span className="text-primary text-xl font-bold tabular-nums">
+      {/* Tax & Discount Details */}
+      <div className="space-y-1.5 text-xs font-sans">
+        <div className="flex justify-between text-default-600 dark:text-default-400 font-medium">
+          <span>Subtotal (Gross)</span>
+          <span className="tabular-nums font-semibold text-foreground font-mono">
+            {formatCurrency(subtotal)}
+          </span>
+        </div>
+        <div className="flex justify-between text-default-600 dark:text-default-400 font-medium">
+          <span>
+            {discountType === "SENIOR" || discountType === "PWD"
+              ? "VAT-Exempt Sales"
+              : "VATable Sales (Net)"}
+          </span>
+          <span className="tabular-nums font-semibold text-foreground font-mono">
+            {formatCurrency(grandTotal - vat)}
+          </span>
+        </div>
+        <div className="flex justify-between text-default-600 dark:text-default-400 font-medium">
+          <span>
+            {discountType === "SENIOR" || discountType === "PWD"
+              ? "12% Output VAT (Exempt)"
+              : "12% Output VAT"}
+          </span>
+          <span className="tabular-nums font-semibold text-foreground font-mono">
+            {formatCurrency(vat)}
+          </span>
+        </div>
+
+        {discountAmount > 0 && (
+          <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 text-[11px] animate-fade-in">
+            <span>Discounts Applied ({discountType || 'Custom'})</span>
+            <span className="tabular-nums font-bold font-mono">-{formatCurrency(discountAmount)}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Hero Grand Total Due Banner */}
+      <div className="bg-primary/10 dark:bg-primary/20 border border-primary/30 rounded-xl p-3 flex items-center justify-between mt-auto shadow-xs">
+        <div>
+          <span className="text-[10px] font-black uppercase tracking-wider text-primary block leading-none">
+            Grand Total Due
+          </span>
+          <span className="text-[9.5px] text-default-500 font-medium block mt-1">
+            {cart.length > 0 ? "Inclusive of 12% Output VAT" : "No active items"}
+          </span>
+        </div>
+        <span className="text-2xl sm:text-3xl font-black text-primary font-mono tabular-nums tracking-tight leading-none">
           ₱{(Number(grandTotal) || 0).toLocaleString(undefined, {
             minimumFractionDigits: 2,
           })}

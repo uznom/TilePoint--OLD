@@ -15,7 +15,6 @@ import {
   Calculator,
   Store,
   Eye,
-  X,
   Calendar,
   RotateCw
 } from 'lucide-react';
@@ -1287,18 +1286,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         <div className="p-6 space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-divider/20">
             <div>
-              <h3 className="text-base font-extrabold text-foreground">
+              <h3 className="text-base font-extrabold text-foreground pr-10">
                 Invoice Breakdown: {selectedSale?.saleNumber || ''}
               </h3>
               <p className="text-xs text-default-400">Transaction details and receipt breakdown</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setSelectedSale(null)}
-              className="p-1 rounded-full text-default-400 hover:text-foreground active:scale-95"
-            >
-              <X className="h-4 w-4" />
-            </button>
           </div>
 
           {selectedSale && (

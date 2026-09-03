@@ -2234,6 +2234,83 @@ html.dark [data-slot="select-listbox"] {
   margin-top: -0.125rem;
 }
 
+/* Active / Pressed state (1:1 HeroUI v3 behavior) */
+.checkbox:active:not([data-disabled="true"]) .checkbox__control,
+.checkbox[data-pressed="true"]:not([data-disabled="true"]) .checkbox__control {
+  transform: scale(0.92);
+}
+
+/* Focus visible state */
+.checkbox input:focus-visible ~ .checkbox__control,
+.checkbox:has(input:focus-visible) .checkbox__control {
+  outline: 2px solid var(--heroui-primary, #006FEE);
+  outline-offset: 2px;
+}
+
+/* Universal Checkbox Enhancement (1:1 HeroUI parity across all native inputs) */
+input[type="checkbox"]:not(.sr-only) {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 6px;
+  border: 1.5px solid rgba(0, 0, 0, 0.25);
+  background-color: transparent;
+  outline: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  vertical-align: middle;
+  transition: all 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+:where(.dark, .dark *) input[type="checkbox"]:not(.sr-only) {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+input[type="checkbox"]:not(.sr-only):hover:not(:disabled) {
+  border-color: rgba(0, 0, 0, 0.45);
+}
+:where(.dark, .dark *) input[type="checkbox"]:not(.sr-only):hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.45);
+}
+input[type="checkbox"]:not(.sr-only):checked {
+  background-color: var(--heroui-primary, #006FEE);
+  border-color: transparent !important;
+}
+input[type="checkbox"]:not(.sr-only):checked::after {
+  content: "";
+  display: block;
+  width: 5px;
+  height: 9px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-0.5px, -1px);
+}
+input[type="checkbox"]:not(.sr-only):indeterminate {
+  background-color: var(--heroui-primary, #006FEE);
+  border-color: transparent !important;
+}
+input[type="checkbox"]:not(.sr-only):indeterminate::after {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 2px;
+  background-color: #ffffff;
+}
+input[type="checkbox"]:not(.sr-only):focus-visible {
+  outline: 2px solid var(--heroui-primary, #006FEE);
+  outline-offset: 2px;
+}
+input[type="checkbox"]:not(.sr-only):active:not(:disabled) {
+  transform: scale(0.92);
+}
+input[type="checkbox"]:not(.sr-only):disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .checkbox[data-invalid="true"] .checkbox__control {
   border-color: #f31260 !important;
 }

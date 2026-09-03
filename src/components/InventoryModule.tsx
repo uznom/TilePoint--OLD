@@ -24,7 +24,7 @@ import {
   TransferType,
   UserRole
 } from '../types/db';
-import { generateCode128SvgHtml,generateEan13Barcode } from '../utils/barcodeGenerator';
+import { generateCode128SvgHtml, generateQrCodeSvgHtml, generateEan13Barcode } from '../utils/barcodeGenerator';
 import { ConfirmationModal } from './ConfirmationModal';
 import { DynamicEntityConfigModal } from './DynamicEntityConfigModal';
 import { ToastNotification } from './ToastNotification';
@@ -43,7 +43,7 @@ import { TransfersSubTab } from './inventory/TransfersSubTab';
 
 // Modals
 import { AddEditProductModal } from './inventory/AddEditProductModal';
-import { BarcodeModal } from './inventory/BarcodeModal';
+import { BarcodeModal, PrintLabelOptions } from './inventory/BarcodeModal';
 import { BranchConfigsModal } from './inventory/BranchConfigsModal';
 import { BulkDamageModal } from './inventory/BulkDamageModal';
 import { ChemicalBatchDetailModal } from './inventory/ChemicalBatchDetailModal';
@@ -1373,152 +1373,299 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
  setShowCodesModal(true);
  };
 
-  const handleSimulatePrint = (labelSize: '50x30' | '100x60' | '40x25' = '50x30') => {
+  const handleSimulatePrint = (options: PrintLabelOptions) => {
     if (!codesProduct) return;
     setPrintingCode(true);
 
+    const { paperSize, quantity, establishmentName, layoutStyle } = options;
     const isTile = (codesProduct.category || '').toLowerCase().includes('tile');
-    const dimLabel = isTile ? 'DIM' : 'SPEC';
+    const dimLabel = isTile ? 'Dim' : 'Spec';
     const dimVal = codesProduct.size || (isTile ? 'N/A' : 'Standard');
-    const qtyLabel = isTile ? 'BOX QTY' : 'PACK';
     const qtyVal = isTile
-      ? `${codesProduct.boxQuantity || 1} tiles/box`
+      ? `${codesProduct.boxQuantity || 1} pcs/box`
       : `${codesProduct.boxQuantity || 1} ${codesProduct.unit || 'pcs'}`;
 
-    const sizeConfig = {
-      '50x30': { width: '50mm', height: '30mm', barH: 26, fontSize: '8px', titleSize: '9.5px', brandH: '7.5px' },
-      '100x60': { width: '100mm', height: '60mm', barH: 42, fontSize: '11px', titleSize: '13px', brandH: '9px' },
-      '40x25': { width: '40mm', height: '25mm', barH: 20, fontSize: '7.5px', titleSize: '8.5px', brandH: '7px' },
-    }[labelSize] || { width: '50mm', height: '30mm', barH: 26, fontSize: '8px', titleSize: '9.5px', brandH: '7.5px' };
+    const isSheet = paperSize === 'letter-30' || paperSize === 'a4-24';
+    const isLetterSheet = paperSize === 'letter-30';
+    const labelsPerPage = isLetterSheet ? 30 : paperSize === 'a4-24' ? 24 : 1;
+
+    const renderSingleLabelHtml = () => `
+      <div class="label-card ${layoutStyle}">
+        <div class="label-header">
+          <div class="store-brand">
+            <span class="establishment-title">${establishmentName || 'ESTABLISHMENT NAME'}</span>
+            <span class="product-brand">${codesProduct.brand || 'Store Exclusive'}</span>
+          </div>
+          <span class="category-pill">${codesProduct.category || 'RETAIL'}</span>
+        </div>
+
+        <div class="label-body">
+          <div class="product-name">${codesProduct.productName}</div>
+          <div class="product-meta">
+            SKU: <strong>${codesProduct.sku}</strong> • ${dimLabel}: <strong>${dimVal}</strong> • Pack: <strong>${qtyVal}</strong>
+          </div>
+        </div>
+
+        <div class="label-footer">
+          <div class="barcode-qr-group">
+            <div class="qr-box">
+              ${generateQrCodeSvgHtml(codesProduct.barcode || codesProduct.sku, 36)}
+            </div>
+            <div class="barcode-box">
+              <div class="barcode-svg">
+                ${generateCode128SvgHtml(codesProduct.barcode, 20)}
+              </div>
+              <div class="barcode-number">${codesProduct.barcode}</div>
+            </div>
+          </div>
+
+          <div class="price-badge ${layoutStyle === 'retail-yellow' ? 'badge-yellow' : 'badge-mono'}">
+            <span class="price-badge-label">Retail Price</span>
+            <span class="price-badge-val">₱${Number(codesProduct.sellingPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    let bodyHtml = '';
+    if (isSheet) {
+      const totalSheets = Math.ceil(quantity / labelsPerPage);
+      for (let s = 0; s < totalSheets; s++) {
+        const startIdx = s * labelsPerPage;
+        const countThisSheet = Math.min(labelsPerPage, quantity - startIdx);
+        let labelsHtml = '';
+        for (let i = 0; i < countThisSheet; i++) {
+          labelsHtml += renderSingleLabelHtml();
+        }
+        bodyHtml += `<div class="sheet-page ${isLetterSheet ? 'letter-sheet' : 'a4-sheet'}">${labelsHtml}</div>`;
+      }
+    } else {
+      for (let i = 0; i < quantity; i++) {
+        bodyHtml += `<div class="roll-label-page">${renderSingleLabelHtml()}</div>`;
+      }
+    }
+
+    let pageCss = '';
+    if (isLetterSheet) {
+      pageCss = `
+        @page {
+          size: 8.5in 11in;
+          margin: 0.5in 0.1875in;
+        }
+        .sheet-page.letter-sheet {
+          display: grid;
+          grid-template-columns: repeat(3, 2.625in);
+          grid-auto-rows: 1in;
+          column-gap: 0.125in;
+          row-gap: 0;
+          width: 8.125in;
+          height: 10in;
+          page-break-after: always;
+          box-sizing: border-box;
+        }
+      `;
+    } else if (paperSize === 'a4-24') {
+      pageCss = `
+        @page {
+          size: 210mm 297mm;
+          margin: 10mm 5mm;
+        }
+        .sheet-page.a4-sheet {
+          display: grid;
+          grid-template-columns: repeat(3, 66mm);
+          grid-auto-rows: 34mm;
+          column-gap: 2mm;
+          row-gap: 0;
+          width: 200mm;
+          height: 272mm;
+          page-break-after: always;
+          box-sizing: border-box;
+        }
+      `;
+    } else if (paperSize === '50x30') {
+      pageCss = `
+        @page { size: 50mm 30mm; margin: 0; }
+        .roll-label-page { width: 50mm; height: 30mm; page-break-after: always; }
+      `;
+    } else if (paperSize === '100x60') {
+      pageCss = `
+        @page { size: 100mm 60mm; margin: 0; }
+        .roll-label-page { width: 100mm; height: 60mm; page-break-after: always; }
+      `;
+    } else if (paperSize === '40x25') {
+      pageCss = `
+        @page { size: 40mm 25mm; margin: 0; }
+        .roll-label-page { width: 40mm; height: 25mm; page-break-after: always; }
+      `;
+    } else {
+      pageCss = `
+        @page { size: 2.625in 1in; margin: 0; }
+        .roll-label-page { width: 2.625in; height: 1in; page-break-after: always; }
+      `;
+    }
 
     const printHtmlContents = `
+    <!DOCTYPE html>
     <html>
       <head>
-        <title>Label Print - ${codesProduct.sku}</title>
+        <title>${codesProduct.sku} - ${establishmentName}</title>
         <style>
-          @page {
-            size: ${sizeConfig.width} ${sizeConfig.height};
-            margin: 0;
-          }
-          * {
-            box-sizing: border-box;
-          }
+          ${pageCss}
+          * { box-sizing: border-box; }
           body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
-            padding: 1.5mm 2mm;
+            padding: 0;
             background: #ffffff;
             color: #000000;
-            width: ${sizeConfig.width};
-            height: ${sizeConfig.height};
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .label-card {
+            width: 100%;
+            height: 100%;
+            padding: 1.5mm 2.2mm;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             overflow: hidden;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+            background: #ffffff;
+            page-break-inside: avoid;
           }
-          .header {
-            border-bottom: 1.5px solid #000;
-            padding-bottom: 2px;
-            margin-bottom: 2px;
+          .label-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-          }
-          .logo {
-            font-weight: 900;
-            font-size: ${sizeConfig.titleSize};
-            letter-spacing: 0.5px;
-          }
-          .category {
-            font-size: ${sizeConfig.brandH};
-            text-transform: uppercase;
-            background: #000;
-            color: #fff;
-            padding: 1px 3px;
-            font-weight: bold;
-            border-radius: 2px;
-          }
-          .details {
-            font-size: ${sizeConfig.fontSize};
-            font-weight: 800;
-            line-height: 1.15;
+            align-items: flex-start;
+            border-bottom: 1px solid #000000;
+            padding-bottom: 1px;
             margin-bottom: 1px;
+          }
+          .establishment-title {
+            font-weight: 900;
+            font-size: 8.5px;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            line-height: 1.1;
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 165px;
+          }
+          .product-brand {
+            font-size: 7px;
+            color: #333333;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: block;
+          }
+          .category-pill {
+            font-size: 7px;
+            font-weight: 900;
+            background: #000000;
+            color: #ffffff;
+            padding: 1px 3px;
+            border-radius: 2px;
+            text-transform: uppercase;
+            line-height: 1;
+          }
+          .product-name {
+            font-size: 9.5px;
+            font-weight: 900;
+            line-height: 1.1;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
           }
-          .brand-desc {
-            font-size: ${sizeConfig.brandH};
-            color: #333;
-            margin-bottom: 2px;
-            text-transform: uppercase;
+          .product-meta {
+            font-size: 7.5px;
+            color: #222222;
             font-weight: 600;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            margin-top: 1px;
           }
-          .meta-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1px 4px;
-            font-size: ${sizeConfig.brandH};
-            border-top: 1px dashed #666;
-            border-bottom: 1px dashed #666;
-            padding: 1.5px 0;
-            margin-bottom: 2px;
+          .label-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 3px;
+            padding-top: 1.5px;
+            border-top: 1px dashed #777777;
           }
-          .meta-item strong {
-            font-weight: 900;
+          .barcode-qr-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex: 1;
+            min-width: 0;
           }
-          .barcode-section {
+          .qr-box {
+            width: 34px;
+            height: 34px;
+            flex-shrink: 0;
+          }
+          .qr-box svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+          }
+          .barcode-box {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+          }
+          .barcode-svg {
+            width: 100%;
+            height: 20px;
+          }
+          .barcode-number {
+            font-family: monospace;
+            font-size: 7px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            line-height: 1;
+            margin-top: 1px;
+          }
+          .price-badge {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            width: 100%;
+            padding: 2px 5px;
+            border-radius: 4px;
+            border: 1.5px solid #000000;
+            flex-shrink: 0;
+            min-width: 65px;
           }
-          .barcode-svg-wrap {
-            width: 100%;
-            height: ${sizeConfig.barH}px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+          .price-badge.badge-yellow {
+            background-color: #FFD814 !important;
+            color: #000000 !important;
           }
-          .barcode-text {
-            font-family: monospace;
-            font-size: ${sizeConfig.brandH};
-            letter-spacing: 1px;
+          .price-badge.badge-mono {
+            background-color: #000000 !important;
+            color: #ffffff !important;
+          }
+          .price-badge-label {
+            font-size: 6.5px;
             font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1;
+          }
+          .price-badge-val {
+            font-family: monospace;
+            font-size: 13px;
+            font-weight: 900;
+            line-height: 1.1;
             margin-top: 1px;
           }
         </style>
       </head>
       <body>
-        <div>
-          <div class="header">
-            <span class="logo">TILEPOINT</span>
-            <span class="category">${codesProduct.category || 'TILE'}</span>
-          </div>
-          <div class="details">${codesProduct.productName}</div>
-          <div class="brand-desc">Brand: ${codesProduct.brand || 'TilePoint'} • ${dimLabel}: ${dimVal}</div>
-          
-          <div class="meta-grid">
-            <div class="meta-item">SKU: <strong>${codesProduct.sku}</strong></div>
-            <div class="meta-item">CODE: <strong>${codesProduct.productCode}</strong></div>
-            <div class="meta-item">${qtyLabel}: <strong>${qtyVal}</strong></div>
-            <div class="meta-item">PRICE: <strong>₱${Number(codesProduct.sellingPrice || 0).toLocaleString()}</strong></div>
-          </div>
-        </div>
-
-        <div class="barcode-section">
-          <div class="barcode-svg-wrap">
-            ${generateCode128SvgHtml(codesProduct.barcode, sizeConfig.barH)}
-          </div>
-          <div class="barcode-text">${codesProduct.barcode}</div>
-        </div>
-
+        ${bodyHtml}
         <script>
           window.onload = function() {
             window.focus();
@@ -2196,6 +2343,12 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
     isOpen={showCodesModal}
     onClose={() => setShowCodesModal(false)}
     product={codesProduct}
+    establishmentName={
+      branches.find(b => b.id === selectedViewBranchId)?.name ||
+      branches[0]?.name ||
+      localStorage.getItem('tilepoint_company_name_v1') ||
+      'MAIN DEPOT & SHOWROOM'
+    }
     onSimulatePrint={handleSimulatePrint}
     printingCode={printingCode}
     showToast={showToast}

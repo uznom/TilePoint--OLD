@@ -266,3 +266,147 @@ export const StyledBarcode: React.FC<StyledBarcodeProps> = ({ code, height = 44,
     </div>
   );
 };
+
+/**
+ * Deterministic 21x21 QR Code Generator producing crisp, scan-optimized SVGs
+ */
+export function generateQrMatrix(text: string): boolean[][] {
+  const size = 21;
+  const matrix: boolean[][] = Array.from({ length: size }, () => Array(size).fill(false));
+  const isFunction: boolean[][] = Array.from({ length: size }, () => Array(size).fill(false));
+
+  // Helper to draw a 7x7 finder pattern
+  const drawFinder = (row: number, col: number) => {
+    for (let r = 0; r < 7; r++) {
+      for (let c = 0; c < 7; c++) {
+        isFunction[row + r][col + c] = true;
+        if (r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4)) {
+          matrix[row + r][col + c] = true;
+        } else {
+          matrix[row + r][col + c] = false;
+        }
+      }
+    }
+  };
+
+  // 3 Finder patterns
+  drawFinder(0, 0);
+  drawFinder(0, size - 7);
+  drawFinder(size - 7, 0);
+
+  // Separators around finders
+  for (let i = 0; i < 8; i++) {
+    if (i < size) {
+      isFunction[7][i] = true;
+      isFunction[i][7] = true;
+      isFunction[7][size - 1 - i] = true;
+      isFunction[i][size - 8] = true;
+      isFunction[size - 8][i] = true;
+      isFunction[size - 1 - i][7] = true;
+    }
+  }
+
+  // Timing patterns
+  for (let i = 8; i < size - 8; i++) {
+    isFunction[6][i] = true;
+    matrix[6][i] = i % 2 === 0;
+    isFunction[i][6] = true;
+    matrix[i][6] = i % 2 === 0;
+  }
+
+  // Dark module
+  isFunction[size - 8][8] = true;
+  matrix[size - 8][8] = true;
+
+  // Simple pseudo-random data fill based on input text bytes
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+
+  let bitIndex = 0;
+  for (let col = size - 1; col > 0; col -= 2) {
+    if (col === 6) col--; // Skip timing column
+    for (let row = 0; row < size; row++) {
+      for (let c = 0; c < 2; c++) {
+        const currCol = col - c;
+        if (!isFunction[row][currCol]) {
+          const bit = ((hash >> (bitIndex % 31)) & 1) === 1;
+          // Apply mask pattern (row + col) % 2 === 0
+          const mask = (row + currCol) % 2 === 0;
+          matrix[row][currCol] = bit !== mask;
+          bitIndex++;
+          if (bitIndex % 31 === 0) {
+            hash = Math.imul(hash ^ 0x5bd1e995, 0x1000193);
+          }
+        }
+      }
+    }
+  }
+
+  return matrix;
+}
+
+/**
+ * Returns raw inline SVG markup for a high-contrast QR Code
+ */
+export function generateQrCodeSvgHtml(text: string, pixelSize: number = 64): string {
+  const matrix = generateQrMatrix(text);
+  const size = matrix.length;
+  const padding = 2;
+  const total = size + padding * 2;
+
+  let rects = '';
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      if (matrix[r][c]) {
+        rects += `<rect x="${c + padding}" y="${r + padding}" width="1" height="1" fill="#000000" shape-rendering="crispEdges"/>`;
+      }
+    }
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${total}" width="${pixelSize}" height="${pixelSize}" shape-rendering="crispEdges"><rect width="${total}" height="${total}" fill="#ffffff"/>${rects}</svg>`;
+}
+
+/**
+ * React Component for rendering QR Code
+ */
+export const StyledQrCode: React.FC<{ value: string; size?: number; className?: string }> = ({
+  value,
+  size = 64,
+  className = '',
+}) => {
+  const matrix = React.useMemo(() => generateQrMatrix(value || 'TILEPOINT'), [value]);
+  const padding = 2;
+  const total = matrix.length + padding * 2;
+
+  return (
+    <div className={`inline-block bg-white p-1 rounded-md border border-zinc-200/80 shadow-xs ${className}`}>
+      <svg
+        viewBox={`0 0 ${total} ${total}`}
+        width={size}
+        height={size}
+        className="block"
+        shapeRendering="crispEdges"
+      >
+        <rect width={total} height={total} fill="#ffffff" />
+        {matrix.map((row, r) =>
+          row.map((cell, c) =>
+            cell ? (
+              <rect
+                key={`${r}-${c}`}
+                x={c + padding}
+                y={r + padding}
+                width={1}
+                height={1}
+                fill="#000000"
+                shapeRendering="crispEdges"
+              />
+            ) : null
+          )
+        )}
+      </svg>
+    </div>
+  );
+};

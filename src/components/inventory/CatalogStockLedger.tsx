@@ -32,6 +32,7 @@ import { HeroTooltip } from '../common/ui/HeroTooltip';
 import { HeroTable } from '../common/ui/HeroTable';
 import { HeroChip } from '../common/ui/HeroChip';
 import { HeroDropdownSelect, HeroDropdownItem } from '../common/ui/HeroDropdown';
+import { HeroCheckbox } from '../common/ui/HeroCheckbox';
 import { useMultiSort } from '../../hooks/useMultiSort';
 
 export interface CatalogStockLedgerProps {
@@ -540,21 +541,21 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
           isStriped
         >
           <HeroTable.Header>
-            <tr className="border-b border-divider/20 bg-zinc-100/80 dark:bg-zinc-800/80 text-[10px] uppercase font-bold text-default-600 dark:text-default-400 tracking-wider">
+            <tr className="border-b border-divider/20 text-[10px] uppercase font-bold text-default-600 dark:text-default-400 tracking-wider">
               {/* Checkbox column header */}
               {!hasActiveShift && (
-                <HeroTable.Column align="center" className="py-3 px-2 w-10 text-center select-none bg-zinc-100/40 dark:bg-zinc-800/40 border-r border-divider/20">
-                  <input
-                    type="checkbox"
-                    checked={paginatedProducts.length > 0 && paginatedProducts.every(p => !!selectedProdIds[p.id])}
-                    onChange={handleToggleSelectAll}
-                    className="rounded border-zinc-300 text-primary focus:ring-primary/30 cursor-pointer h-3.5 w-3.5 disabled:opacity-30 disabled:cursor-not-allowed"
+                <HeroTable.Column align="center" className="py-3 px-2 w-10 text-center select-none border-r border-divider/20">
+                  <HeroCheckbox
+                    isSelected={paginatedProducts.length > 0 && paginatedProducts.every(p => !!selectedProdIds[p.id])}
+                    isIndeterminate={paginatedProducts.some(p => !!selectedProdIds[p.id]) && !paginatedProducts.every(p => !!selectedProdIds[p.id])}
+                    onValueChange={() => handleToggleSelectAll()}
+                    size="sm"
                     aria-label="Select/Deselect visible"
-                    disabled={!allowedToModify}
+                    isDisabled={!allowedToModify}
                   />
                 </HeroTable.Column>
               )}
-              <HeroTable.Column align="center" className="py-3 px-2 w-10 text-center bg-zinc-100/40 dark:bg-zinc-800/40 select-none"></HeroTable.Column>
+              <HeroTable.Column align="center" className="py-3 px-2 w-10 text-center select-none"></HeroTable.Column>
               <HeroTable.Column
                 allowsSorting
                 sortDirection={getTableSortDir('sku') !== 'none' ? getTableSortDir('sku') : (sortBy === 'sku-asc' ? 'ascending' : sortBy === 'sku-desc' ? 'descending' : 'none')}
@@ -721,13 +722,13 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                         {!hasActiveShift && (
                           <HeroTable.Cell
                             align="center"
-                            className="py-3.5 px-2 text-center bg-zinc-100/40 dark:bg-zinc-800/40 border-r border-divider/20"
+                            className="py-3.5 px-2 text-center border-r border-divider/20"
                             onClick={e => e.stopPropagation()}
                           >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => {
+                            <HeroCheckbox
+                              isSelected={isSelected}
+                              size="sm"
+                              onValueChange={() => {
                                 if (!allowedToModify) {
                                   showToast('Access Denied: Row selection is restricted to authorized roles (Admin/Manager).');
                                   return;
@@ -737,8 +738,7 @@ export const CatalogStockLedger: React.FC<CatalogStockLedgerProps> = ({
                                   [p.id]: !prev[p.id]
                                 }));
                               }}
-                              className="rounded border-zinc-300 text-primary focus:ring-primary/30 cursor-pointer h-3.5 w-3.5 disabled:opacity-30 disabled:cursor-not-allowed"
-                              disabled={!allowedToModify}
+                              isDisabled={!allowedToModify}
                               aria-label={`Select ${p.productName}`}
                             />
                           </HeroTable.Cell>

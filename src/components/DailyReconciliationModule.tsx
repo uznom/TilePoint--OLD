@@ -29,7 +29,7 @@ import { saveFileToBackup } from "../lib/fileBackupHelper";
 import { UserRole } from "../types/db";
 import { ToastNotification } from "./ToastNotification";
 import { HeaderBar } from "./common/HeaderBar";
-import { HeroDropdownSelect, HeroDatePicker, HeroTable } from "./common/ui";
+import { HeroDropdownSelect, HeroDatePicker, HeroTable, HeroCheckbox } from "./common/ui";
 
 interface DailyReconciliationModuleProps {
   darkMode?: boolean;
@@ -687,53 +687,35 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
             </h3>
 
             <div className="space-y-3">
-              <label className="flex items-start gap-3 p-3 rounded-xl hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 transition-all border border-zinc-200/40 dark:border-white/5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  disabled={isReconciled}
-                  checked={checks.salesMatch || isReconciled}
-                  onChange={(e) => setChecks((prev) => ({ ...prev, salesMatch: e.target.checked }))}
-                  className="h-4 w-4 rounded-md border-zinc-300 text-primary focus:ring-primary/30 mt-0.5 cursor-pointer"
+              <div className="p-3 rounded-xl hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 transition-all border border-zinc-200/40 dark:border-white/5">
+                <HeroCheckbox
+                  isDisabled={isReconciled}
+                  isSelected={checks.salesMatch || isReconciled}
+                  onValueChange={(val) => setChecks((prev) => ({ ...prev, salesMatch: val }))}
+                  label="Gross sales match X-Report"
+                  description={`${stats.count} invoices match daily cashier readings.`}
                 />
-                <div>
-                  <span className="text-xs font-bold text-foreground block">Gross sales match X-Report</span>
-                  <span className="text-[11px] text-default-500 leading-relaxed mt-0.5 block font-medium">
-                    {stats.count} invoices match daily cashier readings.
-                  </span>
-                </div>
-              </label>
+              </div>
 
-              <label className="flex items-start gap-3 p-3 rounded-xl hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 transition-all border border-zinc-200/40 dark:border-white/5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  disabled={isReconciled}
-                  checked={checks.expensesDocumented || isReconciled}
-                  onChange={(e) => setChecks((prev) => ({ ...prev, expensesDocumented: e.target.checked }))}
-                  className="h-4 w-4 rounded-md border-zinc-300 text-primary focus:ring-primary/30 mt-0.5 cursor-pointer"
+              <div className="p-3 rounded-xl hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 transition-all border border-zinc-200/40 dark:border-white/5">
+                <HeroCheckbox
+                  isDisabled={isReconciled}
+                  isSelected={checks.expensesDocumented || isReconciled}
+                  onValueChange={(val) => setChecks((prev) => ({ ...prev, expensesDocumented: val }))}
+                  label="Expenses documented"
+                  description={`₱${stats.totalExpenses.toLocaleString()} backed by physical receipts.`}
                 />
-                <div>
-                  <span className="text-xs font-bold text-foreground block">Expenses documented</span>
-                  <span className="text-[11px] text-default-500 leading-relaxed mt-0.5 block font-medium">
-                    ₱{stats.totalExpenses.toLocaleString()} backed by physical receipts.
-                  </span>
-                </div>
-              </label>
+              </div>
 
-              <label className="flex items-start gap-3 p-3 rounded-xl hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 transition-all border border-zinc-200/40 dark:border-white/5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  disabled={isReconciled}
-                  checked={checks.cogsVerified || isReconciled}
-                  onChange={(e) => setChecks((prev) => ({ ...prev, cogsVerified: e.target.checked }))}
-                  className="h-4 w-4 rounded-md border-zinc-300 text-primary focus:ring-primary/30 mt-0.5 cursor-pointer"
+              <div className="p-3 rounded-xl hover:bg-zinc-100/60 dark:hover:bg-zinc-800/60 transition-all border border-zinc-200/40 dark:border-white/5">
+                <HeroCheckbox
+                  isDisabled={isReconciled}
+                  isSelected={checks.cogsVerified || isReconciled}
+                  onValueChange={(val) => setChecks((prev) => ({ ...prev, cogsVerified: val }))}
+                  label="Inventory COGS verified"
+                  description={`₱${stats.cogs.toLocaleString()} COGS aligns with dispatches.`}
                 />
-                <div>
-                  <span className="text-xs font-bold text-foreground block">Inventory COGS verified</span>
-                  <span className="text-[11px] text-default-500 leading-relaxed mt-0.5 block font-medium">
-                    ₱{stats.cogs.toLocaleString()} COGS aligns with dispatches.
-                  </span>
-                </div>
-              </label>
+              </div>
             </div>
 
             {!isReconciled ? (
