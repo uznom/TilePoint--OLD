@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useDb } from "../context/DbContext";
 import { formatCurrency } from "../utils/formatters";
 import {
@@ -22,6 +22,7 @@ import {
   Activity,
   Percent,
   Sparkles,
+  ReceiptText,
 } from "lucide-react";
 import { HeroDropdownSelect } from "./common/ui/HeroDropdown";
 
@@ -31,6 +32,7 @@ interface ProfitAnalyticsProps {
   setSelectedBranchId: (branchId: string) => void;
   getBranchName: (branchId: string | null) => string;
   showToastMsg?: (message: string, type: "success" | "info" | "error") => void;
+  branchLandingModifiers?: Record<string, number>;
 }
 
 export function ProfitAnalytics({
@@ -39,33 +41,66 @@ export function ProfitAnalytics({
   setSelectedBranchId,
   getBranchName,
   showToastMsg: _showToastMsg,
+  branchLandingModifiers: propLandingModifiers,
 }: ProfitAnalyticsProps) {
   const {
-    sales,
-    saleItems,
-    products,
-    damageLogs,
-    shifts,
-    branches,
-    expenses,
+    sales = [],
+    saleItems = [],
+    products = [],
+    damageLogs = [],
+    shifts = [],
+    branches = [],
+    expenses = [],
+    customBills = [],
+    purchaseOrders = [],
   } = useDb();
+
+  // Local storage modifiers fallback / reactive sync
+  const [localModifiers, setLocalModifiers] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem("tilepoint_branch_landing_modifiers");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse branch modifiers in ProfitAnalytics", e);
+      }
+    }
+    return { corporate: 0.0 };
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      const saved = localStorage.getItem("tilepoint_branch_landing_modifiers");
+      if (saved) {
+        try {
+          setLocalModifiers(JSON.parse(saved));
+        } catch {
+          // ignore
+        }
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  const effectiveModifiers = propLandingModifiers || localModifiers;
 
   // Determine default period dynamically based on database history age span
   const defaultPeriod = useMemo<"7d" | "15d" | "30d" | "monthly" | "all-time">(() => {
     const dates: number[] = [];
-    sales?.forEach(s => {
+    (sales || []).forEach((s) => {
       if (s.createdAt) {
         const t = new Date(s.createdAt).getTime();
         if (!isNaN(t)) dates.push(t);
       }
     });
-    expenses?.forEach(e => {
+    (expenses || []).forEach((e) => {
       if (e.dateTime) {
         const t = new Date(e.dateTime).getTime();
         if (!isNaN(t)) dates.push(t);
       }
     });
-    shifts?.forEach(s => {
+    (shifts || []).forEach((s) => {
       if (s.openedAt) {
         const t = new Date(s.openedAt).getTime();
         if (!isNaN(t)) dates.push(t);
@@ -100,7 +135,7 @@ export function ProfitAnalytics({
   const [hasUserSelected, setHasUserSelected] = useState(false);
 
   // Sync to dynamic default if the user hasn't made a manual click yet
-  React.useEffect(() => {
+  useEffect(() => {
     if (!hasUserSelected) {
       setSelectedPeriod(defaultPeriod);
     }
@@ -113,32 +148,18 @@ export function ProfitAnalytics({
 
   const [chartType, setChartType] = useState<"area" | "bar">("area");
 
-  // Expenses state
-  const expensesList = useMemo(() => {
-    return expenses || [];
-  }, [expenses]);
+  // Local date helpers to avoid timezone off-by-one errors
+  const getLocalDateKey = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
 
-  // Branch Landing Cost Modifiers
-  const branchLandingModifiers = useMemo(() => {
-    const saved = localStorage.getItem("tilepoint_branch_landing_modifiers");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return {};
-  }, []);
-
-  // Format Date utility
-  const formatDateLabel = (isoString: string, format: "day" | "month") => {
-    const date = new Date(isoString);
-    if (isNaN(date.getTime())) return "";
-    if (format === "day") {
-      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    }
-    return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+  const getLocalMonthKey = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    return `${year}-${month}`;
   };
 
   // Filter Data by Timeframe & Branch
@@ -148,34 +169,68 @@ export function ProfitAnalytics({
 
     let daysCount = 7;
     if (selectedPeriod === "15d") daysCount = 15;
-    if (selectedPeriod === "30d") daysCount = 30;
-    if (selectedPeriod === "monthly") daysCount = 180;
-    if (selectedPeriod === "all-time") daysCount = 365;
+    else if (selectedPeriod === "30d") daysCount = 30;
+    else if (selectedPeriod === "monthly") daysCount = 180;
+    else if (selectedPeriod === "all-time") daysCount = 365;
 
     const startDate = new Date();
-    startDate.setDate(now.getDate() - daysCount);
+    startDate.setHours(0, 0, 0, 0);
 
-    // Initialize buckets
-    if (selectedPeriod === "monthly" || selectedPeriod === "all-time") {
-      // Monthly buckets
-      for (let i = daysCount === 180 ? 6 : 12; i >= 0; i--) {
+    if (selectedPeriod === "monthly") {
+      // 6 months view
+      const startMonth = new Date(now.getFullYear(), now.getMonth() - 5, 1, 0, 0, 0, 0);
+      startDate.setTime(startMonth.getTime());
+
+      for (let i = 5; i >= 0; i--) {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        const key = getLocalMonthKey(d);
+        const label = d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+        dataMap[key] = { date: label, Revenue: 0, COGS: 0, NetProfit: 0, Expenses: 0 };
+      }
+    } else if (selectedPeriod === "all-time") {
+      // 12 months view for all-time
+      const startMonth = new Date(now.getFullYear(), now.getMonth() - 11, 1, 0, 0, 0, 0);
+      startDate.setTime(startMonth.getTime());
+
+      for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const key = getLocalMonthKey(d);
         const label = d.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
         dataMap[key] = { date: label, Revenue: 0, COGS: 0, NetProfit: 0, Expenses: 0 };
       }
     } else {
-      // Daily buckets
+      // Daily buckets (7d, 15d, 30d)
+      startDate.setDate(now.getDate() - (daysCount - 1));
+
       for (let i = daysCount - 1; i >= 0; i--) {
         const d = new Date();
         d.setDate(now.getDate() - i);
-        const key = d.toISOString().split("T")[0];
-        const label = formatDateLabel(d.toISOString(), "day");
+        const key = getLocalDateKey(d);
+        const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
         dataMap[key] = { date: label, Revenue: 0, COGS: 0, NetProfit: 0, Expenses: 0 };
       }
     }
 
-    // Process Sales & COGS
+    // Pre-indexed Map lookups for O(1) performance
+    const productsById = new Map<string, (typeof products)[0]>();
+    (products || []).forEach((p) => {
+      if (!p.isDeleted) {
+        productsById.set(p.id, p);
+      }
+    });
+
+    const saleItemsBySaleId = new Map<string, typeof saleItems>();
+    (saleItems || []).forEach((item) => {
+      if (item.isDeleted) return;
+      let list = saleItemsBySaleId.get(item.saleId);
+      if (!list) {
+        list = [];
+        saleItemsBySaleId.set(item.saleId, list);
+      }
+      list.push(item);
+    });
+
+    // 1. Process Sales & COGS
     (sales || []).forEach((sale) => {
       if (sale.isDeleted) return;
       if (selectedBranchId !== "all" && sale.branchId !== selectedBranchId) return;
@@ -183,10 +238,9 @@ export function ProfitAnalytics({
       const saleDate = new Date(sale.createdAt);
       if (isNaN(saleDate.getTime()) || saleDate < startDate) return;
 
-      let key = saleDate.toISOString().split("T")[0];
-      if (selectedPeriod === "monthly" || selectedPeriod === "all-time") {
-        key = `${saleDate.getFullYear()}-${String(saleDate.getMonth() + 1).padStart(2, "0")}`;
-      }
+      const key = (selectedPeriod === "monthly" || selectedPeriod === "all-time")
+        ? getLocalMonthKey(saleDate)
+        : getLocalDateKey(saleDate);
 
       if (!dataMap[key]) return;
 
@@ -194,53 +248,102 @@ export function ProfitAnalytics({
       dataMap[key].Revenue += revenue;
 
       // Calculate COGS
-      const items = (saleItems || []).filter((item) => item.saleId === sale.id);
+      const items = saleItemsBySaleId.get(sale.id) || [];
+      const modPercent = effectiveModifiers[sale.branchId] ?? 2.5;
       let saleCogs = 0;
       items.forEach((item) => {
-        const prod = products?.find((p) => p.id === item.productId);
+        const prod = productsById.get(item.productId);
         const baseCost = prod ? Number(prod.costPrice || 0) : 0;
-        const branchModifier = branchLandingModifiers[sale.branchId] || 0;
-        const effectiveCost = baseCost * (1 + branchModifier / 100);
+        const effectiveCost = baseCost * (1 + modPercent / 100);
         saleCogs += effectiveCost * Number(item.quantity || 0);
       });
 
       dataMap[key].COGS += saleCogs;
     });
 
-    // Process Operational Expenses
-    expensesList.forEach((exp) => {
+    // 2. Process Operational Expenses
+    (expenses || []).forEach((exp) => {
+      if (exp.isDeleted) return;
       if (selectedBranchId !== "all" && exp.branchId !== selectedBranchId) return;
 
       const expDate = new Date(exp.dateTime || "");
       if (isNaN(expDate.getTime()) || expDate < startDate) return;
 
-      let key = expDate.toISOString().split("T")[0];
-      if (selectedPeriod === "monthly" || selectedPeriod === "all-time") {
-        key = `${expDate.getFullYear()}-${String(expDate.getMonth() + 1).padStart(2, "0")}`;
-      }
+      const key = (selectedPeriod === "monthly" || selectedPeriod === "all-time")
+        ? getLocalMonthKey(expDate)
+        : getLocalDateKey(expDate);
 
       if (!dataMap[key]) return;
       const amount = Number(exp.amount || 0);
       dataMap[key].Expenses += amount;
     });
 
-    // Process Damage Write-offs
+    // 3. Process Automated Calendar Payments
+    const parsedInstallments: Record<string, { id: string; amount: number; date: string; notes?: string }[]> = (() => {
+      try {
+        const saved = localStorage.getItem("atpos_v2_payable_installments");
+        return saved ? JSON.parse(saved) : {};
+      } catch {
+        return {};
+      }
+    })();
+
+    Object.entries(parsedInstallments).forEach(([poId, insts]) => {
+      const bill = customBills?.find((b) => b.id === poId);
+      const po = purchaseOrders?.find((p) => p.id === poId);
+      const branchId = (bill as any)?.branchId || po?.branchId || "corporate";
+
+      if (selectedBranchId !== "all" && branchId !== selectedBranchId) return;
+
+      insts.forEach((inst) => {
+        const instDate = new Date(inst.date || "");
+        if (isNaN(instDate.getTime()) || instDate < startDate) return;
+
+        const key = (selectedPeriod === "monthly" || selectedPeriod === "all-time")
+          ? getLocalMonthKey(instDate)
+          : getLocalDateKey(instDate);
+
+        if (dataMap[key]) {
+          dataMap[key].Expenses += Number(inst.amount || 0);
+        }
+      });
+    });
+
+    // 4. Process Damage Write-offs
     (damageLogs || []).forEach((dmg) => {
+      if (dmg.isDeleted) return;
       if (selectedBranchId !== "all" && dmg.branchId !== selectedBranchId) return;
 
       const dmgDate = new Date(dmg.createdAt || "");
       if (isNaN(dmgDate.getTime()) || dmgDate < startDate) return;
 
-      let key = dmgDate.toISOString().split("T")[0];
-      if (selectedPeriod === "monthly" || selectedPeriod === "all-time") {
-        key = `${dmgDate.getFullYear()}-${String(dmgDate.getMonth() + 1).padStart(2, "0")}`;
-      }
+      const key = (selectedPeriod === "monthly" || selectedPeriod === "all-time")
+        ? getLocalMonthKey(dmgDate)
+        : getLocalDateKey(dmgDate);
 
       if (!dataMap[key]) return;
-      const prod = products?.find((p) => p.id === dmg.productId);
-      const cost = prod ? Number(prod.costPrice || 0) : 0;
-      const loss = cost * Number(dmg.quantity || 0);
+      const prod = productsById.get(dmg.productId);
+      if (!prod) return;
+      const costPerUnit = dmg.unitType === "Piece" ? (prod.costPrice / (prod.boxQuantity || 4)) : prod.costPrice;
+      const loss = costPerUnit * Number(dmg.quantity || 0);
       dataMap[key].Expenses += loss;
+    });
+
+    // 5. Process Shift Cash Drawer Shortages
+    (shifts || []).forEach((sh) => {
+      if (selectedBranchId !== "all" && sh.branchId !== selectedBranchId) return;
+      const variance = Number(sh.variance || 0);
+      if (variance >= 0) return; // Only negative variance is a loss
+
+      const shDate = new Date(sh.openedAt || sh.closedAt || "");
+      if (isNaN(shDate.getTime()) || shDate < startDate) return;
+
+      const key = (selectedPeriod === "monthly" || selectedPeriod === "all-time")
+        ? getLocalMonthKey(shDate)
+        : getLocalDateKey(shDate);
+
+      if (!dataMap[key]) return;
+      dataMap[key].Expenses += Math.abs(variance);
     });
 
     // Compute Net Profit
@@ -248,7 +351,18 @@ export function ProfitAnalytics({
       ...d,
       NetProfit: Math.round((d.Revenue - d.COGS - d.Expenses) * 100) / 100,
     }));
-  }, [sales, saleItems, products, expensesList, damageLogs, selectedBranchId, selectedPeriod, branchLandingModifiers]);
+  }, [
+    sales,
+    saleItems,
+    products,
+    expenses,
+    damageLogs,
+    shifts,
+    purchaseOrders,
+    selectedBranchId,
+    selectedPeriod,
+    effectiveModifiers,
+  ]);
 
   // Aggregate Totals
   const totals = useMemo(() => {
@@ -298,7 +412,7 @@ export function ProfitAnalytics({
                 "15d": "15 Days",
                 "30d": "30 Days",
                 "monthly": "6 Months",
-                "all-time": "12 Months"
+                "all-time": "12 Months",
               };
               const isActive = selectedPeriod === period;
               return (
@@ -350,13 +464,13 @@ export function ProfitAnalytics({
           <HeroDropdownSelect
             startIcon={<Building className="h-3.5 w-3.5 text-primary" />}
             items={[
-              { key: 'all', label: 'Consolidated (All Branches)' },
+              { key: "all", label: "Consolidated (All Branches)" },
               ...branches.filter((b) => !b.isDeleted).map((b) => ({
                 key: b.id,
                 label: b.name,
               })),
             ]}
-            selectedKey={selectedBranchId ?? 'all'}
+            selectedKey={selectedBranchId ?? "all"}
             onSelectionChange={(val) => setSelectedBranchId(val)}
             size="sm"
             variant="pill"
@@ -402,19 +516,23 @@ export function ProfitAnalytics({
             </div>
           </div>
           <div className="p-3 bg-rose-500/10 text-rose-500 rounded-2xl border border-rose-500/20">
-            <Building className="h-5 w-5" />
+            <ReceiptText className="h-5 w-5" />
           </div>
         </div>
 
         {/* Net Profit */}
-        <div className={`p-5 bg-white dark:bg-zinc-900 border rounded-2xl flex items-center justify-between shadow-elevation-soft ${
-          totals.netProfit >= 0 ? "border-emerald-500/30" : "border-rose-500/30"
-        }`}>
+        <div
+          className={`p-5 bg-white dark:bg-zinc-900 border rounded-2xl flex items-center justify-between shadow-elevation-soft ${
+            totals.netProfit >= 0 ? "border-emerald-500/30" : "border-rose-500/30"
+          }`}
+        >
           <div>
             <span className="text-[10px] font-bold uppercase tracking-wider text-default-500 font-mono">Net Retained Profit</span>
-            <div className={`text-xl font-bold mt-1 font-mono ${
-              totals.netProfit >= 0 ? "text-emerald-500" : "text-rose-500"
-            }`}>
+            <div
+              className={`text-xl font-bold mt-1 font-mono ${
+                totals.netProfit >= 0 ? "text-emerald-500" : "text-rose-500"
+              }`}
+            >
               {formatCurrency(totals.netProfit)}
             </div>
             <div className="flex items-center gap-1 mt-0.5">
@@ -424,9 +542,13 @@ export function ProfitAnalytics({
               </span>
             </div>
           </div>
-          <div className={`p-3 rounded-2xl border ${
-            totals.netProfit >= 0 ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-rose-500/10 text-rose-500 border-rose-500/20"
-          }`}>
+          <div
+            className={`p-3 rounded-2xl border ${
+              totals.netProfit >= 0
+                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                : "bg-rose-500/10 text-rose-500 border-rose-500/20"
+            }`}
+          >
             {totals.netProfit >= 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
           </div>
         </div>
@@ -437,7 +559,7 @@ export function ProfitAnalytics({
         <div className="flex items-center justify-between mb-4.5">
           <h5 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5 font-mono">
             <Activity className="h-4 w-4 text-primary" />
-            Financial Health Trend Matrix ({selectedPeriod === "monthly" ? "6 Months View" : `${selectedPeriod} Boundaries`})
+            Financial Health Trend Matrix ({selectedPeriod === "monthly" ? "6 Months View" : selectedPeriod === "all-time" ? "12 Months View" : `${selectedPeriod} Boundaries`})
           </h5>
           <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-white/5 text-default-600 dark:text-default-400 font-mono">
             Active Port: {selectedBranchId === "all" ? "Consolidated All Branches" : getBranchName(selectedBranchId)}
@@ -453,30 +575,34 @@ export function ProfitAnalytics({
               >
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.25}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorCOGS" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.15}/>
-                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorProfit" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)"} />
-                <XAxis 
-                  dataKey="date" 
-                  stroke={darkMode ? "#A1A1AA" : "#71717A"} 
-                  fontSize={10.5} 
-                  tickLine={false} 
+                <XAxis
+                  dataKey="date"
+                  stroke={darkMode ? "#A1A1AA" : "#71717A"}
+                  fontSize={10.5}
+                  tickLine={false}
                   dy={10}
                   fontFamily="'Plus Jakarta Sans', ui-sans-serif, sans-serif"
                 />
-                <YAxis 
-                  stroke={darkMode ? "#A1A1AA" : "#71717A"} 
-                  fontSize={10} 
+                <YAxis
+                  stroke={darkMode ? "#A1A1AA" : "#71717A"}
+                  fontSize={10}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(val) => formatCurrency(val, { compact: true })}
@@ -490,49 +616,61 @@ export function ProfitAnalytics({
                     color: darkMode ? "#ECEDEE" : "#18181B",
                     fontSize: "11px",
                     fontFamily: "'Plus Jakarta Sans', ui-sans-serif, sans-serif",
-                    boxShadow: "0 12px 28px -4px rgba(0, 0, 0, 0.18)"
+                    boxShadow: "0 12px 28px -4px rgba(0, 0, 0, 0.18)",
                   }}
                   labelStyle={{
                     color: darkMode ? "#ECEDEE" : "#18181B",
                     fontWeight: "bold",
-                    marginBottom: "4px"
+                    marginBottom: "4px",
                   }}
                   itemStyle={{
-                    color: darkMode ? "#D4D4D8" : "#3F3F46"
+                    color: darkMode ? "#D4D4D8" : "#3F3F46",
                   }}
-                  formatter={(value: any) => [formatCurrency(value), ""]}
+                  formatter={(value: any, name: any) => [
+                    formatCurrency(Number(value) || 0),
+                    name === "NetProfit" ? "Net Profit" : name === "COGS" ? "COGS Base" : name === "Expenses" ? "OpEx & Losses" : name,
+                  ]}
                 />
-                <Legend 
-                  verticalAlign="top" 
-                  height={36} 
+                <Legend
+                  verticalAlign="top"
+                  height={36}
                   iconType="circle"
                   iconSize={8}
                   wrapperStyle={{ fontSize: "11px", fontFamily: "'Plus Jakarta Sans', ui-sans-serif, sans-serif", fontWeight: "bold" }}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="Revenue" 
-                  stroke="#10b981" 
+                <Area
+                  type="monotone"
+                  dataKey="Revenue"
+                  stroke="#10b981"
                   strokeWidth={2.5}
-                  fillOpacity={1} 
-                  fill="url(#colorRevenue)" 
+                  fillOpacity={1}
+                  fill="url(#colorRevenue)"
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="COGS" 
-                  stroke="#f59e0b" 
+                <Area
+                  type="monotone"
+                  dataKey="COGS"
+                  stroke="#f59e0b"
                   strokeWidth={2}
-                  fillOpacity={1} 
-                  fill="url(#colorCOGS)" 
+                  fillOpacity={1}
+                  fill="url(#colorCOGS)"
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="NetProfit" 
-                  stroke="#06b6d4" 
+                <Area
+                  type="monotone"
+                  dataKey="Expenses"
+                  name="OpEx & Losses"
+                  stroke="#f43f5e"
+                  strokeWidth={1.5}
+                  fillOpacity={1}
+                  fill="url(#colorExpenses)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="NetProfit"
+                  stroke="#06b6d4"
                   strokeWidth={3}
                   name="Net Profit"
-                  fillOpacity={1} 
-                  fill="url(#colorProfit)" 
+                  fillOpacity={1}
+                  fill="url(#colorProfit)"
                 />
               </AreaChart>
             ) : (
@@ -541,17 +679,17 @@ export function ProfitAnalytics({
                 margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke={darkMode ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)"} />
-                <XAxis 
-                  dataKey="date" 
-                  stroke={darkMode ? "#A1A1AA" : "#71717A"} 
-                  fontSize={10.5} 
-                  tickLine={false} 
+                <XAxis
+                  dataKey="date"
+                  stroke={darkMode ? "#A1A1AA" : "#71717A"}
+                  fontSize={10.5}
+                  tickLine={false}
                   dy={10}
                   fontFamily="'Plus Jakarta Sans', ui-sans-serif, sans-serif"
                 />
-                <YAxis 
-                  stroke={darkMode ? "#A1A1AA" : "#71717A"} 
-                  fontSize={10} 
+                <YAxis
+                  stroke={darkMode ? "#A1A1AA" : "#71717A"}
+                  fontSize={10}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(val) => formatCurrency(val, { compact: true })}
@@ -565,27 +703,31 @@ export function ProfitAnalytics({
                     color: darkMode ? "#ECEDEE" : "#18181B",
                     fontSize: "11px",
                     fontFamily: "'Plus Jakarta Sans', ui-sans-serif, sans-serif",
-                    boxShadow: "0 12px 28px -4px rgba(0, 0, 0, 0.18)"
+                    boxShadow: "0 12px 28px -4px rgba(0, 0, 0, 0.18)",
                   }}
                   labelStyle={{
                     color: darkMode ? "#ECEDEE" : "#18181B",
                     fontWeight: "bold",
-                    marginBottom: "4px"
+                    marginBottom: "4px",
                   }}
                   itemStyle={{
-                    color: darkMode ? "#D4D4D8" : "#3F3F46"
+                    color: darkMode ? "#D4D4D8" : "#3F3F46",
                   }}
-                  formatter={(value: any) => [formatCurrency(value), ""]}
+                  formatter={(value: any, name: any) => [
+                    formatCurrency(Number(value) || 0),
+                    name === "NetProfit" ? "Net Profit" : name === "COGS" ? "COGS Base" : name === "Expenses" ? "OpEx & Losses" : name,
+                  ]}
                 />
-                <Legend 
-                  verticalAlign="top" 
-                  height={36} 
+                <Legend
+                  verticalAlign="top"
+                  height={36}
                   iconType="circle"
                   iconSize={8}
                   wrapperStyle={{ fontSize: "11px", fontFamily: "'Plus Jakarta Sans', ui-sans-serif, sans-serif", fontWeight: "bold" }}
                 />
                 <Bar dataKey="Revenue" fill="#10b981" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="COGS" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Expenses" name="OpEx & Losses" fill="#f43f5e" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="NetProfit" name="Net Profit" fill="#06b6d4" radius={[4, 4, 0, 0]} />
               </BarChart>
             )}
@@ -595,7 +737,7 @@ export function ProfitAnalytics({
         <div className="mt-4 pt-3.5 border-t border-divider/20 flex flex-wrap gap-4 items-center justify-between text-[10.5px] text-default-500 font-sans font-medium">
           <div className="flex items-center gap-1.5 font-bold text-default-600 dark:text-default-400">
             <Sparkles className="h-4 w-4 text-emerald-500" />
-            <span>Multi-channel profitability tracking synced to point-of-sale invoices and supplier procurement costs.</span>
+            <span>Multi-channel profitability tracking synced to point-of-sale invoices, inventory landing costs, and operational losses.</span>
           </div>
         </div>
       </div>

@@ -71,7 +71,7 @@ export function initSocketServer(httpServer) {
     pingTimeout: 60000,
     pingInterval: 25000,
     connectTimeout: 45000,
-    maxHttpBufferSize: 1e8,
+    maxHttpBufferSize: 5e6, // 5MB buffer limit to prevent memory exhaustion DoS
     path: '/socket.io/'
   });
 

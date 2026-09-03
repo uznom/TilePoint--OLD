@@ -132,7 +132,7 @@ export function generateServerSessionToken(user, sessionId, durationMs = SHIFT_S
   const now = Date.now();
   const nextMidnight = getNextMidnight(now);
   const exp = Math.min(now + durationMs, nextMidnight);
-  const sessId = sessionId || ("SESS_" + Math.random().toString(36).substring(2, 11).toUpperCase());
+  const sessId = sessionId || ("SESS_" + crypto.randomUUID().replace(/-/g, '').substring(0, 12).toUpperCase());
   const payload = {
     id: user.id,
     username: user.username || user.fullName || "User",

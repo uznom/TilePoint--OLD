@@ -39,7 +39,19 @@ const app = express();
 
 app.use(cors(corsOptions));
 app.use(helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'", "wss:", "ws:", "https:", "http:"],
+      workerSrc: ["'self'", "blob:"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: useSsl ? [] : null,
+    }
+  } : false,
   crossOriginEmbedderPolicy: false,
   hsts: useSsl ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false
 }));

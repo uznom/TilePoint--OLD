@@ -1,25 +1,16 @@
-import { Building,Download,Layers,Plus,Search,Sliders,Sparkles,Terminal,TrendingDown,TrendingUp } from "lucide-react";
-import React,{ useMemo,useState } from "react";
+import React, { useMemo, useState } from "react";
+import { Building, Download, Layers, Plus, Search, Sliders, Sparkles, Terminal, TrendingDown, TrendingUp } from "lucide-react";
 import { useDb } from "../context/DbContext";
 import { getBranchOptionLabel } from '../lib/branchUtils';
 import { saveFileToBackup } from "../lib/fileBackupHelper";
-import { downloadWindowsLauncherScript,generateTransactionCsv } from "../lib/transactionLogger";
-const LazyProfitAnalytics = React.lazy(async () => {
-  try {
-    const m = await import("./ProfitAnalytics");
-    return { default: m.ProfitAnalytics };
-  } catch (err) {
-    await new Promise((r) => setTimeout(r, 400));
-    const m = await import("./ProfitAnalytics");
-    return { default: m.ProfitAnalytics };
-  }
-});
+import { downloadWindowsLauncherScript, generateTransactionCsv } from "../lib/transactionLogger";
 import { HeroTable } from "./common/ui/HeroTable";
 import { HeroButton } from "./common/ui/HeroButton";
 import { HeroSelect } from "./common/ui/HeroSelect";
 import { HeroDropdownSelect } from "./common/ui/HeroDropdown";
 import { HeaderBar } from "./common/HeaderBar";
 import { useMultiSort } from "../hooks/useMultiSort";
+import { ProfitAnalytics } from "./ProfitAnalytics";
 
 interface AdminProfitModuleProps {
  darkMode: boolean;
@@ -202,268 +193,293 @@ export function AdminProfitModule({
  showToastMsg("P&L Statement exported to CSV successfully!", "success");
  });
  };
+  const handleModifierSave = (branchId: string) => {
+    const val = parseFloat(editingValue);
+    if (isNaN(val) || val < 0 || val > 100) {
+      showToastMsg("Please enter a valid percentage between 0 and 100.", "error");
+      return;
+    }
+    const updated = {
+      ...branchLandingModifiers,
+      [branchId]: val,
+    };
+    setBranchLandingModifiers(updated);
+    localStorage.setItem("tilepoint_branch_landing_modifiers", JSON.stringify(updated));
+    window.dispatchEvent(new Event("storage"));
+    setEditingBranchId(null);
+    showToastMsg(`Landing cost modifier for ${getBranchName(branchId)} updated to ${val}%`, "success");
+  };
 
- const handleModifierSave = (branchId: string) => {
- const val = parseFloat(editingValue);
- if (isNaN(val) || val < 0 || val > 100) {
- showToastMsg("Please enter a valid percentage between 0 and 100.", "error");
- return;
- }
- const updated = {
- ...branchLandingModifiers,
- [branchId]: val,
- };
- setBranchLandingModifiers(updated);
- localStorage.setItem("tilepoint_branch_landing_modifiers", JSON.stringify(updated));
- setEditingBranchId(null);
- showToastMsg(`Landing cost modifier for ${getBranchName(branchId)} updated to ${val}%`, "success");
- };
+  // Metrics hook calculation
+  const metrics = useMemo(() => {
+    const safeSales = sales || [];
+    const safeSaleItems = saleItems || [];
+    const safeProducts = products || [];
+    const safeExpenses = expenses || [];
+    const safeDamageLogs = damageLogs || [];
+    const safeShifts = shifts || [];
 
- // Metrics hook calculation
- const metrics = useMemo(() => {
- // Pre-indexed Map lookups for O(1) performance
- const saleItemsBySaleId = new Map<string, typeof saleItems>();
- if (saleItems) {
- saleItems.forEach((item) => {
- if (item.isDeleted) return;
- let list = saleItemsBySaleId.get(item.saleId);
- if (!list) {
- list = [];
- saleItemsBySaleId.set(item.saleId, list);
- }
- list.push(item);
- });
- }
+    // Pre-indexed Map lookups for O(1) performance
+    const saleItemsBySaleId = new Map<string, typeof safeSaleItems>();
+    safeSaleItems.forEach((item) => {
+      if (item.isDeleted) return;
+      let list = saleItemsBySaleId.get(item.saleId);
+      if (!list) {
+        list = [];
+        saleItemsBySaleId.set(item.saleId, list);
+      }
+      list.push(item);
+    });
 
- const productsById = new Map<string, (typeof products)[0]>();
- if (products) {
- products.forEach((p) => {
- if (!p.isDeleted) {
- productsById.set(p.id, p);
- }
- });
- }
+    const productsById = new Map<string, (typeof safeProducts)[0]>();
+    safeProducts.forEach((p) => {
+      if (!p.isDeleted) {
+        productsById.set(p.id, p);
+      }
+    });
 
- const activeSales = sales.filter((s) => {
- if (selectedBranchId !== "all" && s.branchId !== selectedBranchId) return false;
- return true;
- });
+    const activeSales = safeSales.filter((s) => {
+      if (selectedBranchId !== "all" && s.branchId !== selectedBranchId) return false;
+      return true;
+    });
 
- const nonDeletedSales = activeSales.filter((s) => !s.isDeleted);
- const voidedSales = activeSales.filter((s) => s.isDeleted);
+    const nonDeletedSales = activeSales.filter((s) => !s.isDeleted);
+    const voidedSales = activeSales.filter((s) => s.isDeleted);
 
- // Gross Revenue
- const grossSalesCollected = nonDeletedSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
- const grossSalesSubtotal = nonDeletedSales.reduce((acc, s) => acc + (Number(s.subtotal) || 0), 0);
- const grossSalesVat = nonDeletedSales.reduce((acc, s) => acc + (Number(s.vat) || 0), 0);
- const grossSalesDiscount = nonDeletedSales.reduce((acc, s) => acc + (Number(s.discount) || 0), 0);
+    // Gross Revenue
+    const grossSalesCollected = nonDeletedSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+    const grossSalesSubtotal = nonDeletedSales.reduce((acc, s) => acc + (Number(s.subtotal) || 0), 0);
+    const grossSalesVat = nonDeletedSales.reduce((acc, s) => acc + (Number(s.vat) || 0), 0);
+    const grossSalesDiscount = nonDeletedSales.reduce((acc, s) => acc + (Number(s.discount) || 0), 0);
 
- // COGS
- let calculatedCogs = 0;
- nonDeletedSales.forEach((sale) => {
- const items = saleItemsBySaleId.get(sale.id) || [];
- const modPercent = branchLandingModifiers[sale.branchId] ?? 2.5; // Default to 2.5% landing modifier if unconfigured
- items.forEach((item) => {
- const prod = productsById.get(item.productId);
- const baseCost = prod ? prod.costPrice : 0;
- calculatedCogs += item.quantity * baseCost * (1 + modPercent / 100);
- });
- });
+    // COGS
+    let calculatedCogs = 0;
+    nonDeletedSales.forEach((sale) => {
+      const items = saleItemsBySaleId.get(sale.id) || [];
+      const modPercent = branchLandingModifiers[sale.branchId] ?? 2.5; // Default to 2.5% landing modifier if unconfigured
+      items.forEach((item) => {
+        const prod = productsById.get(item.productId);
+        const baseCost = prod ? Number(prod.costPrice || 0) : 0;
+        calculatedCogs += Number(item.quantity || 0) * baseCost * (1 + modPercent / 100);
+      });
+    });
 
- // Retrieve calendar payments from localStorage automatically
- const parsedInstallments: Record<string, { id: string, amount: number, date: string, notes?: string }[]> = (() => {
- try {
- const saved = localStorage.getItem("atpos_v2_payable_installments");
- return saved ? JSON.parse(saved) : {};
- } catch {
- return {};
- }
- })();
+    // Retrieve calendar payments from localStorage automatically
+    const parsedInstallments: Record<string, { id: string; amount: number; date: string; notes?: string }[]> = (() => {
+      try {
+        const saved = localStorage.getItem("atpos_v2_payable_installments");
+        return saved ? JSON.parse(saved) : {};
+      } catch {
+        return {};
+      }
+    })();
 
- const automatedPaymentsList: any[] = [];
- Object.entries(parsedInstallments).forEach(([poId, insts]) => {
- const bill = customBills?.find((b) => b.id === poId);
- const po = purchaseOrders?.find((p) => p.id === poId);
- 
- const branchId = po?.branchId || "corporate";
- const title = bill?.title || po?.poNumber || `Payment (${poId})`;
- const category = bill ? "Utilities/Corporate Debt [Calendar]" : "Supplier Payment [Calendar]";
- 
- if (selectedBranchId !== "all" && branchId !== selectedBranchId) return;
+    const automatedPaymentsList: any[] = [];
+    Object.entries(parsedInstallments).forEach(([poId, insts]) => {
+      const bill = customBills?.find((b) => b.id === poId);
+      const po = purchaseOrders?.find((p) => p.id === poId);
 
- insts.forEach((inst) => {
- automatedPaymentsList.push({
- id: inst.id,
- dateTime: inst.date,
- amount: inst.amount,
- recordedBy: "Automated Calendar Sync",
- category,
- notes: inst.notes || `Disbursement against ${title}`,
- branchId,
- isAutomated: true
- });
- });
- });
+      const branchId = po?.branchId || "corporate";
+      const title = bill?.title || po?.poNumber || `Payment (${poId})`;
+      const category = bill ? "Utilities/Corporate Debt [Calendar]" : "Supplier Payment [Calendar]";
 
- // Operating Expenses (OpEx)
- const activeExpenses = expenses.filter((exp) => {
- if (exp.isDeleted) return false;
- if (selectedBranchId !== "all" && exp.branchId !== selectedBranchId) return false;
- return true;
- });
+      if (selectedBranchId !== "all" && branchId !== selectedBranchId) return;
 
- const combinedExpensesList = [...activeExpenses, ...automatedPaymentsList];
- const totalOpex = combinedExpensesList.reduce((acc, exp) => acc + exp.amount, 0);
+      insts.forEach((inst) => {
+        automatedPaymentsList.push({
+          id: inst.id,
+          dateTime: inst.date,
+          amount: Number(inst.amount || 0),
+          recordedBy: "Automated Calendar Sync",
+          category,
+          notes: inst.notes || `Disbursement against ${title}`,
+          branchId,
+          isAutomated: true,
+        });
+      });
+    });
 
- // Shrink / System Loss Ledger
- const activeDamageLogs = damageLogs.filter((log) => {
- if (log.isDeleted) return false;
- if (selectedBranchId !== "all" && log.branchId !== selectedBranchId) return false;
- return true;
- });
-  const totalDamageLoss = activeDamageLogs.reduce((acc, log) => {
-    const prod = productsById.get(log.productId);
-    if (!prod) return acc;
-    const costPerUnit = log.unitType === "Piece" ? (prod.costPrice / (prod.boxQuantity || 4)) : prod.costPrice;
-    return acc + (costPerUnit * Number(log.quantity || 0));
-  }, 0);
+    // Operating Expenses (OpEx)
+    const activeExpenses = safeExpenses.filter((exp) => {
+      if (exp.isDeleted) return false;
+      if (selectedBranchId !== "all" && exp.branchId !== selectedBranchId) return false;
+      return true;
+    });
 
- const activeShifts = shifts.filter((sh) => {
- if (selectedBranchId !== "all" && sh.branchId !== selectedBranchId) return false;
- return true;
- });
- const totalShiftShortage = activeShifts.reduce((acc, sh) => {
- const v = sh.variance ?? 0;
- if (v < 0) {
- return acc + Math.abs(v);
- }
- return acc;
- }, 0);
+    const combinedExpensesList = [...activeExpenses, ...automatedPaymentsList];
+    const totalOpex = combinedExpensesList.reduce((acc, exp) => acc + Number(exp.amount || 0), 0);
 
- const totalVoidsLoss = voidedSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
- const totalSystemLoss = totalDamageLoss + totalShiftShortage;
-
- // Net Profit
- const totalExpensesAndDeductions = calculatedCogs + totalOpex + totalSystemLoss;
- const netProfit = grossSalesCollected - totalExpensesAndDeductions;
-
- const grossMarginPercent = grossSalesCollected > 0 ? ((grossSalesCollected - calculatedCogs) / grossSalesCollected) * 100 : 0;
- const netMarginPercent = grossSalesCollected > 0 ? (netProfit / grossSalesCollected) * 100 : 0;
-
- return {
- grossRevenue: grossSalesCollected,
- grossSubtotal: grossSalesSubtotal,
- vatCollected: grossSalesVat,
- discountsAllowed: grossSalesDiscount,
- cogs: calculatedCogs,
- opex: totalOpex,
- shrinkage: totalSystemLoss,
- damageLoss: totalDamageLoss,
- shiftShortage: totalShiftShortage,
- voidedLoss: totalVoidsLoss,
- netProfit,
- grossMarginPercent,
- netMarginPercent,
- activeExpenses,
- combinedExpenses: combinedExpensesList,
- activeDamageLogs,
- activeShifts,
- voidedSales,
- };
- }, [sales, saleItems, products, damageLogs, shifts, branchLandingModifiers, selectedBranchId, expenses, customBills, purchaseOrders]);
-
- const opexByCategory = useMemo(() => {
- const categories: Record<string, number> = {
- "Utilities & Energy": 0,
- "Logistics, Freight & Delivery": 0,
- "Packaging Materials": 0,
- "Local Marketing & Ads": 0,
- "Repairs & Showroom Maintenance": 0,
- "Supplier Payments (Calendar)": 0,
- "Utilities/Corporate Debt (Calendar)": 0,
- "Miscellaneous Expenses": 0,
- };
-
- metrics.combinedExpenses.forEach((exp) => {
- if (exp.category === "Utilities") {
- categories["Utilities & Energy"] += exp.amount;
- } else if (exp.category === "Logistics") {
- categories["Logistics, Freight & Delivery"] += exp.amount;
- } else if (exp.category === "Packaging") {
- categories["Packaging Materials"] += exp.amount;
- } else if (exp.category === "Marketing") {
- categories["Local Marketing & Ads"] += exp.amount;
- } else if (exp.category === "Repairs") {
- categories["Repairs & Showroom Maintenance"] += exp.amount;
- } else if (exp.category === "Supplier Payment [Calendar]") {
- categories["Supplier Payments (Calendar)"] += exp.amount;
- } else if (exp.category === "Utilities/Corporate Debt [Calendar]") {
- categories["Utilities/Corporate Debt (Calendar)"] += exp.amount;
- } else {
- categories["Miscellaneous Expenses"] += exp.amount;
- }
- });
-
- return categories;
- }, [metrics.combinedExpenses]);
-
- // Branch Rank calculation list
- const branchLeaderboard = useMemo(() => {
- // Retrieve calendar payments from localStorage automatically
- const parsedInstallments: Record<string, { id: string, amount: number, date: string, notes?: string }[]> = (() => {
- try {
- const saved = localStorage.getItem("atpos_v2_payable_installments");
- return saved ? JSON.parse(saved) : {};
- } catch {
- return {};
- }
- })();
-
- return branches.filter((b) => !b.isDeleted).map((branch) => {
- const branchSales = sales.filter((s) => s.branchId === branch.id && !s.isDeleted);
- const branchGross = branchSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
- 
- let branchCogs = 0;
- const modPercent = branchLandingModifiers[branch.id] ?? 2.5;
- branchSales.forEach((sale) => {
- const items = saleItems.filter((item) => item.saleId === sale.id && !item.isDeleted);
- items.forEach((item) => {
- const prod = products.find((p) => p.id === item.productId);
- const baseCost = prod ? prod.costPrice : 0;
- branchCogs += item.quantity * baseCost * (1 + modPercent / 100);
- });
- });
-
- // Automated calendar payments for this branch
- let branchAutomatedCalendarPayments = 0;
- Object.entries(parsedInstallments).forEach(([poId, insts]) => {
- const bill = customBills?.find((b) => b.id === poId);
- const po = purchaseOrders?.find((p) => p.id === poId);
- const bId = (bill as any)?.branchId || po?.branchId || "corporate";
- if (bId === branch.id) {
- insts.forEach((inst) => {
- branchAutomatedCalendarPayments += inst.amount;
- });
- }
- });
-
- const branchOpex = expenses
- .filter((exp) => !exp.isDeleted && exp.branchId === branch.id)
- .reduce((acc, exp) => acc + exp.amount, 0) + branchAutomatedCalendarPayments;
-
-  const branchDamages = damageLogs
-    .filter((log) => !log.isDeleted && log.branchId === branch.id)
-    .reduce((acc, log) => {
-      const prod = products.find((p) => p.id === log.productId);
+    // Shrink / System Loss Ledger
+    const activeDamageLogs = safeDamageLogs.filter((log) => {
+      if (log.isDeleted) return false;
+      if (selectedBranchId !== "all" && log.branchId !== selectedBranchId) return false;
+      return true;
+    });
+    const totalDamageLoss = activeDamageLogs.reduce((acc, log) => {
+      const prod = productsById.get(log.productId);
       if (!prod) return acc;
       const costPerUnit = log.unitType === "Piece" ? (prod.costPrice / (prod.boxQuantity || 4)) : prod.costPrice;
       return acc + (costPerUnit * Number(log.quantity || 0));
     }, 0);
 
- const branchShiftShortages = shifts
+    const activeShifts = safeShifts.filter((sh) => {
+      if (selectedBranchId !== "all" && sh.branchId !== selectedBranchId) return false;
+      return true;
+    });
+    const totalShiftShortage = activeShifts.reduce((acc, sh) => {
+      const v = Number(sh.variance || 0);
+      if (v < 0) {
+        return acc + Math.abs(v);
+      }
+      return acc;
+    }, 0);
+
+    const totalVoidsLoss = voidedSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+    const totalSystemLoss = totalDamageLoss + totalShiftShortage;
+
+    // Net Profit
+    const totalExpensesAndDeductions = calculatedCogs + totalOpex + totalSystemLoss;
+    const netProfit = grossSalesCollected - totalExpensesAndDeductions;
+
+    const grossMarginPercent = grossSalesCollected > 0 ? ((grossSalesCollected - calculatedCogs) / grossSalesCollected) * 100 : 0;
+    const netMarginPercent = grossSalesCollected > 0 ? (netProfit / grossSalesCollected) * 100 : 0;
+
+    return {
+      grossRevenue: grossSalesCollected,
+      grossSubtotal: grossSalesSubtotal,
+      vatCollected: grossSalesVat,
+      discountsAllowed: grossSalesDiscount,
+      cogs: calculatedCogs,
+      opex: totalOpex,
+      shrinkage: totalSystemLoss,
+      damageLoss: totalDamageLoss,
+      shiftShortage: totalShiftShortage,
+      voidedLoss: totalVoidsLoss,
+      netProfit,
+      grossMarginPercent,
+      netMarginPercent,
+      activeExpenses,
+      combinedExpenses: combinedExpensesList,
+      activeDamageLogs,
+      activeShifts,
+      voidedSales,
+    };
+  }, [sales, saleItems, products, damageLogs, shifts, branchLandingModifiers, selectedBranchId, expenses, customBills, purchaseOrders]);
+
+  const opexByCategory = useMemo(() => {
+    const categories: Record<string, number> = {
+      "Utilities & Energy": 0,
+      "Logistics, Freight & Delivery": 0,
+      "Packaging Materials": 0,
+      "Local Marketing & Ads": 0,
+      "Repairs & Showroom Maintenance": 0,
+      "Supplier Payments (Calendar)": 0,
+      "Utilities/Corporate Debt (Calendar)": 0,
+      "Miscellaneous Expenses": 0,
+    };
+
+    metrics.combinedExpenses.forEach((exp) => {
+      const amt = Number(exp.amount || 0);
+      if (exp.category === "Utilities") {
+        categories["Utilities & Energy"] += amt;
+      } else if (exp.category === "Logistics") {
+        categories["Logistics, Freight & Delivery"] += amt;
+      } else if (exp.category === "Packaging") {
+        categories["Packaging Materials"] += amt;
+      } else if (exp.category === "Marketing") {
+        categories["Local Marketing & Ads"] += amt;
+      } else if (exp.category === "Repairs") {
+        categories["Repairs & Showroom Maintenance"] += amt;
+      } else if (exp.category === "Supplier Payment [Calendar]") {
+        categories["Supplier Payments (Calendar)"] += amt;
+      } else if (exp.category === "Utilities/Corporate Debt [Calendar]") {
+        categories["Utilities/Corporate Debt (Calendar)"] += amt;
+      } else {
+        categories["Miscellaneous Expenses"] += amt;
+      }
+    });
+
+    return categories;
+  }, [metrics.combinedExpenses]);
+
+  // Branch Rank calculation list
+  const branchLeaderboard = useMemo(() => {
+    const safeBranches = (branches || []).filter((b) => !b.isDeleted);
+    const safeSales = (sales || []).filter((s) => !s.isDeleted);
+    const safeSaleItems = (saleItems || []).filter((item) => !item.isDeleted);
+    const safeProducts = (products || []).filter((p) => !p.isDeleted);
+    const safeExpenses = (expenses || []).filter((exp) => !exp.isDeleted);
+    const safeDamageLogs = (damageLogs || []).filter((log) => !log.isDeleted);
+    const safeShifts = shifts || [];
+
+    const productsById = new Map<string, (typeof safeProducts)[0]>();
+    safeProducts.forEach((p) => productsById.set(p.id, p));
+
+    const saleItemsBySaleId = new Map<string, typeof safeSaleItems>();
+    safeSaleItems.forEach((item) => {
+      let list = saleItemsBySaleId.get(item.saleId);
+      if (!list) {
+        list = [];
+        saleItemsBySaleId.set(item.saleId, list);
+      }
+      list.push(item);
+    });
+
+    // Retrieve calendar payments from localStorage automatically
+    const parsedInstallments: Record<string, { id: string; amount: number; date: string; notes?: string }[]> = (() => {
+      try {
+        const saved = localStorage.getItem("atpos_v2_payable_installments");
+        return saved ? JSON.parse(saved) : {};
+      } catch {
+        return {};
+      }
+    })();
+
+    return safeBranches.map((branch) => {
+      const branchSales = safeSales.filter((s) => s.branchId === branch.id);
+      const branchGross = branchSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+
+      let branchCogs = 0;
+      const modPercent = branchLandingModifiers[branch.id] ?? 2.5;
+      branchSales.forEach((sale) => {
+        const items = saleItemsBySaleId.get(sale.id) || [];
+        items.forEach((item) => {
+          const prod = productsById.get(item.productId);
+          const baseCost = prod ? Number(prod.costPrice || 0) : 0;
+          branchCogs += Number(item.quantity || 0) * baseCost * (1 + modPercent / 100);
+        });
+      });
+
+      // Automated calendar payments for this branch
+      let branchAutomatedCalendarPayments = 0;
+      Object.entries(parsedInstallments).forEach(([poId, insts]) => {
+        const bill = customBills?.find((b) => b.id === poId);
+        const po = purchaseOrders?.find((p) => p.id === poId);
+        const bId = (bill as any)?.branchId || po?.branchId || "corporate";
+        if (bId === branch.id) {
+          insts.forEach((inst) => {
+            branchAutomatedCalendarPayments += Number(inst.amount || 0);
+          });
+        }
+      });
+
+      const branchOpex = safeExpenses
+        .filter((exp) => exp.branchId === branch.id)
+        .reduce((acc, exp) => acc + Number(exp.amount || 0), 0) + branchAutomatedCalendarPayments;
+
+      const branchDamages = safeDamageLogs
+        .filter((log) => log.branchId === branch.id)
+        .reduce((acc, log) => {
+          const prod = productsById.get(log.productId);
+          if (!prod) return acc;
+          const costPerUnit = log.unitType === "Piece" ? (prod.costPrice / (prod.boxQuantity || 4)) : prod.costPrice;
+          return acc + (costPerUnit * Number(log.quantity || 0));
+        }, 0);
+
+      const branchShiftShortages = safeShifts
         .filter((sh) => sh.branchId === branch.id)
         .reduce((acc, sh) => {
-          const v = sh.variance ?? 0;
+          const v = Number(sh.variance || 0);
           return v < 0 ? acc + Math.abs(v) : acc;
         }, 0);
 
@@ -734,22 +750,14 @@ export function AdminProfitModule({
 
       {/* 2. PROFIT ANALYTICS TIMELINE & GRAPH */}
       <div className="bg-content1 border border-divider/30 rounded-2xl p-2 shadow-sm">
-        <React.Suspense
-          fallback={
-            <div className="h-64 flex flex-col items-center justify-center space-y-2 text-default-400">
-              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <span className="text-xs">Loading analytics charts...</span>
-            </div>
-          }
-        >
-          <LazyProfitAnalytics
-            darkMode={darkMode}
-            selectedBranchId={selectedBranchId}
-            setSelectedBranchId={setSelectedBranchId}
-            getBranchName={getBranchName}
-            showToastMsg={showToastMsg}
-          />
-        </React.Suspense>
+        <ProfitAnalytics
+          darkMode={darkMode}
+          selectedBranchId={selectedBranchId}
+          setSelectedBranchId={setSelectedBranchId}
+          getBranchName={getBranchName}
+          showToastMsg={showToastMsg}
+          branchLandingModifiers={branchLandingModifiers}
+        />
       </div>
 
       {/* 3. MULTI-BRANCH COMPARISON & OPERATIONAL AUDIT GRID */}
@@ -1377,4 +1385,6 @@ export function AdminProfitModule({
     </div>
   );
 }
+
+export default AdminProfitModule;
 

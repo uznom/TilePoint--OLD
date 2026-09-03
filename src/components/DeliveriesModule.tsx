@@ -35,7 +35,6 @@ import { HeroTable } from './common/ui/HeroTable';
 import { HeroButton } from './common/ui/HeroButton';
 import { HeroSelect } from './common/ui/HeroSelect';
 import { HeroDropdownSelect } from './common/ui/HeroDropdown';
-import { HeaderBar } from './common/HeaderBar';
 import { useMultiSort } from '../hooks/useMultiSort';
 import { Delivery } from '../types/db';
 
@@ -117,17 +116,6 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
  const [posDelivTruck, setPosDelivTruck] = useState('');
  const [posDelivDriver, setPosDelivDriver] = useState('');
  const [posDelivHelper, setPosDelivHelper] = useState('');
-
- // Delivery State Reconciliation & Diagnostic Audit Tracking
- const [lastReconciledAt, setLastReconciledAt] = useState<string | null>(null);
- const [reconciliationStats, setReconciliationStats] = useState<{
- reconciledCount: number;
- pending: number;
- scheduled: number;
- transit: number;
- delivered: number;
- failed: number;
- } | null>(null);
 
  // Auto-reconcile delivery status discrepancies & missing POS store delivery orders across sessions
  const runDeliveriesReconciliationCheck = React.useCallback((silent = false) => {
@@ -212,15 +200,6 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
 
  const totalReconciled = createdCount + reconciledCount;
  const timestamp = new Date().toLocaleTimeString();
- setLastReconciledAt(timestamp);
- setReconciliationStats({
- reconciledCount: totalReconciled,
- pending: pendingCount,
- scheduled: scheduledCount,
- transit: transitCount,
- delivered: deliveredCount,
- failed: failedCount,
- });
 
  // 4. Log structured diagnostic report to console on mount/execution
  console.log(
@@ -690,90 +669,58 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
 
   return (
     <div className="p-6 space-y-6 text-left h-full overflow-y-auto">
-      {/* HEADER SECTION */}
-      <HeaderBar
-        title="Cargo Deliveries & Freight Scheduling"
-        subtitle="Dispatch, route, track, and log customer bulk shipments on tile transport trucks."
-        icon={Truck}
-        badge={{ text: `${deliveries.length} Shipments`, variant: 'primary' }}
-        actions={
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <HeroButton
-              onClick={() => runDeliveriesReconciliationCheck(false)}
-              color="default"
-              variant="bordered"
-              size="md"
-              startContent={<RefreshCw className="h-3.5 w-3.5 text-primary animate-spin-slow" />}
-            >
-              Reconcile & Sync
-            </HeroButton>
-
-            <HeroButton
-              onClick={() => setShowSchedulePosModal(true)}
-              color="primary"
-              variant="solid"
-              size="md"
-              startContent={<Plus className="h-4 w-4" />}
-            >
-              Schedule Delivery
-            </HeroButton>
-
-            {currentUser?.role === UserRole.ADMIN && (
-              <div className="flex items-center gap-2 shrink-0">
-                <HeroDropdownSelect
-                  startIcon={<span className="text-[10px] font-black uppercase text-primary tracking-widest">Scope:</span>}
-                  items={[
-                    { key: 'ALL', label: 'ALL OUTLETS' },
-                    ...branches.map((b) => ({
-                      key: b.id,
-                      label: b.name.toUpperCase(),
-                    })),
-                  ]}
-                  selectedKey={selectedBranchId ?? 'ALL'}
-                  onSelectionChange={(val) => setSelectedBranchId(val)}
-                  size="sm"
-                  variant="pill"
-                  className="min-w-[160px]"
-                />
-              </div>
-            )}
-          </div>
-        }
+      {/* TOAST PANEL BAR */}
+      <ToastNotification
+        message={toastMessage}
+        onClose={() => setToastMessage(null)}
       />
 
- {/* TOAST PANEL BAR */}
- <ToastNotification
- message={toastMessage}
- onClose={() => setToastMessage(null)}
- />
+      {/* TOP ACTIONS TOOLBAR */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <HeroButton
+            onClick={() => setShowSchedulePosModal(true)}
+            color="primary"
+            variant="solid"
+            size="md"
+            startContent={<Plus className="h-4 w-4" />}
+          >
+            Schedule Delivery
+          </HeroButton>
 
- {/* RECONCILIATION AUDIT STATUS CARD */}
- {reconciliationStats && (
- <div className="bg-content1 border border-divider/30 rounded-2xl p-3 px-4 text-xs shadow-xs flex flex-wrap items-center justify-between gap-3 font-sans">
- <div className="flex items-center gap-2.5">
- <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 shrink-0" />
- <div>
- <span className="font-extrabold text-foreground uppercase tracking-wide">
- Delivery Reconciliation & Multi-Session Sync Active
- </span>
- <span className="text-[11px] text-default-500 font-medium block">
- Mount & session audit checked at <strong className="">{lastReconciledAt || 'Just now'}</strong>. Scheduled & in-transit delivery states fully synced.
- </span>
- </div>
- </div>
- <div className="flex flex-wrap items-center gap-2 text-[10px] font-extrabold uppercase bg-background border border-divider/40 px-3 py-1.5 rounded-xl">
- <span className="text-amber-500">Pending: {reconciliationStats.pending}</span>
- <span className="text-primary">Scheduled: {reconciliationStats.scheduled}</span>
- <span className="text-secondary">In-Transit: {reconciliationStats.transit}</span>
- <span className="text-emerald-500">Delivered: {reconciliationStats.delivered}</span>
-                <span className="bg-emerald-500 text-white px-2 py-0.5 rounded-md font-sans">
-                  {reconciliationStats.reconciledCount} Auto-Reconciled
-                </span>
-              </div>
+          <HeroButton
+            onClick={() => runDeliveriesReconciliationCheck(false)}
+            color="default"
+            variant="bordered"
+            size="md"
+            startContent={<RefreshCw className="h-3.5 w-3.5 text-primary animate-spin-slow" />}
+          >
+            Reconcile & Sync
+          </HeroButton>
+        </div>
+
+        {currentUser?.role === UserRole.ADMIN && (
+          <div className="flex items-center gap-2 shrink-0">
+            <HeroDropdownSelect
+              startIcon={<span className="text-[10px] font-black uppercase text-primary tracking-widest">Scope:</span>}
+              items={[
+                { key: 'ALL', label: 'ALL OUTLETS' },
+                ...branches.map((b) => ({
+                  key: b.id,
+                  label: b.name.toUpperCase(),
+                })),
+              ]}
+              selectedKey={selectedBranchId ?? 'ALL'}
+              onSelectionChange={(val) => setSelectedBranchId(val)}
+              size="sm"
+              variant="pill"
+              className="min-w-[160px]"
+            />
           </div>
         )}
+      </div>
 
-        {/* METRIC CARD BENTO STATS */}
+      {/* METRIC CARD BENTO STATS */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="p-5 rounded-2xl border border-zinc-200/70 dark:border-white/10 bg-white dark:bg-zinc-900 shadow-elevation-soft flex flex-col justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-default-500 font-mono">Gross Deliveries</span>

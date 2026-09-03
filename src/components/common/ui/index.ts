@@ -12,9 +12,11 @@ export * from './HeroTextarea';
 export * from './HeroSelect';
 export * from './HeroAutocomplete';
 export * from './HeroNumberInput';
+export * from './HeroNumberField';
 export * from './HeroDatePicker';
 export * from './HeroDateRangePicker';
 export * from './HeroErrorMessage';
+export * from './HeroFieldError';
 export * from './HeroColorArea';
 export * from './HeroForm';
 export * from './HeroMeter';
@@ -45,6 +47,7 @@ export * from './HeroSkeleton';
 export * from './HeroSpinner';
 export * from './HeroDropdown';
 export * from './HeroAlertDialog';
+export * from './HeroToast';
 
 // Navigation & Layout
 export * from './HeroNavbar';

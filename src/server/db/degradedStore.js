@@ -1,6 +1,6 @@
 import fs from 'fs';
 import mysql from 'mysql2/promise';
-import { WAL_FILE_PATH } from '../config/serverConfig.js';
+import { WAL_FILE_PATH, TABLE_COLUMNS } from '../config/serverConfig.js';
 import { pool, isConnectionError, initDatabaseSchema } from './mysqlPool.js';
 
 let isMysqlActive = false;
@@ -186,11 +186,17 @@ export async function replayQueuedDegradedWrites() {
   const queueCopy = [...degradedWriteQueue];
   const remaining = [];
 
+  const allowedTables = TABLE_COLUMNS ? new Set(Object.keys(TABLE_COLUMNS)) : null;
+
   for (const op of queueCopy) {
     try {
       if (typeof executeReplayOpHandler === 'function') {
         await executeReplayOpHandler(op);
       } else {
+        if (op.tableName && allowedTables && !allowedTables.has(op.tableName)) {
+          console.error(`[Security Warning] Fallback replay skipped unwhitelisted table: "${op.tableName}"`);
+          continue;
+        }
         if (op.type === 'delete') {
           await pool.execute(`DELETE FROM \`${op.tableName}\` WHERE id = ?`, [op.id]);
         } else if (op.type === 'soft_delete_backup') {

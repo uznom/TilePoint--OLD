@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import {
@@ -79,7 +80,7 @@ router.post('/login', authLimiter, async (req, res) => {
     await pruneExpiredSessions();
     const activeSessions = await getActiveSessionsList();
     const now = Date.now();
-    const incomingSessionId = sessionId || req.headers['x-client-id'] || ("SESS_" + Math.random().toString(36).substring(2, 11).toUpperCase());
+    const incomingSessionId = sessionId || req.headers['x-client-id'] || ("SESS_" + crypto.randomUUID().replace(/-/g, '').substring(0, 12).toUpperCase());
     const clientFingerprint = fingerprint || req.headers['x-client-fingerprint'] || '';
     const clientDeviceInfo = deviceInfo || req.headers['x-client-info'] || '';
     const durationMinutes = parseInt(maxDurationMinutes, 10) || DEFAULT_SESSION_MAX_DURATION_MINUTES;

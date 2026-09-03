@@ -1036,6 +1036,12 @@ export function getEmptyDatabaseStructure() {
 
 // Hook degraded store write replay handler to execute MySQL writes
 setExecuteReplayOpHandler(async (op) => {
+  const allowedTables = new Set(Object.keys(TABLE_COLUMNS));
+  if (op.tableName && !allowedTables.has(op.tableName)) {
+    console.error(`[Security Warning] Blocked replay operation with unwhitelisted table name: "${op.tableName}"`);
+    return;
+  }
+
   if (op.type === 'upsert') {
     await upsertRecordMysql(op.tableName, op.record);
   } else if (op.type === 'delete') {

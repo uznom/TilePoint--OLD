@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import {
@@ -21,13 +22,8 @@ export const globalApiLimiter = rateLimit({
     const p = req.path || req.url || '';
     return (
       p.includes('/api/auth/heartbeat') ||
-      p.includes('/api/auth/session') ||
-      p.includes('/api/auth/me') ||
       p.includes('/api/health') ||
-      p.includes('/api/server/status') ||
-      p.includes('/api/db') ||
-      p.includes('/api/mysql') ||
-      p.includes('/api/sync')
+      p.includes('/api/server/status')
     );
   }
 });
@@ -134,7 +130,7 @@ export async function verifySessionAndCheckConcurrency(req) {
   if (!userSession) {
     // If no active session was found in table (e.g. server restarted or table pruned),
     // auto-recreate the session record since token signature is cryptographically valid and user is active
-    const effectiveSessionId = incomingSessionId || payload.sessionId || ("SESS_" + Math.random().toString(36).substring(2, 11).toUpperCase());
+    const effectiveSessionId = incomingSessionId || payload.sessionId || ("SESS_" + crypto.randomUUID().replace(/-/g, '').substring(0, 12).toUpperCase());
     userSession = {
       id: effectiveSessionId,
       userId: dbUser.id,

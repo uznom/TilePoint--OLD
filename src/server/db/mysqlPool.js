@@ -79,10 +79,15 @@ export async function initDatabaseSchema() {
         .map(s => s.trim())
         .filter(s => s.length > 0 && !s.toLowerCase().startsWith('create database') && !s.toLowerCase().startsWith('use '));
       
+      const benignCodes = new Set(['ER_TABLE_EXISTS_ERROR', 'ER_DUP_FIELDNAME', 'ER_DUP_KEYNAME']);
       for (const stmt of statements) {
         try {
           await pool.query(stmt);
-        } catch (e) {}
+        } catch (e) {
+          if (!benignCodes.has(e.code)) {
+            console.warn(`[MySQL Schema Warning] Statement failed (${e.code || 'UNKNOWN'}):`, e.message);
+          }
+        }
       }
     }
     
@@ -144,10 +149,15 @@ export async function initDatabaseSchema() {
       "ALTER TABLE `active_sessions` MODIFY COLUMN `role` VARCHAR(64) NULL"
     ];
 
+    const indexBenignCodes = new Set(['ER_DUP_KEYNAME', 'ER_DUP_FIELDNAME', 'ER_CANT_DROP_FIELD_OR_KEY', 'ER_PARSE_ERROR']);
     for (const q of explicitIndexQueries) {
       try {
         await pool.query(q);
-      } catch (e) {}
+      } catch (e) {
+        if (!indexBenignCodes.has(e.code)) {
+          console.debug(`[MySQL Schema Notice] Index query skipped (${e.code || 'UNKNOWN'}):`, e.message);
+        }
+      }
     }
     
     console.log('[MySQL] Database schema and indexes verified and initialized.');

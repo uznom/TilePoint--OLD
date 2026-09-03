@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   Menu,
   PanelLeftClose,
@@ -8,7 +8,6 @@ import {
   Moon,
   Keyboard,
   Store,
-  ChevronRight,
 } from 'lucide-react';
 import { User, Branch, UserRole } from '../../types/db';
 import { SidebarCategoryItem } from '../Sidebar';
@@ -63,48 +62,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   unreadNotificationsCount = 0,
   onOpenNotifications,
 }) => {
-  // Compute breadcrumb trail based on current activeTab and category tree
-  const breadcrumb = useMemo(() => {
-    for (const cat of categories) {
-      if (cat.id === activeTab) {
-        return { category: cat.name, subItem: null, icon: cat.icon };
-      }
-      for (const sub of cat.subItems) {
-        if (sub.id === activeTab) {
-          return { category: cat.name, subItem: sub.name, icon: cat.icon };
-        }
-      }
-    }
-    // Fallbacks for specific standalone routes
-    const routeTitles: Record<string, { category: string; subItem: string | null }> = {
-      dashboard: { category: 'Intelligence', subItem: 'Executive Dashboard' },
-      'profit-analytics': { category: 'Intelligence', subItem: 'Profit Analytics' },
-      pos: { category: 'Sale', subItem: 'POS Checkout' },
-      ledger: { category: 'Sale', subItem: 'Sales Ledger' },
-      shift: { category: 'Sale', subItem: 'Shift Drawer' },
-      calculator: { category: 'Sale', subItem: 'Tile Calculator' },
-      tutorials: { category: 'Help', subItem: 'Tutorials & Manual' },
-      branches: { category: 'Administration', subItem: 'Corporate Branches' },
-      users: { category: 'Administration', subItem: 'User Management' },
-      archives: { category: 'Administration', subItem: 'Archives & Purge' },
-      'system-settings': { category: 'Settings', subItem: 'System Configuration' },
-    };
-
-    if (routeTitles[activeTab]) {
-      return {
-        category: routeTitles[activeTab].category,
-        subItem: routeTitles[activeTab].subItem,
-        icon: null,
-      };
-    }
-
-    return {
-      category: 'TilePoint ERP',
-      subItem: activeTab.charAt(0).toUpperCase() + activeTab.slice(1),
-      icon: null,
-    };
-  }, [activeTab, categories]);
-
   const activeBranchName = getBranchName(selectedBranchId || currentUser?.branchAssignmentId || null);
 
   const isDegraded = Boolean(serverDegradedState?.isDegraded);
@@ -112,7 +69,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
   return (
     <header className="h-14 min-h-[56px] bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-200/80 dark:border-white/10 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] dark:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.5)] px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2 sm:gap-4 sticky top-0 z-30 select-none transition-colors duration-200 shrink-0">
-      {/* Left Zone: Sidebar Toggles & Dynamic Breadcrumbs */}
+      {/* Left Zone: Sidebar Toggles */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {/* Mobile Hamburger Trigger */}
         <button
@@ -139,23 +96,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
             <PanelLeft className="h-4 w-4" />
           )}
         </button>
-
-        <div className="h-4 w-px bg-divider/40 hidden md:block" />
-
-        {/* Interactive Breadcrumbs */}
-        <nav aria-label="Breadcrumbs" className="flex items-center gap-1.5 text-xs font-semibold tracking-tight min-w-0">
-          <span className="text-default-400 hover:text-default-600 transition-colors truncate hidden sm:inline-block">
-            {breadcrumb.category}
-          </span>
-          {breadcrumb.subItem && (
-            <>
-              <ChevronRight className="h-3.5 w-3.5 text-default-300 shrink-0 hidden sm:inline-block" />
-              <span className="text-foreground font-bold truncate">
-                {breadcrumb.subItem}
-              </span>
-            </>
-          )}
-        </nav>
       </div>
 
       {/* Center Zone: Global Quick Command Search Bar */}

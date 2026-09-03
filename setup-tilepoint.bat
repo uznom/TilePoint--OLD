@@ -133,7 +133,7 @@ if not exist .env (
     echo Copying .env.example to .env...
     copy .env.example .env >nul
     
-    powershell -NoProfile -Command "$sec = [System.Guid]::NewGuid().ToString('N') + [System.Guid]::NewGuid().ToString('N'); $c = Get-Content .env; $c = $c -replace 'APP_URL=.*', 'APP_URL=https://%LOCAL_IP%:3000'; $c = $c -replace 'SECURITY_SECRET=.*', ('SECURITY_SECRET=' + $sec); $c = $c -replace 'VITE_SECURITY_SECRET=.*', ('VITE_SECURITY_SECRET=' + $sec); Set-Content -Path .env -Value $c -Encoding Ascii"
+    powershell -NoProfile -Command "$sec = [System.Guid]::NewGuid().ToString('N') + [System.Guid]::NewGuid().ToString('N'); $c = Get-Content .env; $c = $c -replace 'APP_URL=.*', 'APP_URL=https://%LOCAL_IP%:3000'; $c = $c -replace 'SECURITY_SECRET=.*', ('SECURITY_SECRET=' + $sec); Set-Content -Path .env -Value $c -Encoding Ascii"
     
     echo [OK] Created .env file and bound to local IP address: %LOCAL_IP%
 ) else (

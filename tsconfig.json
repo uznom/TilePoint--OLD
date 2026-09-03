@@ -27,5 +27,14 @@
     "strict": true,
     "noUnusedLocals": true,
     "noEmit": true
-  }
+  },
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "scripts",
+    "scratch"
+  ]
 }

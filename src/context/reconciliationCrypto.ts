@@ -69,18 +69,19 @@ export const encryptString = xorObfuscateString;
 export const decryptString = xorDeobfuscateString;
 
 /**
- * Sourced from environment variable to prevent extraction from client-side bundles.
+ * Client-side stable key used exclusively for local clipboard transmittal masking/obfuscation.
+ * Decoupled from server-side HMAC session signing secrets to prevent credential extraction.
  */
 export const getSecuritySecretKey = (): string => {
   const envSecret =
     typeof import.meta !== "undefined" && import.meta.env
-      ? import.meta.env.VITE_SECURITY_SECRET
+      ? import.meta.env.VITE_CLIPBOARD_OBFUSCATION_KEY
       : undefined;
 
   const isValidSecret =
     envSecret &&
     envSecret.trim() !== "" &&
-    envSecret.length >= 32 &&
+    envSecret.length >= 16 &&
     !envSecret.includes("123456") &&
     !envSecret.toLowerCase().includes("placeholder");
 

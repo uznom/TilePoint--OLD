@@ -1245,3 +1245,250 @@ html.dark [data-slot="select-listbox"] {
     border-color: #000000 !important;
   }
 }
+
+/* ==========================================================================
+   HeroUI v3 Table Styling (1:1 with heroui-inc/heroui/v3/packages/styles/components/table.css)
+   ========================================================================== */
+
+/* Outer Root Container */
+.table-root {
+  position: relative;
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  overflow: clip;
+}
+
+.table-root--primary {
+  background-color: var(--color-surface-secondary, #f4f4f5);
+  padding: 4px;
+  border-radius: 20px;
+}
+:where(.dark, .dark *) .table-root--primary {
+  background-color: var(--color-surface-secondary, #27272a);
+}
+
+.table-root--secondary {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* Scroll Container */
+.table__scroll-container {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+/* Resizable Container */
+.table__resizable-container {
+  position: relative;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+/* Table Content */
+.table__content {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+}
+
+.table-root--primary .table__content {
+  overflow: clip;
+}
+
+/* Table Header */
+.table__header {
+  background-color: transparent;
+}
+
+/* Table Column (th) */
+.table__column {
+  position: relative;
+  padding: 10px 16px;
+  text-align: start;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-muted, #71717a);
+  background-color: transparent;
+  user-select: none;
+}
+:where(.dark, .dark *) .table__column {
+  color: var(--color-muted, #a1a1aa);
+}
+
+/* Short vertical separator line between columns (1:1 with HeroUI v3 & screenshot) */
+.table__column::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset-inline-end: 0;
+  top: 50%;
+  height: 1rem;
+  width: 1px;
+  transform: translateY(-50%);
+  border-radius: 2px;
+  background-color: var(--color-divider, rgba(0, 0, 0, 0.12));
+}
+:where(.dark, .dark *) .table__column::after {
+  background-color: var(--color-divider, rgba(255, 255, 255, 0.12));
+}
+
+.table__column:last-child:not(:only-child)::after {
+  content: none;
+}
+
+/* Hide separator if resizer is present */
+.table__column:has(.table__column-resizer)::after {
+  content: none;
+}
+
+.table__column[data-allows-sorting="true"] {
+  cursor: pointer;
+}
+.table__column[data-allows-sorting="true"]:hover {
+  color: var(--color-foreground, #09090b);
+}
+:where(.dark, .dark *) .table__column[data-allows-sorting="true"]:hover {
+  color: var(--color-foreground, #f4f4f5);
+}
+
+/* Sortable Column Header layout */
+.table__sortable-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.375rem;
+}
+
+/* Sort Indicator (rotates 180deg on descending) */
+.table__sortable-column-indicator {
+  display: inline-grid;
+  width: 0.875rem;
+  height: 0.875rem;
+  place-content: center;
+  transition: transform 120ms ease-out;
+}
+.table__sortable-column-indicator[data-direction="descending"] {
+  transform: rotate(180deg);
+}
+
+/* Table Body */
+.table__body {
+  background-color: var(--color-surface, #ffffff);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+}
+:where(.dark, .dark *) .table__body {
+  background-color: var(--color-surface, #18181b);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Rounded corners on the body via first and last rows/cells */
+.table__body tr:first-child td:first-child {
+  border-top-left-radius: 14px;
+}
+.table__body tr:first-child td:last-child {
+  border-top-right-radius: 14px;
+}
+.table__body tr:last-child td:first-child {
+  border-bottom-left-radius: 14px;
+}
+.table__body tr:last-child td:last-child {
+  border-bottom-right-radius: 14px;
+}
+
+/* Table Row */
+.table__row {
+  position: relative;
+  height: 100%;
+  border-bottom: 1px solid var(--color-divider, rgba(0, 0, 0, 0.06));
+  transition: background-color 150ms ease;
+}
+:where(.dark, .dark *) .table__row {
+  border-bottom: 1px solid var(--color-divider, rgba(255, 255, 255, 0.07));
+}
+
+.table__row:last-child {
+  border-bottom: none;
+}
+
+.table__row:hover .table__cell,
+.table__row[data-hovered="true"] .table__cell {
+  background-color: rgba(0, 0, 0, 0.025);
+}
+:where(.dark, .dark *) .table__row:hover .table__cell,
+:where(.dark, .dark *) .table__row[data-hovered="true"] .table__cell {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.table__row[data-selected="true"] .table__cell {
+  background-color: rgba(0, 111, 238, 0.08);
+}
+:where(.dark, .dark *) .table__row[data-selected="true"] .table__cell {
+  background-color: rgba(0, 111, 238, 0.15);
+}
+
+/* Table Cell */
+.table__cell {
+  height: 100%;
+  background-color: var(--color-surface, #ffffff);
+  padding: 12px 16px;
+  vertical-align: middle;
+  font-size: 0.875rem;
+  color: var(--color-foreground, #18181b);
+  border-bottom: 1px solid var(--color-divider, rgba(0, 0, 0, 0.06));
+}
+:where(.dark, .dark *) .table__cell {
+  background-color: var(--color-surface, #18181b);
+  color: var(--color-foreground, #f4f4f5);
+  border-bottom: 1px solid var(--color-divider, rgba(255, 255, 255, 0.07));
+}
+
+.table__row:last-child .table__cell {
+  border-bottom: none;
+}
+
+/* Tree / Expandable Row indent */
+.table__cell[data-tree-column] {
+  padding-inline-start: calc(1rem * var(--table-row-level, 1));
+}
+
+/* Column Resizer */
+.table__column-resizer {
+  position: absolute;
+  inset-inline-end: 0;
+  top: 50%;
+  height: 1rem;
+  width: 1px;
+  transform: translateY(-50%);
+  border-radius: 2px;
+  background-color: var(--color-divider, rgba(0, 0, 0, 0.14));
+  cursor: col-resize;
+  touch-action: none;
+  padding: 0 6px;
+  box-sizing: content-box;
+  z-index: 10;
+  user-select: none;
+}
+:where(.dark, .dark *) .table__column-resizer {
+  background-color: var(--color-divider, rgba(255, 255, 255, 0.16));
+}
+.table__column-resizer:hover,
+.table__column-resizer[data-resizing="true"] {
+  height: 100%;
+  width: 2px;
+  background-color: var(--color-primary, #006fee);
+}
+
+/* Footer */
+.table__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  font-size: 0.8125rem;
+}
+

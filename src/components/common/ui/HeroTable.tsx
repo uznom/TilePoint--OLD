@@ -1,5 +1,14 @@
-import React, { createContext, useContext, useEffect, useRef } from 'react';
-import { ArrowUpDown, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import {
+  ArrowUpDown,
+  ChevronUp,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Check,
+  Minus,
+} from 'lucide-react';
 
 export type TableVariant = 'primary' | 'secondary';
 export type TableSelectionMode = 'none' | 'single' | 'multiple';
@@ -10,6 +19,10 @@ export interface TableSortDescriptor {
   direction?: 'ascending' | 'descending';
 }
 
+/* -------------------------------------------------------------------------- */
+/*                               CONTEXT SETUP                                */
+/* -------------------------------------------------------------------------- */
+
 interface TableContextType {
   variant?: TableVariant;
   isStriped?: boolean;
@@ -19,6 +32,13 @@ interface TableContextType {
   selectionMode?: TableSelectionMode;
   selectedKeys?: Set<string | number> | 'all';
   onSelectionChange?: (keys: Set<string | number> | 'all') => void;
+  allRowKeys?: (string | number)[];
+  registerRowKey?: (key: string | number) => void;
+  unregisterRowKey?: (key: string | number) => void;
+  expandedKeys?: Set<string | number>;
+  onExpandedChange?: (keys: Set<string | number>) => void;
+  columnWidths?: Record<string, number>;
+  setColumnWidth?: (columnId: string, width: number) => void;
 }
 
 const TableContext = createContext<TableContextType>({
@@ -28,6 +48,8 @@ const TableContext = createContext<TableContextType>({
   selectionMode: 'none',
 });
 
+export const useTableContext = () => useContext(TableContext);
+
 /* -------------------------------------------------------------------------- */
 /*                                ROOT TABLE                                  */
 /* -------------------------------------------------------------------------- */
@@ -36,6 +58,13 @@ export interface HeroTableProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: TableVariant;
   isStriped?: boolean;
   isCompact?: boolean;
+  sortDescriptor?: TableSortDescriptor;
+  onSortChange?: (descriptor: TableSortDescriptor) => void;
+  selectionMode?: TableSelectionMode;
+  selectedKeys?: Set<string | number> | 'all';
+  onSelectionChange?: (keys: Set<string | number> | 'all') => void;
+  expandedKeys?: Set<string | number>;
+  onExpandedChange?: (keys: Set<string | number>) => void;
   className?: string;
   containerClassName?: string;
   containerRef?: React.Ref<HTMLDivElement>;
@@ -48,6 +77,13 @@ export const HeroTable = ({
   variant = 'primary',
   isStriped = false,
   isCompact = false,
+  sortDescriptor,
+  onSortChange,
+  selectionMode = 'none',
+  selectedKeys,
+  onSelectionChange,
+  expandedKeys,
+  onExpandedChange,
   className = '',
   containerClassName = '',
   containerRef,
@@ -56,7 +92,40 @@ export const HeroTable = ({
   id,
   ...props
 }: HeroTableProps) => {
-  // Determine if children already contain a Table.ScrollContainer or Table.Content
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
+  const [rowKeys, setRowKeys] = useState<(string | number)[]>([]);
+
+  const handleSetColumnWidth = useCallback((columnId: string, width: number) => {
+    setColumnWidths((prev) => ({ ...prev, [columnId]: width }));
+  }, []);
+
+  const registerRowKey = useCallback((key: string | number) => {
+    setRowKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
+  }, []);
+
+  const unregisterRowKey = useCallback((key: string | number) => {
+    setRowKeys((prev) => prev.filter((k) => k !== key));
+  }, []);
+
+  const contextValue: TableContextType = {
+    variant,
+    isStriped,
+    isCompact,
+    sortDescriptor,
+    onSortChange,
+    selectionMode,
+    selectedKeys,
+    onSelectionChange,
+    allRowKeys: rowKeys,
+    registerRowKey,
+    unregisterRowKey,
+    expandedKeys,
+    onExpandedChange,
+    columnWidths,
+    setColumnWidth: handleSetColumnWidth,
+  };
+
+  // Determine if children already contain a Table.ScrollContainer, Table.Content, or Table.ResizableContainer
   const hasSubContainers = React.Children.toArray(children).some(
     (child) =>
       React.isValidElement(child) &&
@@ -67,23 +136,17 @@ export const HeroTable = ({
         (child.type as any)?.displayName === 'TableResizableContainer')
   );
 
-  const contextValue: TableContextType = {
-    variant,
-    isStriped,
-    isCompact,
-  };
-
   const rootVariantClass =
     variant === 'primary'
-      ? 'bg-content1 border border-divider/60 rounded-2xl shadow-elevation-card'
-      : 'bg-transparent border-0 shadow-none';
+      ? 'table-root--primary'
+      : 'table-root--secondary';
 
   if (hasSubContainers) {
     return (
       <TableContext.Provider value={contextValue}>
         <div
           id={id}
-          className={`table-root relative w-full overflow-hidden ${rootVariantClass} ${className}`}
+          className={`table-root ${rootVariantClass} ${className}`}
           {...props}
         >
           {children}
@@ -99,22 +162,24 @@ export const HeroTable = ({
         id={id}
         ref={containerRef}
         onScroll={onScroll}
-        className={`table-root w-full overflow-x-auto rounded-2xl border border-divider/60 bg-content1 shadow-elevation-card ${containerClassName}`}
+        className={`table-root ${rootVariantClass} ${containerClassName}`}
         {...props}
       >
-        <table
-          className={`table__content w-full text-left border-collapse text-xs sm:text-sm font-sans tabular-nums ${
-            isStriped
-              ? '[&_tbody_tr:nth-child(even)]:bg-default-50/50 dark:[&_tbody_tr:nth-child(even)]:bg-white/[0.02]'
-              : ''
-          } ${
-            isCompact
-              ? '[&_th]:py-2 [&_th]:px-3 [&_td]:py-2 [&_td]:px-3'
-              : '[&_th]:py-3.5 [&_th]:px-4 [&_td]:py-3.5 [&_td]:px-4'
-          } ${className}`}
-        >
-          {children}
-        </table>
+        <div className="table__scroll-container">
+          <table
+            className={`table__content ${
+              isStriped
+                ? '[&_tbody_tr:nth-child(even)]:bg-default-50/50 dark:[&_tbody_tr:nth-child(even)]:bg-white/[0.02]'
+                : ''
+            } ${
+              isCompact
+                ? '[&_th]:py-2 [&_th]:px-3 [&_td]:py-2 [&_td]:px-3'
+                : ''
+            } ${className}`}
+          >
+            {children}
+          </table>
+        </div>
       </div>
     </TableContext.Provider>
   );
@@ -136,7 +201,7 @@ export const TableScrollContainer: React.FC<TableScrollContainerProps> = ({
 }) => {
   return (
     <div
-      className={`table__scroll-container w-full overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-thumb-divider/40 scrollbar-track-transparent ${className}`}
+      className={`table__scroll-container ${className}`}
       {...props}
     >
       {children}
@@ -156,7 +221,7 @@ export const TableResizableContainer: React.FC<TableScrollContainerProps> = ({
 }) => {
   return (
     <div
-      className={`table__resizable-container w-full overflow-x-auto ${className}`}
+      className={`table__resizable-container ${className}`}
       {...props}
     >
       {children}
@@ -176,6 +241,8 @@ export interface TableContentProps extends React.TableHTMLAttributes<HTMLTableEl
   selectionMode?: TableSelectionMode;
   selectedKeys?: Set<string | number> | 'all';
   onSelectionChange?: (keys: Set<string | number> | 'all') => void;
+  expandedKeys?: Set<string | number>;
+  onExpandedChange?: (keys: Set<string | number>) => void;
   isStriped?: boolean;
   isCompact?: boolean;
   className?: string;
@@ -186,9 +253,11 @@ export const TableContent: React.FC<TableContentProps> = ({
   'aria-label': ariaLabel,
   sortDescriptor,
   onSortChange,
-  selectionMode = 'none',
+  selectionMode,
   selectedKeys,
   onSelectionChange,
+  expandedKeys,
+  onExpandedChange,
   isStriped,
   isCompact,
   className = '',
@@ -199,30 +268,39 @@ export const TableContent: React.FC<TableContentProps> = ({
 
   const effectiveStriped = isStriped !== undefined ? isStriped : parentContext.isStriped;
   const effectiveCompact = isCompact !== undefined ? isCompact : parentContext.isCompact;
+  const effectiveSortDesc = sortDescriptor !== undefined ? sortDescriptor : parentContext.sortDescriptor;
+  const effectiveOnSortChange = onSortChange !== undefined ? onSortChange : parentContext.onSortChange;
+  const effectiveSelectionMode = selectionMode !== undefined ? selectionMode : parentContext.selectionMode;
+  const effectiveSelectedKeys = selectedKeys !== undefined ? selectedKeys : parentContext.selectedKeys;
+  const effectiveOnSelectionChange = onSelectionChange !== undefined ? onSelectionChange : parentContext.onSelectionChange;
+  const effectiveExpandedKeys = expandedKeys !== undefined ? expandedKeys : parentContext.expandedKeys;
+  const effectiveOnExpandedChange = onExpandedChange !== undefined ? onExpandedChange : parentContext.onExpandedChange;
 
   const contentContextValue: TableContextType = {
     ...parentContext,
     isStriped: effectiveStriped,
     isCompact: effectiveCompact,
-    sortDescriptor,
-    onSortChange,
-    selectionMode,
-    selectedKeys,
-    onSelectionChange,
+    sortDescriptor: effectiveSortDesc,
+    onSortChange: effectiveOnSortChange,
+    selectionMode: effectiveSelectionMode,
+    selectedKeys: effectiveSelectedKeys,
+    onSelectionChange: effectiveOnSelectionChange,
+    expandedKeys: effectiveExpandedKeys,
+    onExpandedChange: effectiveOnExpandedChange,
   };
 
   return (
     <TableContext.Provider value={contentContextValue}>
       <table
         aria-label={ariaLabel}
-        className={`table__content w-full text-left border-collapse text-xs sm:text-sm font-sans tabular-nums ${
+        className={`table__content ${
           effectiveStriped
             ? '[&_tbody_tr:nth-child(even)]:bg-default-50/50 dark:[&_tbody_tr:nth-child(even)]:bg-white/[0.02]'
             : ''
         } ${
           effectiveCompact
             ? '[&_th]:py-2 [&_th]:px-3 [&_td]:py-2 [&_td]:px-3'
-            : '[&_th]:py-3.5 [&_th]:px-4 [&_td]:py-3.5 [&_td]:px-4'
+            : ''
         } ${className}`}
         {...props}
       >
@@ -249,13 +327,6 @@ export const TableHeader = <T = any>({
   className = '',
   ...props
 }: TableHeaderProps<T>) => {
-  const { variant } = useContext(TableContext);
-
-  const headerClass =
-    variant === 'secondary'
-      ? 'bg-transparent text-default-500 font-semibold border-b border-divider/40'
-      : 'bg-default-100/60 dark:bg-content2/40 border-b border-divider/60 font-semibold text-xs text-default-500';
-
   let renderedContent: React.ReactNode = children as React.ReactNode;
 
   if (columns && typeof children === 'function') {
@@ -272,7 +343,7 @@ export const TableHeader = <T = any>({
 
   return (
     <thead
-      className={`table__header select-none font-sans tracking-tight ${headerClass} ${className}`}
+      className={`table__header select-none font-sans ${className}`}
       {...props}
     >
       {renderedContent}
@@ -293,6 +364,7 @@ export interface HeroTableColumnProps extends Omit<React.ThHTMLAttributes<HTMLTa
   id?: string;
   isRowHeader?: boolean;
   allowsSorting?: boolean;
+  allowsResizing?: boolean;
   sortDirection?: TableSortDirection;
   sortRank?: number | null;
   sortPriority?: number | null;
@@ -300,6 +372,7 @@ export interface HeroTableColumnProps extends Omit<React.ThHTMLAttributes<HTMLTa
   align?: 'start' | 'center' | 'end';
   defaultWidth?: string | number;
   minWidth?: number;
+  treeColumn?: boolean;
   children?: React.ReactNode | ((props: ColumnRenderProps) => React.ReactNode);
   className?: string;
 }
@@ -308,19 +381,26 @@ export const TableColumn: React.FC<HeroTableColumnProps> = ({
   id: colId,
   isRowHeader = false,
   allowsSorting = false,
+  allowsResizing = false,
   sortDirection: explicitSortDirection,
   sortRank,
   sortPriority,
   onSort,
   align = 'start',
   defaultWidth,
-  minWidth,
+  minWidth = 50,
+  treeColumn = false,
   children,
   className = '',
   style,
   ...props
 }) => {
-  const { sortDescriptor, onSortChange } = useContext(TableContext);
+  const { sortDescriptor, onSortChange, columnWidths, setColumnWidth } = useContext(TableContext);
+
+  // Dynamic width tracking from column resizing
+  const currentWidth = colId && columnWidths && columnWidths[colId] !== undefined
+    ? columnWidths[colId]
+    : undefined;
 
   // Compute effective sort direction from context descriptor or explicit prop
   let effectiveSortDir: TableSortDirection = 'none';
@@ -331,6 +411,11 @@ export const TableColumn: React.FC<HeroTableColumnProps> = ({
   }
 
   const handleColumnClick = (e: React.MouseEvent<HTMLTableCellElement>) => {
+    // Avoid sort trigger if clicking the resizer handle
+    if ((e.target as HTMLElement)?.closest('.table__column-resizer')) {
+      return;
+    }
+
     if (onSort) {
       onSort(e);
     } else if (allowsSorting && colId && onSortChange) {
@@ -357,43 +442,49 @@ export const TableColumn: React.FC<HeroTableColumnProps> = ({
   const widthStyle: React.CSSProperties = {
     ...style,
     ...(minWidth ? { minWidth: `${minWidth}px` } : {}),
-    ...(defaultWidth ? { width: typeof defaultWidth === 'number' ? `${defaultWidth}px` : defaultWidth } : {}),
+    ...(currentWidth
+      ? { width: `${currentWidth}px`, maxWidth: `${currentWidth}px` }
+      : defaultWidth
+      ? { width: typeof defaultWidth === 'number' ? `${defaultWidth}px` : defaultWidth }
+      : {}),
   };
 
-  if (allowsSorting || onSort) {
-    return (
-      <th
-        scope={isRowHeader ? 'row' : 'col'}
-        style={widthStyle}
-        className={`table__column px-4 py-3 font-extrabold cursor-pointer hover:text-primary transition-colors group select-none ${alignClass} ${className}`}
-        onClick={handleColumnClick}
-        role="columnheader"
-        aria-sort={
-          effectiveSortDir === 'ascending'
-            ? 'ascending'
-            : effectiveSortDir === 'descending'
-            ? 'descending'
-            : undefined
-        }
-        title="Click to sort column"
-        {...props}
+  return (
+    <th
+      scope={isRowHeader ? 'row' : 'col'}
+      style={widthStyle}
+      data-allows-sorting={allowsSorting || onSort ? 'true' : undefined}
+      data-tree-column={treeColumn ? 'true' : undefined}
+      className={`table__column font-medium group select-none ${alignClass} ${className}`}
+      onClick={allowsSorting || onSort ? handleColumnClick : undefined}
+      role="columnheader"
+      aria-sort={
+        effectiveSortDir === 'ascending'
+          ? 'ascending'
+          : effectiveSortDir === 'descending'
+          ? 'descending'
+          : undefined
+      }
+      {...props}
+    >
+      <div
+        className={`inline-flex items-center gap-1.5 w-full ${
+          align === 'center'
+            ? 'justify-center'
+            : align === 'end'
+            ? 'justify-end'
+            : 'justify-between'
+        }`}
       >
-        <div
-          className={`inline-flex items-center gap-1.5 ${
-            align === 'center'
-              ? 'justify-center'
-              : align === 'end'
-              ? 'justify-end'
-              : 'justify-start'
-          }`}
-        >
-          <span>{content}</span>
-          <span className="shrink-0 inline-flex items-center gap-1 transition-colors">
+        <span className="truncate">{content}</span>
+
+        {(allowsSorting || onSort) && (
+          <span className="shrink-0 inline-flex items-center gap-1 text-default-400 group-hover:text-foreground transition-colors">
             {effectiveSortDir === 'ascending' ? (
               <>
                 <ChevronUp className="h-3.5 w-3.5 text-primary" />
                 {rank !== null && rank !== undefined && (
-                  <span className="h-4 min-w-4 px-1 rounded-full bg-primary/20 text-primary border border-primary/30 text-[8.5px] font-black flex items-center justify-center">
+                  <span className="h-3.5 min-w-3.5 px-0.5 rounded-full bg-primary/20 text-primary border border-primary/30 text-[8px] font-black flex items-center justify-center">
                     {rank}
                   </span>
                 )}
@@ -402,28 +493,24 @@ export const TableColumn: React.FC<HeroTableColumnProps> = ({
               <>
                 <ChevronDown className="h-3.5 w-3.5 text-primary" />
                 {rank !== null && rank !== undefined && (
-                  <span className="h-4 min-w-4 px-1 rounded-full bg-primary/20 text-primary border border-primary/30 text-[8.5px] font-black flex items-center justify-center">
+                  <span className="h-3.5 min-w-3.5 px-0.5 rounded-full bg-primary/20 text-primary border border-primary/30 text-[8px] font-black flex items-center justify-center">
                     {rank}
                   </span>
                 )}
               </>
             ) : (
-              <ArrowUpDown className="h-3 w-3 text-default-400 group-hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+              <ArrowUpDown className="h-3 w-3 opacity-0 group-hover:opacity-60 transition-opacity" />
             )}
           </span>
-        </div>
-      </th>
-    );
-  }
+        )}
+      </div>
 
-  return (
-    <th
-      scope={isRowHeader ? 'row' : 'col'}
-      style={widthStyle}
-      className={`table__column px-4 py-3 font-extrabold ${alignClass} ${className}`}
-      {...props}
-    >
-      {content}
+      {allowsResizing && colId && setColumnWidth && (
+        <TableColumnResizer
+          columnId={colId}
+          minWidth={minWidth}
+        />
+      )}
     </th>
   );
 };
@@ -449,18 +536,15 @@ export const TableSortableColumnHeader: React.FC<SortableColumnHeaderProps> = ({
   className = '',
 }) => {
   return (
-    <span className={`inline-flex items-center gap-1.5 ${className}`}>
+    <span className={`table__sortable-column-header w-full ${className}`}>
       <span>{children}</span>
       {showIndicator && (
-        <span className="shrink-0 inline-flex items-center">
-          {indicator ? (
-            <span data-direction={sortDirection}>{indicator}</span>
-          ) : sortDirection === 'ascending' ? (
-            <ChevronUp className="h-3.5 w-3.5 text-primary" />
-          ) : sortDirection === 'descending' ? (
-            <ChevronDown className="h-3.5 w-3.5 text-primary" />
-          ) : (
-            <ArrowUpDown className="h-3 w-3 text-default-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <span
+          className="table__sortable-column-indicator"
+          data-direction={sortDirection === 'descending' ? 'descending' : 'ascending'}
+        >
+          {indicator || (
+            <ChevronUp className="h-3 w-3 text-muted group-hover:text-foreground" />
           )}
         </span>
       )}
@@ -476,6 +560,8 @@ TableSortableColumnHeader.displayName = 'TableSortableColumnHeader';
 export interface TableBodyProps<T = any> extends Omit<React.HTMLAttributes<HTMLTableSectionElement>, 'children'> {
   items?: T[];
   renderEmptyState?: () => React.ReactNode;
+  isLoading?: boolean;
+  loadingContent?: React.ReactNode;
   children?: React.ReactNode | ((item: T) => React.ReactNode);
   className?: string;
 }
@@ -483,10 +569,29 @@ export interface TableBodyProps<T = any> extends Omit<React.HTMLAttributes<HTMLT
 export const TableBody = <T = any>({
   items,
   renderEmptyState,
+  isLoading = false,
+  loadingContent,
   children,
   className = '',
   ...props
 }: TableBodyProps<T>) => {
+  if (isLoading) {
+    return (
+      <tbody className={`table__body ${className}`} {...props}>
+        <tr>
+          <td colSpan={100} className="p-8 text-center">
+            {loadingContent || (
+              <div className="flex flex-col items-center justify-center gap-2 text-default-500 py-6">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <span className="text-xs font-medium">Loading records...</span>
+              </div>
+            )}
+          </td>
+        </tr>
+      </tbody>
+    );
+  }
+
   const isEmpty = items ? items.length === 0 : false;
 
   if (isEmpty && renderEmptyState) {
@@ -505,7 +610,7 @@ export const TableBody = <T = any>({
 
   if (items && typeof children === 'function') {
     renderedContent = items.map((item, idx) => (
-      <React.Fragment key={(item as any)?.id || idx}>
+      <React.Fragment key={(item as any)?.id || (item as any)?.key || idx}>
         {(children as (item: T) => React.ReactNode)(item)}
       </React.Fragment>
     ));
@@ -513,7 +618,7 @@ export const TableBody = <T = any>({
 
   return (
     <tbody
-      className={`table__body divide-y divide-divider/40 dark:divide-white/5 text-foreground font-sans ${className}`}
+      className={`table__body ${className}`}
       {...props}
     >
       {renderedContent}
@@ -530,6 +635,9 @@ export interface HeroTableRowProps extends Omit<React.HTMLAttributes<HTMLTableRo
   id?: string | number;
   isSelected?: boolean;
   isHoverable?: boolean;
+  isExpanded?: boolean;
+  expandedContent?: React.ReactNode;
+  level?: number;
   className?: string;
   children?: React.ReactNode;
 }
@@ -538,34 +646,63 @@ export const TableRow: React.FC<HeroTableRowProps> = ({
   id: rowId,
   isSelected: explicitSelected,
   isHoverable = true,
+  isExpanded: explicitExpanded,
+  expandedContent,
+  level = 1,
   className = '',
   children,
   ...props
 }) => {
-  const { selectedKeys } = useContext(TableContext);
+  const {
+    selectedKeys,
+    registerRowKey,
+    unregisterRowKey,
+    expandedKeys,
+  } = useContext(TableContext);
+
+  useEffect(() => {
+    if (rowId !== undefined && registerRowKey) {
+      registerRowKey(rowId);
+      return () => {
+        if (unregisterRowKey) unregisterRowKey(rowId);
+      };
+    }
+  }, [rowId, registerRowKey, unregisterRowKey]);
 
   const isSelected =
     explicitSelected !== undefined
       ? explicitSelected
-      : rowId && selectedKeys
+      : rowId !== undefined && selectedKeys
       ? selectedKeys === 'all' || selectedKeys.has(rowId)
       : false;
 
+  const isExpanded =
+    explicitExpanded !== undefined
+      ? explicitExpanded
+      : rowId !== undefined && expandedKeys
+      ? expandedKeys.has(rowId)
+      : false;
+
   return (
-    <tr
-      data-selected={isSelected ? 'true' : undefined}
-      data-hovered={isHoverable ? 'true' : undefined}
-      className={`table__row transition-colors duration-150 ${
-        isSelected
-          ? 'bg-primary-50/60 dark:bg-primary/20 text-primary font-medium'
-          : isHoverable
-          ? 'hover:bg-default-100/50 dark:hover:bg-content2/40'
-          : ''
-      } ${className}`}
-      {...props}
-    >
-      {children}
-    </tr>
+    <>
+      <tr
+        data-selected={isSelected ? 'true' : undefined}
+        data-hovered={isHoverable ? 'true' : undefined}
+        style={{ '--table-row-level': level } as React.CSSProperties}
+        className={`table__row ${className}`}
+        {...props}
+      >
+        {children}
+      </tr>
+
+      {isExpanded && expandedContent && (
+        <tr className="table__row bg-default-50/40 dark:bg-zinc-900/40">
+          <td colSpan={100} className="p-4 border-b border-separator/50">
+            {expandedContent}
+          </td>
+        </tr>
+      )}
+    </>
   );
 };
 TableRow.displayName = 'TableRow';
@@ -576,6 +713,7 @@ TableRow.displayName = 'TableRow';
 
 export interface HeroTableCellProps extends Omit<React.TdHTMLAttributes<HTMLTableCellElement>, 'align'> {
   align?: 'start' | 'center' | 'end';
+  treeColumn?: boolean;
   className?: string;
   children?: React.ReactNode;
 }
@@ -583,6 +721,7 @@ export interface HeroTableCellProps extends Omit<React.TdHTMLAttributes<HTMLTabl
 export const TableCell: React.FC<HeroTableCellProps> = ({
   children,
   align = 'start',
+  treeColumn = false,
   className = '',
   ...props
 }) => {
@@ -594,7 +733,11 @@ export const TableCell: React.FC<HeroTableCellProps> = ({
       : 'text-left';
 
   return (
-    <td className={`table__cell px-4 py-3.5 align-middle ${alignClass} ${className}`} {...props}>
+    <td
+      data-tree-column={treeColumn ? 'true' : undefined}
+      className={`table__cell ${alignClass} ${className}`}
+      {...props}
+    >
       {children}
     </td>
   );
@@ -617,7 +760,7 @@ export const TableFooter: React.FC<TableFooterProps> = ({
 }) => {
   return (
     <div
-      className={`table__footer flex items-center justify-between px-4 py-3 border-t border-divider/40 bg-default-50/50 dark:bg-content2/20 text-xs text-default-500 font-sans ${className}`}
+      className={`table__footer ${className}`}
       {...props}
     >
       {children}
@@ -625,6 +768,407 @@ export const TableFooter: React.FC<TableFooterProps> = ({
   );
 };
 TableFooter.displayName = 'TableFooter';
+
+/* -------------------------------------------------------------------------- */
+/*                            COLUMN RESIZER                                  */
+/* -------------------------------------------------------------------------- */
+
+export interface TableColumnResizerProps {
+  columnId?: string;
+  minWidth?: number;
+  onResize?: (width: number) => void;
+  className?: string;
+}
+
+export const TableColumnResizer: React.FC<TableColumnResizerProps> = ({
+  columnId,
+  minWidth = 50,
+  onResize,
+  className = '',
+}) => {
+  const { setColumnWidth } = useContext(TableContext);
+  const [isResizing, setIsResizing] = useState(false);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const thElement = (e.currentTarget as HTMLElement).closest('th');
+    if (!thElement) return;
+
+    const startX = e.clientX;
+    const startWidth = thElement.getBoundingClientRect().width;
+
+    setIsResizing(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const newWidth = Math.max(minWidth, Math.round(startWidth + deltaX));
+
+      if (onResize) {
+        onResize(newWidth);
+      }
+      if (columnId && setColumnWidth) {
+        setColumnWidth(columnId, newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  return (
+    <div
+      data-resizing={isResizing ? 'true' : undefined}
+      onMouseDown={handleMouseDown}
+      className={`table__column-resizer ${className}`}
+      title="Drag to resize column"
+    />
+  );
+};
+TableColumnResizer.displayName = 'TableColumnResizer';
+
+/* -------------------------------------------------------------------------- */
+/*                        HEROUI CHECKBOX (SELECTION)                         */
+/* -------------------------------------------------------------------------- */
+
+export interface TableCheckboxProps {
+  isSelected?: boolean;
+  isIndeterminate?: boolean;
+  onChange?: (checked: boolean) => void;
+  'aria-label'?: string;
+  className?: string;
+}
+
+export const TableCheckbox: React.FC<TableCheckboxProps> = ({
+  isSelected = false,
+  isIndeterminate = false,
+  onChange,
+  'aria-label': ariaLabel = 'Select row',
+  className = '',
+}) => {
+  return (
+    <label
+      className={`inline-flex items-center justify-center cursor-pointer select-none p-1 ${className}`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <input
+        type="checkbox"
+        checked={isSelected}
+        aria-label={ariaLabel}
+        onChange={(e) => onChange?.(e.target.checked)}
+        className="sr-only"
+      />
+      <div
+        className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all ${
+          isSelected || isIndeterminate
+            ? 'bg-primary border-primary text-primary-foreground shadow-2xs'
+            : 'border-default-300 dark:border-white/20 bg-default-100/50 hover:border-default-400'
+        }`}
+      >
+        {isIndeterminate ? (
+          <Minus className="h-3 w-3 stroke-[3]" />
+        ) : isSelected ? (
+          <Check className="h-3 w-3 stroke-[3]" />
+        ) : null}
+      </div>
+    </label>
+  );
+};
+TableCheckbox.displayName = 'TableCheckbox';
+
+/* -------------------------------------------------------------------------- */
+/*                       HEADER SELECT-ALL CHECKBOX                           */
+/* -------------------------------------------------------------------------- */
+
+export const TableSelectAllCheckbox: React.FC<{ className?: string }> = ({ className = '' }) => {
+  const { selectionMode, selectedKeys, onSelectionChange, allRowKeys = [] } = useContext(TableContext);
+
+  if (selectionMode !== 'multiple') return null;
+
+  const isAllSelected =
+    selectedKeys === 'all' ||
+    (allRowKeys.length > 0 &&
+      selectedKeys instanceof Set &&
+      allRowKeys.every((key) => selectedKeys.has(key)));
+
+  const isSomeSelected =
+    !isAllSelected &&
+    selectedKeys instanceof Set &&
+    selectedKeys.size > 0;
+
+  const handleToggleAll = (checked: boolean) => {
+    if (!onSelectionChange) return;
+    if (checked) {
+      onSelectionChange('all');
+    } else {
+      onSelectionChange(new Set());
+    }
+  };
+
+  return (
+    <TableCheckbox
+      isSelected={isAllSelected}
+      isIndeterminate={isSomeSelected}
+      onChange={handleToggleAll}
+      aria-label="Select all rows"
+      className={className}
+    />
+  );
+};
+TableSelectAllCheckbox.displayName = 'TableSelectAllCheckbox';
+
+/* -------------------------------------------------------------------------- */
+/*                        ROW SELECTION CHECKBOX CELL                         */
+/* -------------------------------------------------------------------------- */
+
+export const TableSelectRowCell: React.FC<{ rowId: string | number; className?: string }> = ({
+  rowId,
+  className = '',
+}) => {
+  const { selectionMode, selectedKeys, onSelectionChange, allRowKeys = [] } = useContext(TableContext);
+
+  if (selectionMode === 'none') return null;
+
+  const isSelected =
+    selectedKeys === 'all' ||
+    (selectedKeys instanceof Set && selectedKeys.has(rowId));
+
+  const handleToggleRow = (checked: boolean) => {
+    if (!onSelectionChange) return;
+
+    if (selectionMode === 'single') {
+      onSelectionChange(checked ? new Set([rowId]) : new Set());
+      return;
+    }
+
+    const next = new Set<string | number>(
+      selectedKeys === 'all' ? allRowKeys : selectedKeys ? Array.from(selectedKeys) : []
+    );
+
+    if (checked) {
+      next.add(rowId);
+    } else {
+      next.delete(rowId);
+    }
+    onSelectionChange(next);
+  };
+
+  return (
+    <TableCell className={`w-10 px-3 py-3 text-center ${className}`}>
+      <TableCheckbox
+        isSelected={isSelected}
+        onChange={handleToggleRow}
+        aria-label={`Select row ${rowId}`}
+      />
+    </TableCell>
+  );
+};
+TableSelectRowCell.displayName = 'TableSelectRowCell';
+
+/* -------------------------------------------------------------------------- */
+/*                       EXPAND / COLLAPSE BUTTON                             */
+/* -------------------------------------------------------------------------- */
+
+export interface TableExpandButtonProps {
+  rowId?: string | number;
+  isExpanded?: boolean;
+  onToggle?: () => void;
+  className?: string;
+}
+
+export const TableExpandButton: React.FC<TableExpandButtonProps> = ({
+  rowId,
+  isExpanded: explicitExpanded,
+  onToggle,
+  className = '',
+}) => {
+  const { expandedKeys, onExpandedChange } = useContext(TableContext);
+
+  const isExpanded =
+    explicitExpanded !== undefined
+      ? explicitExpanded
+      : rowId !== undefined && expandedKeys
+      ? expandedKeys.has(rowId)
+      : false;
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onToggle) {
+      onToggle();
+    } else if (rowId !== undefined && onExpandedChange) {
+      const next = new Set<string | number>(expandedKeys ? Array.from(expandedKeys) : []);
+      if (next.has(rowId)) {
+        next.delete(rowId);
+      } else {
+        next.add(rowId);
+      }
+      onExpandedChange(next);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      aria-expanded={isExpanded}
+      className={`p-1 rounded-md text-default-400 hover:text-foreground hover:bg-default-100 transition-all cursor-pointer inline-flex items-center justify-center ${className}`}
+      title={isExpanded ? 'Collapse row' : 'Expand row'}
+    >
+      <ChevronRight
+        className={`h-3.5 w-3.5 transition-transform duration-150 ${
+          isExpanded ? 'rotate-90 text-primary' : ''
+        }`}
+      />
+    </button>
+  );
+};
+TableExpandButton.displayName = 'TableExpandButton';
+
+/* -------------------------------------------------------------------------- */
+/*                              TABLE PAGINATION                              */
+/* -------------------------------------------------------------------------- */
+
+export interface TablePaginationProps {
+  page: number;
+  totalPages: number;
+  totalItems?: number;
+  pageSize?: number;
+  pageSizeOptions?: number[];
+  onPageChange: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
+  className?: string;
+}
+
+export const TablePagination: React.FC<TablePaginationProps> = ({
+  page,
+  totalPages,
+  totalItems,
+  pageSize,
+  pageSizeOptions = [10, 20, 50, 100],
+  onPageChange,
+  onPageSizeChange,
+  className = '',
+}) => {
+  const startItem = totalItems && pageSize ? (page - 1) * pageSize + 1 : undefined;
+  const endItem = totalItems && pageSize ? Math.min(page * pageSize, totalItems) : undefined;
+
+  // Build pagination range with ellipses
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      return pages;
+    }
+
+    pages.push(1);
+    if (page > 3) pages.push('ellipsis');
+
+    const start = Math.max(2, page - 1);
+    const end = Math.min(totalPages - 1, page + 1);
+
+    for (let i = start; i <= end; i++) pages.push(i);
+
+    if (page < totalPages - 2) pages.push('ellipsis');
+    pages.push(totalPages);
+
+    return pages;
+  };
+
+  return (
+    <div className={`table__footer flex flex-wrap items-center justify-between gap-3 text-xs text-default-500 font-sans ${className}`}>
+      {/* Left count indicator */}
+      <div className="flex items-center gap-2">
+        {totalItems !== undefined && startItem !== undefined && endItem !== undefined ? (
+          <span>
+            Showing <strong className="text-foreground">{startItem}</strong>–
+            <strong className="text-foreground">{endItem}</strong> of{' '}
+            <strong className="text-foreground">{totalItems}</strong> items
+          </span>
+        ) : (
+          <span>
+            Page <strong className="text-foreground">{page}</strong> of{' '}
+            <strong className="text-foreground">{totalPages}</strong>
+          </span>
+        )}
+
+        {pageSize && onPageSizeChange && (
+          <div className="flex items-center gap-1.5 ml-2">
+            <span className="text-[11px]">Rows:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => onPageSizeChange(Number(e.target.value))}
+              className="bg-default-100 dark:bg-zinc-800 border border-divider/40 rounded-lg px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+            >
+              {pageSizeOptions.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* Right navigation buttons */}
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+          className="p-1.5 rounded-lg border border-divider/40 bg-surface text-default-600 hover:text-foreground hover:bg-default-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-2xs"
+          title="Previous page"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </button>
+
+        <div className="flex items-center gap-1 px-1">
+          {getPageNumbers().map((p, idx) =>
+            p === 'ellipsis' ? (
+              <span key={`ellipsis-${idx}`} className="px-1 text-default-400 select-none">
+                …
+              </span>
+            ) : (
+              <button
+                key={p}
+                type="button"
+                onClick={() => onPageChange(p)}
+                className={`min-w-7 h-7 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  p === page
+                    ? 'bg-primary text-primary-foreground font-bold shadow-2xs'
+                    : 'text-default-600 hover:text-foreground hover:bg-default-100'
+                }`}
+              >
+                {p}
+              </button>
+            )
+          )}
+        </div>
+
+        <button
+          type="button"
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(page + 1)}
+          className="p-1.5 rounded-lg border border-divider/40 bg-surface text-default-600 hover:text-foreground hover:bg-default-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer shadow-2xs"
+          title="Next page"
+        >
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+};
+TablePagination.displayName = 'TablePagination';
 
 /* -------------------------------------------------------------------------- */
 /*                      ASYNC LOADING & LOAD MORE ITEM                        */
@@ -698,24 +1242,17 @@ export interface TableCollectionProps<T = any> {
 }
 
 export function TableCollection<T>({ items, children }: TableCollectionProps<T>) {
-  return <>{items.map((item, idx) => (
-    <React.Fragment key={(item as any)?.id || idx}>
-      {children(item)}
-    </React.Fragment>
-  ))}</>;
+  return (
+    <>
+      {items.map((item, idx) => (
+        <React.Fragment key={(item as any)?.id || (item as any)?.key || idx}>
+          {children(item)}
+        </React.Fragment>
+      ))}
+    </>
+  );
 }
 TableCollection.displayName = 'TableCollection';
-
-/* -------------------------------------------------------------------------- */
-/*                            COLUMN RESIZER                                  */
-/* -------------------------------------------------------------------------- */
-
-export const TableColumnResizer: React.FC<{ className?: string }> = ({ className = '' }) => (
-  <div
-    className={`table__column-resizer absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary transition-colors ${className}`}
-  />
-);
-TableColumnResizer.displayName = 'TableColumnResizer';
 
 /* -------------------------------------------------------------------------- */
 /*                        COMPOUND EXPORT MAPPING                             */
@@ -735,6 +1272,11 @@ HeroTable.LoadMore = TableLoadMore;
 HeroTable.LoadMoreContent = TableLoadMoreContent;
 HeroTable.Collection = TableCollection;
 HeroTable.ColumnResizer = TableColumnResizer;
+HeroTable.Checkbox = TableCheckbox;
+HeroTable.SelectAllCheckbox = TableSelectAllCheckbox;
+HeroTable.SelectRowCell = TableSelectRowCell;
+HeroTable.ExpandButton = TableExpandButton;
+HeroTable.Pagination = TablePagination;
 
 export const Table = HeroTable;
 export default HeroTable;

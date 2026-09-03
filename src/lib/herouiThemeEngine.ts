@@ -462,8 +462,11 @@ export function applyHeroUIThemeToDOM(config?: HeroUIConfig) {
 
 
   if (isDark) {
-    // Official HeroUI v3 dark mode semantic surfaces (zinc scale: 950 canvas, 900 content1, 800 content2, 700 content3, 600 content4)
+    // Official HeroUI v3 dark mode semantic surfaces (zinc scale: 000000 deep canvas, 18181b content1 surface, 27272a content2, 3f3f46 content3)
     root.style.setProperty('--heroui-background', '#000000');
+    root.style.setProperty('--heroui-surface', '#18181B');
+    root.style.setProperty('--heroui-surface-secondary', '#27272A');
+    root.style.setProperty('--heroui-surface-tertiary', '#3F3F46');
     root.style.setProperty('--heroui-content1', '#18181B');
     root.style.setProperty('--heroui-content1-foreground', '#ECEDEE');
     root.style.setProperty('--heroui-content2', '#27272A');
@@ -473,14 +476,17 @@ export function applyHeroUIThemeToDOM(config?: HeroUIConfig) {
     root.style.setProperty('--heroui-content4', '#52525B');
     root.style.setProperty('--heroui-content4-foreground', '#ECEDEE');
     root.style.setProperty('--heroui-card-bg', '#18181B');
-    root.style.setProperty('--heroui-header-bg', '#000000');
-    root.style.setProperty('--heroui-divider', 'rgba(255, 255, 255, 0.15)');
+    root.style.setProperty('--heroui-header-bg', '#18181B');
+    root.style.setProperty('--heroui-divider', 'rgba(255, 255, 255, 0.12)');
   } else {
-    // Official HeroUI v3 light mode semantic surfaces (white canvas, white content1, zinc-100 content2, zinc-200 content3, zinc-300 content4)
-    root.style.setProperty('--heroui-background', '#FFFFFF');
+    // Official HeroUI v3 light mode semantic surfaces (F4F4F5 soft gray canvas, FFFFFF white content1 surface, F4F4F6 content2, E4E4E7 content3)
+    root.style.setProperty('--heroui-background', '#F4F4F5');
+    root.style.setProperty('--heroui-surface', '#FFFFFF');
+    root.style.setProperty('--heroui-surface-secondary', '#F4F4F6');
+    root.style.setProperty('--heroui-surface-tertiary', '#E4E4E7');
     root.style.setProperty('--heroui-content1', '#FFFFFF');
     root.style.setProperty('--heroui-content1-foreground', '#11181C');
-    root.style.setProperty('--heroui-content2', '#F4F4F5');
+    root.style.setProperty('--heroui-content2', '#F4F4F6');
     root.style.setProperty('--heroui-content2-foreground', '#11181C');
     root.style.setProperty('--heroui-content3', '#E4E4E7');
     root.style.setProperty('--heroui-content3-foreground', '#11181C');
@@ -488,7 +494,7 @@ export function applyHeroUIThemeToDOM(config?: HeroUIConfig) {
     root.style.setProperty('--heroui-content4-foreground', '#11181C');
     root.style.setProperty('--heroui-card-bg', '#FFFFFF');
     root.style.setProperty('--heroui-header-bg', '#FFFFFF');
-    root.style.setProperty('--heroui-divider', 'rgba(17, 17, 17, 0.12)');
+    root.style.setProperty('--heroui-divider', 'rgba(17, 17, 17, 0.08)');
   }
 
   root.style.setProperty('--heroui-surface-blur', '0px');
