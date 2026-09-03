@@ -120,45 +120,68 @@ export async function initDatabaseSchema() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // Explicitly guarantee indexes on product_sku and category_id in inventory and products tables
-    const explicitIndexQueries = [
-      "ALTER TABLE `inventory` ADD COLUMN IF NOT EXISTS `product_sku` VARCHAR(128) NULL",
-      "ALTER TABLE `inventory` ADD COLUMN IF NOT EXISTS `category_id` VARCHAR(128) NULL",
-      "CREATE INDEX `idx_inventory_product_sku` ON `inventory` (`product_sku`)",
-      "CREATE INDEX `idx_inventory_category_id` ON `inventory` (`category_id`)",
-      "CREATE INDEX `idx_inventory_sku_cat` ON `inventory` (`product_sku`, `category_id`)",
-      "CREATE INDEX `idx_inventory_branch_sku` ON `inventory` (`branchId`, `product_sku`)",
-      "CREATE INDEX `idx_inventory_branch_cat` ON `inventory` (`branchId`, `category_id`)",
-      "ALTER TABLE `products` ADD COLUMN IF NOT EXISTS `product_sku` VARCHAR(128) NULL",
-      "ALTER TABLE `products` ADD COLUMN IF NOT EXISTS `category_id` VARCHAR(128) NULL",
-      "CREATE INDEX `idx_products_product_sku` ON `products` (`product_sku`)",
-      "CREATE INDEX `idx_products_category_id` ON `products` (`category_id`)",
-      "CREATE INDEX `idx_products_sku` ON `products` (`sku`)",
-      "CREATE INDEX `idx_products_category` ON `products` (`category`)",
-      "CREATE INDEX `idx_products_sku_category` ON `products` (`sku`, `category`)",
-      "CREATE INDEX `idx_products_sku_cat_id` ON `products` (`product_sku`, `category_id`)",
-      "ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `mustResetPassword` TINYINT(1) NOT NULL DEFAULT 1",
-      "ALTER TABLE `sales` MODIFY COLUMN `shiftId` VARCHAR(64) NULL",
-      "ALTER TABLE `sales` MODIFY COLUMN `cashierId` VARCHAR(64) NULL",
-      "ALTER TABLE `sales` MODIFY COLUMN `cashierName` VARCHAR(191) NULL",
-      "ALTER TABLE `purchase_orders` MODIFY COLUMN `supplierId` VARCHAR(64) NULL",
-      "ALTER TABLE `active_sessions` MODIFY COLUMN `branchId` VARCHAR(191) NULL",
-      "ALTER TABLE `active_sessions` MODIFY COLUMN `branchName` VARCHAR(191) NULL",
-      "ALTER TABLE `active_sessions` MODIFY COLUMN `username` VARCHAR(191) NULL",
-      "ALTER TABLE `active_sessions` MODIFY COLUMN `fullName` VARCHAR(191) NULL",
-      "ALTER TABLE `active_sessions` MODIFY COLUMN `role` VARCHAR(64) NULL"
-    ];
-
-    const indexBenignCodes = new Set(['ER_DUP_KEYNAME', 'ER_DUP_FIELDNAME', 'ER_CANT_DROP_FIELD_OR_KEY', 'ER_PARSE_ERROR']);
-    for (const q of explicitIndexQueries) {
+    // Resilient schema migrations and index guarantees
+    const ensureColumn = async (table, column, definition) => {
       try {
-        await pool.query(q);
+        await pool.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`);
       } catch (e) {
-        if (!indexBenignCodes.has(e.code)) {
-          console.debug(`[MySQL Schema Notice] Index query skipped (${e.code || 'UNKNOWN'}):`, e.message);
+        if (e.code !== 'ER_DUP_FIELDNAME' && e.errno !== 1060) {
+          console.debug(`[MySQL Schema Notice] Column check on ${table}.${column}:`, e.message);
         }
       }
-    }
+    };
+
+    const ensureIndex = async (table, indexName, indexCols) => {
+      try {
+        await pool.query(`CREATE INDEX \`${indexName}\` ON \`${table}\` (${indexCols})`);
+      } catch (e) {
+        if (e.code !== 'ER_DUP_KEYNAME' && e.errno !== 1061) {
+          console.debug(`[MySQL Schema Notice] Index check on ${table}.${indexName}:`, e.message);
+        }
+      }
+    };
+
+    const modifyColumn = async (table, column, definition) => {
+      try {
+        await pool.query(`ALTER TABLE \`${table}\` MODIFY COLUMN \`${column}\` ${definition}`);
+      } catch (e) {
+        console.debug(`[MySQL Schema Notice] Column modify on ${table}.${column}:`, e.message);
+      }
+    };
+
+    // Columns guarantee across all supported MySQL versions
+    await ensureColumn('inventory', 'product_sku', 'VARCHAR(128) NULL');
+    await ensureColumn('inventory', 'category_id', 'VARCHAR(128) NULL');
+    await ensureColumn('products', 'product_sku', 'VARCHAR(128) NULL');
+    await ensureColumn('products', 'category_id', 'VARCHAR(128) NULL');
+    await ensureColumn('users', 'mustResetPassword', 'TINYINT(1) NOT NULL DEFAULT 1');
+    await ensureColumn('sales', 'customerAddress', 'TEXT NULL');
+    await ensureColumn('sales', 'customerTin', 'VARCHAR(100) NULL');
+    await ensureColumn('sales', 'businessStyle', 'VARCHAR(255) NULL');
+
+    // Column constraints and type alignments
+    await modifyColumn('sales', 'shiftId', 'VARCHAR(64) NULL');
+    await modifyColumn('sales', 'cashierId', 'VARCHAR(64) NULL');
+    await modifyColumn('sales', 'cashierName', 'VARCHAR(191) NULL');
+    await modifyColumn('purchase_orders', 'supplierId', 'VARCHAR(64) NULL');
+    await modifyColumn('active_sessions', 'branchId', 'VARCHAR(191) NULL');
+    await modifyColumn('active_sessions', 'branchName', 'VARCHAR(191) NULL');
+    await modifyColumn('active_sessions', 'username', 'VARCHAR(191) NULL');
+    await modifyColumn('active_sessions', 'fullName', 'VARCHAR(191) NULL');
+    await modifyColumn('active_sessions', 'role', 'VARCHAR(64) NULL');
+
+    // Index optimizations
+    await ensureIndex('inventory', 'idx_inventory_product_sku', '`product_sku`');
+    await ensureIndex('inventory', 'idx_inventory_category_id', '`category_id`');
+    await ensureIndex('inventory', 'idx_inventory_sku_cat', '`product_sku`, `category_id`');
+    await ensureIndex('inventory', 'idx_inventory_branch_sku', '`branchId`, `product_sku`');
+    await ensureIndex('inventory', 'idx_inventory_branch_cat', '`branchId`, `category_id`');
+    await ensureIndex('products', 'idx_products_product_sku', '`product_sku`');
+    await ensureIndex('products', 'idx_products_category_id', '`category_id`');
+    await ensureIndex('products', 'idx_products_sku', '`sku`');
+    await ensureIndex('products', 'idx_products_category', '`category`');
+    await ensureIndex('products', 'idx_products_sku_category', '`sku`, `category`');
+    await ensureIndex('products', 'idx_products_sku_cat_id', '`product_sku`, `category_id`');
     
     console.log('[MySQL] Database schema and indexes verified and initialized.');
   } catch (err) {

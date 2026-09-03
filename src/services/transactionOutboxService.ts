@@ -219,6 +219,12 @@ class TransactionOutboxService {
       }
     }
 
+    const hasAuthToken = Boolean(authHeaders.Authorization || authHeaders.authorization || authHeaders['x-session-token']);
+    if (!hasAuthToken) {
+      console.log('[Outbox Service] Flush paused - no active authentication token found. Standing by for active session.');
+      return { successCount: 0, failCount: 0 };
+    }
+
     const pending = this.items
       .filter(i => i.status === 'pending' || i.status === 'failed')
       .sort((a, b) => {
@@ -274,6 +280,7 @@ class TransactionOutboxService {
 
         const res = await this.fetchFn(record.endpoint, {
           method: record.method,
+          credentials: 'same-origin',
           headers: {
             'Content-Type': 'application/json',
             ...authHeaders

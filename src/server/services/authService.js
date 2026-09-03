@@ -197,11 +197,12 @@ export function verifyAndExtractToken(req) {
     const payload = JSON.parse(payloadJson);
     const now = Date.now();
 
-    // Reject tokens that claim future issuance / timestamps
-    if (typeof payload.timestamp === 'number' && payload.timestamp > now) {
+    // Reject tokens that claim future issuance / timestamps (with 60s clock-skew tolerance)
+    const CLOCK_SKEW_TOLERANCE_MS = 60000;
+    if (typeof payload.timestamp === 'number' && payload.timestamp > now + CLOCK_SKEW_TOLERANCE_MS) {
       return null;
     }
-    if (typeof payload.iat === 'number' && payload.iat > now) {
+    if (typeof payload.iat === 'number' && payload.iat > now + CLOCK_SKEW_TOLERANCE_MS) {
       return null;
     }
 

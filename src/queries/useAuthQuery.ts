@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { User, ActiveSession } from '../types/db';
+import { fetchAuthenticatedDb, getQueryAuthHeaders, getQueryAuthToken } from './queryClient';
 
 export const AUTH_QUERY_KEYS = {
   session: ['auth', 'session'] as const,
@@ -8,6 +9,7 @@ export const AUTH_QUERY_KEYS = {
 };
 
 export function useCurrentSessionQuery() {
+  const token = getQueryAuthToken();
   return useQuery<{
     success: boolean;
     user: User | null;
@@ -16,11 +18,14 @@ export function useCurrentSessionQuery() {
     remainingSeconds?: number;
   }>({
     queryKey: AUTH_QUERY_KEYS.session,
+    enabled: Boolean(token),
     queryFn: async () => {
+      if (!token) {
+        return { success: false, user: null };
+      }
       try {
-        const token = localStorage.getItem('tp_session_token') || sessionStorage.getItem('tp_session_token');
         const res = await fetch('/api/auth/session', {
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          headers: getQueryAuthHeaders()
         });
         if (res.ok) {
           return await res.json();
@@ -37,16 +42,19 @@ export function useCurrentSessionQuery() {
 }
 
 export function useActiveSessionsQuery() {
+  const token = getQueryAuthToken();
   return useQuery<ActiveSession[]>({
     queryKey: AUTH_QUERY_KEYS.activeSessions,
+    enabled: Boolean(token),
     queryFn: async () => {
+      if (!token) return [];
       try {
-        const res = await fetch('/api/auth/active-sessions');
+        const res = await fetch('/api/auth/active-sessions', {
+          headers: getQueryAuthHeaders()
+        });
         if (res.ok) {
           const json = await res.json();
-          if (json && Array.isArray(json.sessions)) {
-            return json.sessions;
-          }
+          return Array.isArray(json.sessions) ? json.sessions : [];
         }
       } catch {
         // Fallback
@@ -64,13 +72,14 @@ export function useActiveSessionsQuery() {
 }
 
 export function useUsersListQuery() {
+  const token = getQueryAuthToken();
   return useQuery<User[]>({
     queryKey: AUTH_QUERY_KEYS.users,
+    enabled: Boolean(token),
     queryFn: async () => {
       try {
-        const res = await fetch('/api/db');
-        if (res.ok) {
-          const json = await res.json();
+        const json = await fetchAuthenticatedDb('/api/db');
+        if (json) {
           const users = json?.data?.tp_users || json?.tp_users || json?.users;
           if (Array.isArray(users)) {
             return users;

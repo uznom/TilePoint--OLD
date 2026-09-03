@@ -163,34 +163,25 @@ export function useDbAuthModule(options?: UseDbAuthOptions) {
         }
       }
     }
-    if (!user || !user.id || !user.role) return {};
 
-    try {
-      if (
-        !sessionStorage.getItem("tp_current_user") &&
-        !localStorage.getItem("tp_current_user")
-      ) {
-        sessionStorage.setItem("tp_current_user", JSON.stringify(user));
-        localStorage.setItem("tp_current_user", JSON.stringify(user));
-      }
-    } catch (e) {
-      console.debug("[DbContext] Cache sync exception ignored:", e);
-    }
+    const token = sessionToken || (typeof window !== "undefined" ? (sessionStorage.getItem("tp_session_token") || localStorage.getItem("tp_session_token")) : null);
 
     const headers: Record<string, string> = {
-      "x-user-id": user.id,
-      "x-user-role": user.role,
-      "x-user-branch": user.branchAssignmentId || "B1",
       "x-client-fp": getClientFingerprintHash(),
       "x-client-device": getClientDeviceSummary(),
       "x-device-key": getDeviceHardwareKey(),
     };
 
+    if (user && user.id) {
+      headers["x-user-id"] = user.id;
+      if (user.role) headers["x-user-role"] = user.role;
+      headers["x-user-branch"] = user.branchAssignmentId || "B1";
+    }
+
     if (activeSessionId) {
       headers["x-session-id"] = activeSessionId;
     }
 
-    const token = sessionToken || (typeof window !== "undefined" ? (sessionStorage.getItem("tp_session_token") || localStorage.getItem("tp_session_token")) : null);
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
       headers["x-session-token"] = token;
@@ -398,6 +389,12 @@ export function useDbAuthModule(options?: UseDbAuthOptions) {
           const body = await response.clone().json().catch(() => ({}));
           if (body.superseded) {
             setSessionSupersededNotice(body.message || "Your session has been superseded by another login.");
+          } else if (body.expired || body.code === 'UNAUTHORIZED' || body.code === 'USER_NOT_FOUND' || (typeof body.error === 'string' && body.error.toLowerCase().includes('authentication required'))) {
+            setSessionToken(null);
+            if (typeof window !== "undefined") {
+              sessionStorage.removeItem("tp_session_token");
+              localStorage.removeItem("tp_session_token");
+            }
           }
         }
         return response;
@@ -516,6 +513,12 @@ export function useDbAuthModule(options?: UseDbAuthOptions) {
           if (body.sessionId) {
             sessionStorage.setItem("tp_active_session_id", body.sessionId);
           }
+
+          // Immediately resume flushing any pending outbox items that were waiting for an active session
+          setTimeout(() => {
+            transactionOutboxService.flush().catch(() => {});
+          }, 100);
+
           return { success: true };
         } else {
           handleFailedLogin();

@@ -190,6 +190,12 @@ export async function replayQueuedDegradedWrites() {
 
   for (const op of queueCopy) {
     try {
+      if (typeof executeReplayOpHandler !== 'function') {
+        try {
+          await import('./dbHelpers.js');
+        } catch (_) {}
+      }
+
       if (typeof executeReplayOpHandler === 'function') {
         await executeReplayOpHandler(op);
       } else {

@@ -326,11 +326,11 @@ export const TableHeader = <T = any>({
   className = '',
   ...props
 }: TableHeaderProps<T>) => {
-  let renderedContent: React.ReactNode = children as React.ReactNode;
+  let renderedContent: React.ReactNode;
 
   if (columns && typeof children === 'function') {
     renderedContent = (
-      <tr>
+      <tr className="table__header-row">
         {columns.map((col, idx) => (
           <React.Fragment key={(col as any)?.id || idx}>
             {(children as (column: T) => React.ReactNode)(col)}
@@ -338,6 +338,17 @@ export const TableHeader = <T = any>({
         ))}
       </tr>
     );
+  } else {
+    // In HTML, <th> elements MUST be enclosed inside a <tr> under <thead>
+    const isSingleTr =
+      React.isValidElement(children) &&
+      (children.type === 'tr' || (children.type as any)?.displayName === 'TableRow');
+
+    if (isSingleTr) {
+      renderedContent = children as React.ReactNode;
+    } else {
+      renderedContent = <tr className="table__header-row">{children as React.ReactNode}</tr>;
+    }
   }
 
   return (

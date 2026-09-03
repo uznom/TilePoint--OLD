@@ -34,3 +34,41 @@ export const QUERY_KEYS = {
   transmittals: ['transmittals'] as const,
   branchSalesReports: ['branchSalesReports'] as const,
 };
+
+export function getQueryAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('tp_session_token') || sessionStorage.getItem('tp_session_token');
+}
+
+export function getQueryAuthHeaders(): Record<string, string> {
+  const token = getQueryAuthToken();
+  const headers: Record<string, string> = {
+    'Accept': 'application/json'
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+    headers['x-session-token'] = token;
+  }
+  return headers;
+}
+
+export async function fetchAuthenticatedDb(path = '/api/db'): Promise<any> {
+  const token = getQueryAuthToken();
+  if (!token) {
+    return null; // Return null when unauthenticated to fall back to cached initialData cleanly
+  }
+  try {
+    const res = await fetch(path, {
+      headers: getQueryAuthHeaders(),
+      credentials: 'same-origin'
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+    if (res.status === 401 || res.status === 403) {
+      return null;
+    }
+  } catch (_) {}
+  return null;
+}
+

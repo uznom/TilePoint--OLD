@@ -112,6 +112,7 @@ interface UseDbSyncOptions {
   revalidateStockCounts: (
     affectedItems?: { productId: string; branchId?: string; quantityDelta?: number }[]
   ) => Promise<void>;
+  optimisticStockCacheRef?: React.MutableRefObject<Map<string, any>>;
 }
 
 export function useDbSyncModule({
@@ -171,6 +172,8 @@ export function useDbSyncModule({
   addAuditLog,
   safeApiFetch,
   getAuthHeaders,
+  revalidateStockCounts,
+  optimisticStockCacheRef,
 }: UseDbSyncOptions) {
   const [dbSnapshots, setDbSnapshots] = useState<DbSnapshot[]>(() => {
     return safeParse<DbSnapshot[]>("tp_db_snapshots", []);
@@ -191,6 +194,9 @@ export function useDbSyncModule({
   const [dbSyncStatus, setDbSyncStatus] = useState<"synced" | "syncing" | "offline" | "error">(
     "synced"
   );
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(() => {
+    return localStorage.getItem("tp_last_sync_time") || new Date().toISOString();
+  });
   const [syncStatus] = useState({
     sales: "Live",
     inventory: "Live",
@@ -964,8 +970,21 @@ export function useDbSyncModule({
   const syncFromSharedServer = useCallback(
     async (silent: boolean = false): Promise<void> => {
       try {
-        if (!silent) setDbSyncStatus("syncing");
-        const res = await safeApiFetch("/api/db/full");
+        const auth = getAuthHeaders();
+        const hasAuthToken = Boolean(auth.Authorization || auth['x-session-token']);
+
+        // When unauthenticated, only check public server status instead of authenticated /api/db/full
+        if (!hasAuthToken) {
+          const statusRes = await safeApiFetch('/api/db/status');
+          if (statusRes.ok) {
+            setServerConnected(true);
+            setDbSyncStatus('synced');
+          }
+          return;
+        }
+
+        if (!silent) setDbSyncStatus('syncing');
+        const res = await safeApiFetch('/api/db/full');
         if (res.ok) {
           const body = await res.json().catch(() => ({}));
           if (body && body.data) {
@@ -983,25 +1002,54 @@ export function useDbSyncModule({
               try { localStorage.setItem("tp_brands", JSON.stringify(d.tp_brands)); } catch (_) {}
             }
             if (Array.isArray(d.tp_products) && d.tp_products.length > 0) {
-              setProducts(d.tp_products);
-              try { localStorage.setItem("tp_products", JSON.stringify(d.tp_products)); } catch (_) {}
+              const now = Date.now();
+              const mergedProducts = d.tp_products.map((p: any) => {
+                const cached = optimisticStockCacheRef?.current?.get(`prod:${p.id}`);
+                if (cached && now - cached.lastSaleCommitTime < 60000) {
+                  return { ...p, stockQuantity: Math.min(p.stockQuantity ?? 0, cached.quantity) };
+                }
+                return p;
+              });
+              setProducts(mergedProducts);
+              try { localStorage.setItem("tp_products", JSON.stringify(mergedProducts)); } catch (_) {}
             }
             if (Array.isArray(d.tp_users) && d.tp_users.length > 0) {
               setUsers(d.tp_users);
               try { localStorage.setItem("tp_users", JSON.stringify(d.tp_users)); } catch (_) {}
             }
             if (Array.isArray(d.tp_branch_stock)) {
-              setBranchStock(d.tp_branch_stock);
-              try { localStorage.setItem("tp_branch_stock", JSON.stringify(d.tp_branch_stock)); } catch (_) {}
+              const now = Date.now();
+              const mergedBs = d.tp_branch_stock.map((bs: any) => {
+                const cached = optimisticStockCacheRef?.current?.get(`bs:${bs.branchId}:${bs.productId}`);
+                if (cached && now - cached.lastSaleCommitTime < 60000) {
+                  return { ...bs, quantity: Math.min(bs.quantity ?? 0, cached.quantity) };
+                }
+                return bs;
+              });
+              setBranchStock(mergedBs);
+              try { localStorage.setItem("tp_branch_stock", JSON.stringify(mergedBs)); } catch (_) {}
             }
           }
           setServerConnected(true);
           setDbSyncStatus("synced");
+          const nowIso = new Date().toISOString();
+          setLastSyncTime(nowIso);
+          try { localStorage.setItem("tp_last_sync_time", nowIso); } catch (_) {}
+        } else if (res.status === 401 || res.status === 403) {
+          // Token expired or invalid: fallback gracefully to /api/db/status without throwing
+          const statusRes = await safeApiFetch('/api/db/status');
+          if (statusRes.ok) {
+            setServerConnected(true);
+            setDbSyncStatus('synced');
+          }
         } else {
           const statusRes = await safeApiFetch("/api/db/status");
           if (statusRes.ok) {
             setServerConnected(true);
             setDbSyncStatus("synced");
+            const nowIso = new Date().toISOString();
+            setLastSyncTime(nowIso);
+            try { localStorage.setItem("tp_last_sync_time", nowIso); } catch (_) {}
           }
         }
       } catch (err) {
@@ -1009,7 +1057,7 @@ export function useDbSyncModule({
         setDbSyncStatus("offline");
       }
     },
-    [safeApiFetch, setBranches, setSuppliers, setBrands, setProducts, setUsers, setBranchStock]
+    [safeApiFetch, setBranches, setSuppliers, setBrands, setProducts, setUsers, setBranchStock, optimisticStockCacheRef, getAuthHeaders, currentUser]
   );
 
   const forceSyncAll = useCallback(async () => {
@@ -1449,6 +1497,8 @@ export function useDbSyncModule({
     getRowClearingBlockedReason,
     syncFromSharedServer,
     forceSyncAll,
+    lastSyncTime,
+    setLastSyncTime,
     resetWriteStats,
     exportAndPurgeCategoryData,
     runDatabaseMaintenance,

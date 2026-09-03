@@ -107,12 +107,9 @@ export async function upsertRecordMysql(tableName, record, executor = pool) {
   }
   if (keys.length === 0) return;
 
-  const columns = keys.map(k => `\`${k}\``).join(', ');
-  const placeholders = keys.map(() => '?').join(', ');
-  const updateClause = keys.filter(k => k !== 'id').map(k => `\`${k}\` = VALUES(\`${k}\`)`).join(', ');
+  const exec = executor || pool;
 
-  const values = keys.map(k => {
-    const val = record[k];
+  const formatValue = (val, k) => {
     if (val === null || val === undefined) return null;
     if (typeof val === 'boolean') return val ? 1 : 0;
     if (val instanceof Date) {
@@ -126,7 +123,51 @@ export async function upsertRecordMysql(tableName, record, executor = pool) {
       }
     }
     return val;
-  });
+  };
+
+  // If record has an id, check if it already exists to safely perform an UPDATE without violating NOT NULL constraints on untouched columns
+  if (record.id !== undefined && record.id !== null) {
+    try {
+      const [existing] = await exec.query(`SELECT 1 FROM \`${tableName}\` WHERE id = ? LIMIT 1`, [record.id]);
+      if (existing && existing.length > 0) {
+        const updateKeys = keys.filter(k => k !== 'id');
+        if (updateKeys.length === 0) return; // Nothing to update
+        const setClause = updateKeys.map(k => `\`${k}\` = ?`).join(', ');
+        const updateValues = updateKeys.map(k => formatValue(record[k], k));
+        updateValues.push(record.id);
+        await exec.execute(`UPDATE \`${tableName}\` SET ${setClause} WHERE id = ?`, updateValues);
+        return;
+      }
+    } catch (_) {
+      // If table doesn't have an id column or check fails, fallback to INSERT ... ON DUPLICATE KEY UPDATE
+    }
+  }
+
+  // Fallback defaults for NOT NULL columns without default values if inserting brand new record
+  if (tableName === 'products') {
+    if (!record.productCode) {
+      keys.push('productCode');
+      record.productCode = record.id;
+    }
+    if (!record.productName) {
+      keys.push('productName');
+      record.productName = 'Product ' + record.id;
+    }
+    if (!record.category) {
+      keys.push('category');
+      record.category = 'General';
+    }
+  } else if (tableName === 'branches') {
+    if (!record.name) {
+      keys.push('name');
+      record.name = record.id || 'Branch';
+    }
+  }
+
+  const columns = keys.map(k => `\`${k}\``).join(', ');
+  const placeholders = keys.map(() => '?').join(', ');
+  const updateClause = keys.filter(k => k !== 'id').map(k => `\`${k}\` = VALUES(\`${k}\`)`).join(', ');
+  const values = keys.map(k => formatValue(record[k], k));
 
   const sql = `
     INSERT INTO \`${tableName}\` (${columns})
@@ -134,7 +175,6 @@ export async function upsertRecordMysql(tableName, record, executor = pool) {
     ${updateClause ? `ON DUPLICATE KEY UPDATE ${updateClause}` : ''}
   `;
 
-  const exec = executor || pool;
   await exec.execute(sql, values);
 }
 
@@ -1057,7 +1097,10 @@ setExecuteReplayOpHandler(async (op) => {
       try {
         conn = await pool.getConnection();
         await conn.beginTransaction();
+        await conn.query('SET FOREIGN_KEY_CHECKS = 0');
         const keyMap = {
+          shifts: 'tp_shifts',
+          branches: 'tp_branches',
           sales: 'tp_sales',
           saleItems: 'tp_sale_items',
           movements: 'tp_movements',
@@ -1065,8 +1108,6 @@ setExecuteReplayOpHandler(async (op) => {
           ledgerEntries: 'tp_ledger_entries',
           expenses: 'atpos_v2_expenses',
           stockTransfers: 'tp_stock_transfers',
-          shifts: 'tp_shifts',
-          branches: 'tp_branches',
           members: 'tp_members',
           customBills: 'atpos_v2_custom_bills',
           parkedSales: 'tp_parked_sales'
@@ -1076,10 +1117,41 @@ setExecuteReplayOpHandler(async (op) => {
           if (Array.isArray(items) && items.length > 0) {
             const tableName = KEY_TO_TABLE_MAP[key];
             if (tableName) {
-              for (const item of items) {
-                if (item && item.id) {
-                  await upsertRecordMysql(tableName, item, conn);
+              for (const rawItem of items) {
+                if (!rawItem || !rawItem.id) continue;
+                const item = { ...rawItem };
+
+                if (propName === 'sales') {
+                  if (item.shiftId === 'NO-SHIFT-ACTIVE' || !item.shiftId) {
+                    item.shiftId = null;
+                  }
                 }
+
+                if (propName === 'movements') {
+                  item.branchId = item.branchId || item.sourceBranchId || item.destinationBranchId || 'B1';
+                  item.createdBy = item.createdBy || item.userId || item.username || 'system';
+                  if (typeof item.quantity === 'number') {
+                    item.quantity = Math.abs(item.quantity);
+                  }
+                  try {
+                    const invMovRec = {
+                      id: item.id || `IM-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                      productId: item.productId,
+                      type: item.type || 'OUT',
+                      quantity: item.quantity,
+                      sourceBranchId: item.sourceBranchId || item.branchId,
+                      destinationBranchId: item.destinationBranchId || null,
+                      referenceId: item.referenceId || '',
+                      notes: item.notes || '',
+                      userId: item.userId || 'SYSTEM',
+                      username: item.username || item.createdBy || 'system',
+                      timestamp: item.timestamp || new Date().toISOString().slice(0, 19).replace('T', ' ')
+                    };
+                    await upsertRecordMysql('inventory_movements', invMovRec, conn);
+                  } catch (_) {}
+                }
+
+                await upsertRecordMysql(tableName, item, conn);
               }
             }
           }
@@ -1090,20 +1162,37 @@ setExecuteReplayOpHandler(async (op) => {
         if (Array.isArray(tx.payload.branchStockUpdates)) {
           for (const bsUpdate of tx.payload.branchStockUpdates) {
             if (!bsUpdate || !bsUpdate.branchId || !bsUpdate.productId) continue;
+            const numQty = bsUpdate.quantity !== undefined ? Number(bsUpdate.quantity) : 0;
             await upsertRecordMysql('branch_stock', {
               id: bsUpdate.id || `${bsUpdate.branchId}_${bsUpdate.productId}`,
               branchId: bsUpdate.branchId,
               productId: bsUpdate.productId,
-              quantity: bsUpdate.quantity !== undefined ? Number(bsUpdate.quantity) : 0,
+              quantity: numQty,
               version: bsUpdate.version || 1,
               updatedAt: bsUpdate.updatedAt || new Date().toISOString().slice(0, 19).replace('T', ' ')
             }, conn);
+            try {
+              await conn.execute("UPDATE `inventory` SET `stockQuantity` = ? WHERE (`productId` = ? OR `id` = ?) AND `branchId` = ?", [
+                numQty,
+                bsUpdate.productId,
+                bsUpdate.productId,
+                bsUpdate.branchId
+              ]);
+            } catch (_) {}
           }
         }
         if (Array.isArray(tx.payload.productUpdates)) {
           for (const pUpdate of tx.payload.productUpdates) {
             if (pUpdate && pUpdate.id) {
+              const numProdQty = pUpdate.stockQuantity !== undefined ? Number(pUpdate.stockQuantity) : 0;
               await upsertRecordMysql('products', pUpdate, conn);
+              try {
+                await conn.execute("UPDATE `inventory` SET `stockQuantity` = ? WHERE `productId` = ? OR `id` = ?", [
+                  numProdQty,
+                  pUpdate.id,
+                  pUpdate.id
+                ]);
+              } catch (_) {}
             }
           }
         }
@@ -1114,7 +1203,10 @@ setExecuteReplayOpHandler(async (op) => {
         }
         throw err;
       } finally {
-        if (conn) conn.release();
+        if (conn) {
+          try { await conn.query('SET FOREIGN_KEY_CHECKS = 1'); } catch (_) {}
+          conn.release();
+        }
       }
     }
   } else if (op.type === 'pos_sale') {

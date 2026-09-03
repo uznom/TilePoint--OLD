@@ -1,16 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Product, BranchStock, Branch } from '../types/db';
 import { mysqlDatabaseService } from '../services/mysqlDatabaseService';
-import { QUERY_KEYS } from './queryClient';
+import { QUERY_KEYS, fetchAuthenticatedDb, getQueryAuthToken } from './queryClient';
 
 export function useProductsQuery() {
+  const hasToken = Boolean(getQueryAuthToken());
   return useQuery<Product[]>({
     queryKey: QUERY_KEYS.products,
+    enabled: hasToken,
     queryFn: async () => {
       try {
-        const res = await fetch('/api/db');
-        if (res.ok) {
-          const json = await res.json();
+        const json = await fetchAuthenticatedDb('/api/db');
+        if (json) {
           const list = json?.data?.tp_products || json?.products;
           if (Array.isArray(list)) {
             return list;
@@ -31,8 +32,10 @@ export function useProductsQuery() {
 }
 
 export function useBranchStockQuery(branchId?: string) {
+  const hasToken = Boolean(getQueryAuthToken());
   return useQuery<BranchStock[]>({
     queryKey: QUERY_KEYS.branchStock(branchId),
+    enabled: hasToken,
     queryFn: async () => {
       try {
         const res = await mysqlDatabaseService.fetchBranchStocks(branchId);
@@ -54,13 +57,14 @@ export function useBranchStockQuery(branchId?: string) {
 }
 
 export function useBranchesQuery() {
+  const hasToken = Boolean(getQueryAuthToken());
   return useQuery<Branch[]>({
     queryKey: QUERY_KEYS.branches,
+    enabled: hasToken,
     queryFn: async () => {
       try {
-        const res = await fetch('/api/db');
-        if (res.ok) {
-          const json = await res.json();
+        const json = await fetchAuthenticatedDb('/api/db');
+        if (json) {
           const list = json?.data?.tp_branches || json?.branches;
           if (Array.isArray(list)) {
             return list;

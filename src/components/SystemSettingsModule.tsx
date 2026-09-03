@@ -35,12 +35,14 @@ import {
   Percent,
   AlertTriangle,
   HardDrive,
+  Inbox,
   RefreshCw,
   FolderArchive,
   ExternalLink
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { useDb } from '../context/DbContext';
+import { formatRelativeTime } from '../utils/dateUtils';
 import { saveHeroUIConfig } from '../lib/herouiThemeEngine';
 import { UserRole } from '../types/db';
 import { HeroSwitch } from './common/ui/HeroSwitch';
@@ -170,6 +172,9 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
     syncAllLocalToMysql,
     getMysqlStatus,
     serverDegradedState,
+    lastSyncTime,
+    outboxStats,
+    setIsOutboxModalOpen,
   } = useDb();
 
   const isAuthorized =
@@ -1189,19 +1194,30 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
                 </span>
               </div>
               <p className="text-[11px] text-default-500 mt-1">
-                Database: <span className="font-mono font-bold text-foreground">{mysqlStatus?.database || 'tilepoint_db'}</span> | Host: <span className="font-mono text-foreground">{mysqlStatus?.host || '127.0.0.1'}</span> | Records: <span className="font-bold text-foreground">{mysqlStatus?.totalRecords || 'Live'}</span>
+                Database: <span className="font-mono font-bold text-foreground">{mysqlStatus?.database || 'tilepoint_db'}</span> | Host: <span className="font-mono text-foreground">{mysqlStatus?.host || '127.0.0.1'}</span> | Records: <span className="font-bold text-foreground">{mysqlStatus?.totalRecords || 'Live'}</span> | Last Sync: <span className="font-bold text-primary">{formatRelativeTime(lastSyncTime)}</span>
               </p>
             </div>
 
-            <button
-              type="button"
-              disabled={isSyncingMysql}
-              onClick={handleSyncToMysql}
-              className="px-4 py-2.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl shadow-2xs hover:opacity-90 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 shrink-0"
-            >
-              <RefreshCw className={`h-4 w-4 ${isSyncingMysql ? 'animate-spin' : ''}`} />
-              <span>{isSyncingMysql ? 'Syncing Data...' : 'Sync All Data Now'}</span>
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsOutboxModalOpen(true)}
+                className="px-3.5 py-2.5 bg-content2 hover:bg-content3 text-foreground font-black text-xs uppercase tracking-wider rounded-xl border border-divider/30 transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 shrink-0"
+              >
+                <Inbox className="h-4 w-4 text-primary" />
+                <span>Outbox ({outboxStats ? outboxStats.pending + outboxStats.failed : 0})</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={isSyncingMysql}
+                onClick={handleSyncToMysql}
+                className="px-4 py-2.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl shadow-2xs hover:opacity-90 active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 shrink-0"
+              >
+                <RefreshCw className={`h-4 w-4 ${isSyncingMysql ? 'animate-spin' : ''}`} />
+                <span>{isSyncingMysql ? 'Syncing Data...' : 'Sync All Data Now'}</span>
+              </button>
+            </div>
           </div>
         </div>
 

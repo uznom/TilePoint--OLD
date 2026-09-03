@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { createContext, useContext, useMemo, useRef } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   DbContextType,
@@ -191,6 +191,7 @@ export const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
     safeApiFetch: authModule.safeApiFetch,
     getAuthHeaders: authModule.getAuthHeaders,
     revalidateStockCounts: productsModule.revalidateStockCounts,
+    optimisticStockCacheRef: productsModule.optimisticStockCacheRef,
   });
 
   // Assign refs for circular links
@@ -208,6 +209,11 @@ export const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
   restoreProductRef.current = productsModule.restoreProduct;
   logManualAdjustmentRef.current = operationsModule.logManualAdjustment;
   generateSystemSnapshotRef.current = syncModule.generateSystemSnapshot;
+
+  // Wire transactionOutboxService to active auth fetch client and headers
+  useEffect(() => {
+    transactionOutboxService.initialize(authModule.safeApiFetch, authModule.getAuthHeaders);
+  }, [authModule.safeApiFetch, authModule.getAuthHeaders]);
 
   // Branch filter views
   const filteredBranchStock = useMemo(() => {
@@ -594,6 +600,8 @@ export const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
       isSystemHydrating: syncModule.isSystemHydrating,
       serverConnected: syncModule.serverConnected,
       syncFromSharedServer: syncModule.syncFromSharedServer,
+      lastSyncTime: syncModule.lastSyncTime,
+      setLastSyncTime: syncModule.setLastSyncTime,
       lowPerformanceMode: syncModule.lowPerformanceMode,
       setLowPerformanceMode: syncModule.setLowPerformanceMode,
       activeSessions: authModule.activeSessions,

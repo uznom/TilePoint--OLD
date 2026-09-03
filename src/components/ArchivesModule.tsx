@@ -6,7 +6,9 @@ import {
   AlertTriangle,
   Archive,
   Building2,
+  Clock,
   FileText,
+  Inbox,
   Package,
   Receipt,
   RotateCcw,
@@ -19,6 +21,8 @@ import { useDb } from '../context/DbContext';
 import { ToastNotification } from './ToastNotification';
 import { HeroPagination } from './common/ui/HeroPagination';
 import { HeroDropdownSelect } from './common/ui/HeroDropdown';
+import { TransactionOutboxPanel } from './TransactionOutboxPanel';
+import { formatRelativeTime } from '../utils/dateUtils';
 
 interface ArchivesModuleProps {
   darkMode?: boolean;
@@ -72,8 +76,11 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
     restoreDamageLog,
     purgeArchivedItem,
     bulkRestoreItems,
+    lastSyncTime,
+    outboxStats,
   } = useDb();
 
+  const [mainSection, setMainSection] = useState<'outbox' | 'archives'>('outbox');
   const [activeTab, setActiveTab] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedKeys, setSelectedKeys] = useState<Record<string, boolean>>({});
@@ -433,8 +440,58 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
         onClose={() => setToastMessage(null)}
       />
 
-      {/* HEADER BANNER */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl p-5 shadow-elevation-soft flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      {/* TOP-LEVEL NAVIGATION: TRANSACTIONAL OUTBOX & SYNC vs RECOVERY VAULT */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 p-3 rounded-2xl shadow-elevation-soft">
+        <div className="flex items-center gap-2 select-none overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setMainSection('outbox')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              mainSection === 'outbox'
+                ? 'bg-primary text-primary-foreground shadow-2xs'
+                : 'text-default-500 hover:text-foreground hover:bg-default-100'
+            }`}
+          >
+            <Inbox className="h-4 w-4" />
+            <span>Database Outbox &amp; Sync</span>
+            {outboxStats && (outboxStats.pending + outboxStats.failed > 0) ? (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-black">
+                {outboxStats.pending + outboxStats.failed}
+              </span>
+            ) : null}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setMainSection('archives')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              mainSection === 'archives'
+                ? 'bg-primary text-primary-foreground shadow-2xs'
+                : 'text-default-500 hover:text-foreground hover:bg-default-100'
+            }`}
+          >
+            <Archive className="h-4 w-4" />
+            <span>Recovery Vault &amp; Archives</span>
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-content2 text-default-500 border border-divider/20">
+              {counts.all}
+            </span>
+          </button>
+        </div>
+
+        {/* Quick Last Synced widget in the bar */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-content2/50 border border-divider/20 text-xs font-mono self-start sm:self-center">
+          <Clock className="h-3.5 w-3.5 text-primary shrink-0" />
+          <span className="text-default-500 text-[11px]">Last Sync:</span>
+          <span className="font-bold text-foreground text-[11px]">{formatRelativeTime(lastSyncTime)}</span>
+        </div>
+      </div>
+
+      {mainSection === 'outbox' ? (
+        <TransactionOutboxPanel showHeader={true} />
+      ) : (
+        <>
+          {/* HEADER BANNER */}
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl p-5 shadow-elevation-soft flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="p-3 rounded-2xl bg-primary/10 text-primary border border-primary/20 shrink-0">
             <Archive className="h-6 w-6" />
@@ -725,7 +782,7 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
                         { key: '50', label: '50' },
                       ]}
                       selectedKey={String(pageSize)}
-                      onSelectionChange={(val) => {
+                      onSelectionChange={(val: any) => {
                         setPageSize(Number(val));
                         setCurrentPage(1);
                       }}
@@ -748,6 +805,8 @@ export const ArchivesModule: React.FC<ArchivesModuleProps> = () => {
           </>
         )}
       </div>
+      </>
+      )}
 
       {/* MODAL: SINGLE PURGE CONFIRMATION */}
       {itemToPurge && (

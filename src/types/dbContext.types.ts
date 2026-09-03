@@ -542,6 +542,8 @@ export interface DbContextType {
   isSystemHydrating: boolean;
   serverConnected: boolean;
   syncFromSharedServer: (silent?: boolean) => Promise<void>;
+  lastSyncTime: string | null;
+  setLastSyncTime: (val: string | null) => void;
   lowPerformanceMode: boolean;
   setLowPerformanceMode: (val: boolean) => void;
   activeSessions: ActiveSession[];

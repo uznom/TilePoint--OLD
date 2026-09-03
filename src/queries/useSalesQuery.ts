@@ -1,16 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Sale, SaleItem, Shift, BranchSalesReport } from '../types/db';
 import { mysqlDatabaseService } from '../services/mysqlDatabaseService';
-import { QUERY_KEYS } from './queryClient';
+import { QUERY_KEYS, fetchAuthenticatedDb, getQueryAuthToken } from './queryClient';
 
 export function useSalesQuery(branchId?: string) {
+  const hasToken = Boolean(getQueryAuthToken());
   return useQuery<Sale[]>({
     queryKey: QUERY_KEYS.sales(branchId),
+    enabled: hasToken,
     queryFn: async () => {
       try {
-        const res = await fetch('/api/db');
-        if (res.ok) {
-          const json = await res.json();
+        const json = await fetchAuthenticatedDb('/api/db');
+        if (json) {
           const list = json?.data?.tp_sales || json?.sales;
           if (Array.isArray(list)) {
             if (branchId && branchId !== 'all') {
@@ -38,13 +39,14 @@ export function useSalesQuery(branchId?: string) {
 }
 
 export function useSaleItemsQuery() {
+  const hasToken = Boolean(getQueryAuthToken());
   return useQuery<SaleItem[]>({
     queryKey: QUERY_KEYS.saleItems,
+    enabled: hasToken,
     queryFn: async () => {
       try {
-        const res = await fetch('/api/db');
-        if (res.ok) {
-          const json = await res.json();
+        const json = await fetchAuthenticatedDb('/api/db');
+        if (json) {
           const list = json?.data?.tp_sale_items || json?.sale_items;
           if (Array.isArray(list)) {
             return list;
@@ -65,13 +67,14 @@ export function useSaleItemsQuery() {
 }
 
 export function useShiftsQuery(branchId?: string) {
+  const hasToken = Boolean(getQueryAuthToken());
   return useQuery<Shift[]>({
     queryKey: QUERY_KEYS.shifts(branchId),
+    enabled: hasToken,
     queryFn: async () => {
       try {
-        const res = await fetch('/api/db');
-        if (res.ok) {
-          const json = await res.json();
+        const json = await fetchAuthenticatedDb('/api/db');
+        if (json) {
           const list = json?.data?.tp_shifts || json?.shifts;
           if (Array.isArray(list)) {
             if (branchId && branchId !== 'all') {
@@ -99,13 +102,14 @@ export function useShiftsQuery(branchId?: string) {
 }
 
 export function useBranchSalesReportsQuery() {
+  const hasToken = Boolean(getQueryAuthToken());
   return useQuery<BranchSalesReport[]>({
     queryKey: QUERY_KEYS.branchSalesReports,
+    enabled: hasToken,
     queryFn: async () => {
       try {
-        const res = await fetch('/api/db');
-        if (res.ok) {
-          const json = await res.json();
+        const json = await fetchAuthenticatedDb('/api/db');
+        if (json) {
           const list = json?.data?.tp_branch_sales_reports || json?.branch_sales_reports;
           if (Array.isArray(list)) {
             return list;

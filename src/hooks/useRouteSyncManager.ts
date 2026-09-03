@@ -291,9 +291,11 @@ export function useRouteSyncManager(options: UseRouteSyncOptions = {}) {
       trackModuleVisit(canonical);
       prefetchModule(canonical);
 
-      // Navigate URL immediately if it differs from current pathname
-      if (window.location.pathname !== targetPath) {
-        navigate(targetPath);
+      // Defer URL navigation to next microtask so BrowserRouter is not updated synchronously during render
+      if (typeof window !== 'undefined' && window.location.pathname !== targetPath) {
+        queueMicrotask(() => {
+          navigate(targetPath);
+        });
       }
 
       return canonical;

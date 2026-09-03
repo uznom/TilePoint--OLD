@@ -48,11 +48,13 @@ Type,
 Upload,
 Wifi,
 WifiOff,
-  CheckCircle2
+CheckCircle2,
 } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { ToastNotification } from './ToastNotification';
-import { DbSnapshot,useDb } from '../context/DbContext';
+import { DbSnapshot, useDb } from '../context/DbContext';
+import { TransactionOutboxPanel } from './TransactionOutboxPanel';
+import { formatRelativeTime, formatDateTime as formatExactTime } from '../utils/dateUtils';
 import { exportMasterDatabaseToXLSX } from '../lib/excelExportHelper';
 import {
   getServiceWorkerStatus,
@@ -204,7 +206,7 @@ export function PrivacyAccessibilityHub({
  }, [activeTab, db.currentUser?.role]);
 
  // DB Tuning custom state variables
- const [dbSubTab, setDbSubTab] = useState<'performance' | 'offline_cache' | 'rules' | 'backup' | 'archive'>('performance');
+ const [dbSubTab, setDbSubTab] = useState<'performance' | 'outbox' | 'offline_cache' | 'rules' | 'backup' | 'archive'>('performance');
  const [swStatus, setSwStatus] = useState<CacheStatusInfo>(getServiceWorkerStatus());
  const [isRefreshingSw, setIsRefreshingSw] = useState(false);
  const [isPurgingCache, setIsPurgingCache] = useState(false);
@@ -1484,6 +1486,7 @@ startxref
  <div className="flex border-b border-divider/15 pb-2 gap-1.5 select-none shrink-0 overflow-x-auto">
  {[
  { id: 'performance', name: 'Save Settings' },
+ { id: 'outbox', name: 'Transactional Outbox' },
  { id: 'offline_cache', name: 'Offline & Service Worker' },
  { id: 'rules', name: 'Security Rules' },
  { id: 'backup', name: 'Backups' },
@@ -1532,6 +1535,10 @@ startxref
  db.dbSyncStatus === 'queued' ? 'text-amber-400' :
  'text-primary'
  }>{db.dbSyncStatus === 'idle' ? 'UP TO DATE' : db.dbSyncStatus.toUpperCase()}</span>
+ </div>
+ <div className="text-[10.5px] text-default-400 font-mono mt-0.5 flex items-center gap-1.5">
+ <Clock className="h-3 w-3 text-primary shrink-0" />
+ <span>Last Sync: <strong className="text-foreground">{formatRelativeTime(db.lastSyncTime)}</strong> ({formatExactTime(db.lastSyncTime)})</span>
  </div>
  <p className="text-[10px] text-default-500 leading-relaxed mt-0.5">
  {db.dbSyncStatus === 'idle' && 'All changes saved. Database is currently idle.'}
@@ -1628,6 +1635,13 @@ startxref
  </div>
  </div>
  </div>
+ )}
+
+ {/* Subtab OUTBOX: TRANSACTIONAL OUTBOX PANEL */}
+ {dbSubTab === 'outbox' && (
+   <div className="space-y-4 animate-fade-in font-sans">
+     <TransactionOutboxPanel showHeader={false} />
+   </div>
  )}
 
  {/* Subtab B: SERVICE WORKER & OFFLINE CACHING */}

@@ -1,16 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { InventoryMovement, DamageLog, Delivery, Transmittal, Expense, PurchaseOrder, Member, AuditLog } from '../types/db';
 import { mysqlDatabaseService } from '../services/mysqlDatabaseService';
-import { QUERY_KEYS } from './queryClient';
+import { QUERY_KEYS, fetchAuthenticatedDb, getQueryAuthToken } from './queryClient';
 
 export function useMovementsQuery(branchId?: string) {
+  const hasToken = Boolean(getQueryAuthToken());
   return useQuery<InventoryMovement[]>({
     queryKey: QUERY_KEYS.movements(branchId),
+    enabled: hasToken,
     queryFn: async () => {
       try {
-        const res = await fetch('/api/db');
-        if (res.ok) {
-          const json = await res.json();
+        const json = await fetchAuthenticatedDb('/api/db');
+        if (json) {
           const list = json?.data?.tp_movements || json?.movements;
           if (Array.isArray(list)) {
             if (branchId && branchId !== 'all') {
@@ -38,13 +39,14 @@ export function useMovementsQuery(branchId?: string) {
 }
 
 export function useDamageLogsQuery(branchId?: string) {
+  const hasToken = Boolean(getQueryAuthToken());
   return useQuery<DamageLog[]>({
     queryKey: QUERY_KEYS.damageLogs(branchId),
+    enabled: hasToken,
     queryFn: async () => {
       try {
-        const res = await fetch('/api/db');
-        if (res.ok) {
-          const json = await res.json();
+        const json = await fetchAuthenticatedDb('/api/db');
+        if (json) {
           const list = json?.data?.tp_damage_logs || json?.damage_logs;
           if (Array.isArray(list)) {
             if (branchId && branchId !== 'all') {
@@ -72,13 +74,14 @@ export function useDamageLogsQuery(branchId?: string) {
 }
 
 export function useDeliveriesQuery(branchId?: string) {
+  const hasToken = Boolean(getQueryAuthToken());
   return useQuery<Delivery[]>({
     queryKey: QUERY_KEYS.deliveries(branchId),
+    enabled: hasToken,
     queryFn: async () => {
       try {
-        const res = await fetch('/api/db');
-        if (res.ok) {
-          const json = await res.json();
+        const json = await fetchAuthenticatedDb('/api/db');
+        if (json) {
           const list = json?.data?.tp_deliveries || json?.deliveries;
           if (Array.isArray(list)) {
             if (branchId && branchId !== 'all') {
@@ -106,13 +109,14 @@ export function useDeliveriesQuery(branchId?: string) {
 }
 
 export function useTransmittalsQuery() {
+  const hasToken = Boolean(getQueryAuthToken());
   return useQuery<Transmittal[]>({
     queryKey: QUERY_KEYS.transmittals,
+    enabled: hasToken,
     queryFn: async () => {
       try {
-        const res = await fetch('/api/db');
-        if (res.ok) {
-          const json = await res.json();
+        const json = await fetchAuthenticatedDb('/api/db');
+        if (json) {
           const list = json?.data?.tp_transmittals || json?.transmittals;
           if (Array.isArray(list)) {
             return list;
@@ -133,13 +137,14 @@ export function useTransmittalsQuery() {
 }
 
 export function useExpensesQuery(branchId?: string) {
+  const hasToken = Boolean(getQueryAuthToken());
   return useQuery<Expense[]>({
     queryKey: QUERY_KEYS.expenses(branchId),
+    enabled: hasToken,
     queryFn: async () => {
       try {
-        const res = await fetch('/api/db');
-        if (res.ok) {
-          const json = await res.json();
+        const json = await fetchAuthenticatedDb('/api/db');
+        if (json) {
           const list = json?.data?.tp_expenses || json?.expenses;
           if (Array.isArray(list)) {
             if (branchId && branchId !== 'all') {
@@ -167,13 +172,14 @@ export function useExpensesQuery(branchId?: string) {
 }
 
 export function usePurchaseOrdersQuery() {
+  const hasToken = Boolean(getQueryAuthToken());
   return useQuery<PurchaseOrder[]>({
     queryKey: QUERY_KEYS.purchaseOrders,
+    enabled: hasToken,
     queryFn: async () => {
       try {
-        const res = await fetch('/api/db');
-        if (res.ok) {
-          const json = await res.json();
+        const json = await fetchAuthenticatedDb('/api/db');
+        if (json) {
           const list = json?.data?.tp_purchase_orders || json?.purchase_orders;
           if (Array.isArray(list)) {
             return list;
@@ -194,13 +200,14 @@ export function usePurchaseOrdersQuery() {
 }
 
 export function useMembersQuery() {
+  const hasToken = Boolean(getQueryAuthToken());
   return useQuery<Member[]>({
     queryKey: QUERY_KEYS.members,
+    enabled: hasToken,
     queryFn: async () => {
       try {
-        const res = await fetch('/api/db');
-        if (res.ok) {
-          const json = await res.json();
+        const json = await fetchAuthenticatedDb('/api/db');
+        if (json) {
           const list = json?.data?.tp_members || json?.members;
           if (Array.isArray(list)) {
             return list;
@@ -221,8 +228,10 @@ export function useMembersQuery() {
 }
 
 export function useAuditLogsQuery() {
+  const hasToken = Boolean(getQueryAuthToken());
   return useQuery<AuditLog[]>({
     queryKey: QUERY_KEYS.auditLogs,
+    enabled: hasToken,
     queryFn: async () => {
       try {
         const res = await mysqlDatabaseService.getAuditTrails();

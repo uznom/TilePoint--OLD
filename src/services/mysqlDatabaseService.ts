@@ -54,6 +54,9 @@ export interface SaleRecordPayload {
   shiftId?: string;
   customerId?: string;
   customerName?: string;
+  customerAddress?: string;
+  customerTin?: string;
+  businessStyle?: string;
   subtotal: number;
   taxAmount?: number;
   discountTotal?: number;

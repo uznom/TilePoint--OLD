@@ -58,6 +58,8 @@ router.use(operationsDbRoutes);
 async function executeAtomicPackageMysql(tx) {
   const payload = tx.payload || {};
   const keyMap = {
+    shifts: 'tp_shifts',
+    branches: 'tp_branches',
     sales: 'tp_sales',
     saleItems: 'tp_sale_items',
     movements: 'tp_movements',
@@ -65,8 +67,6 @@ async function executeAtomicPackageMysql(tx) {
     ledgerEntries: 'tp_ledger_entries',
     expenses: 'atpos_v2_expenses',
     stockTransfers: 'tp_stock_transfers',
-    shifts: 'tp_shifts',
-    branches: 'tp_branches',
     members: 'tp_members',
     customBills: 'atpos_v2_custom_bills',
     parkedSales: 'tp_parked_sales'
@@ -76,16 +76,51 @@ async function executeAtomicPackageMysql(tx) {
   try {
     conn = await pool.getConnection();
     await conn.beginTransaction();
+    await conn.query('SET FOREIGN_KEY_CHECKS = 0');
 
     for (const [propName, key] of Object.entries(keyMap)) {
       const items = payload[propName];
       if (Array.isArray(items) && items.length > 0) {
         const tableName = KEY_TO_TABLE_MAP[key];
         if (tableName) {
-          for (const item of items) {
-            if (item && item.id) {
-              await upsertRecordMysql(tableName, item, conn);
+          for (const rawItem of items) {
+            if (!rawItem || !rawItem.id) continue;
+            const item = { ...rawItem };
+
+            // Handle shiftId normalization for sales
+            if (propName === 'sales') {
+              if (item.shiftId === 'NO-SHIFT-ACTIVE' || !item.shiftId) {
+                item.shiftId = null;
+              }
             }
+
+            // Handle stock movement column mappings
+            if (propName === 'movements') {
+              item.branchId = item.branchId || item.sourceBranchId || item.destinationBranchId || 'B1';
+              item.createdBy = item.createdBy || item.userId || item.username || 'system';
+              if (typeof item.quantity === 'number') {
+                item.quantity = Math.abs(item.quantity);
+              }
+              // Also sync into inventory_movements if available
+              try {
+                const invMovRec = {
+                  id: item.id || `IM-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                  productId: item.productId,
+                  type: item.type || 'OUT',
+                  quantity: item.quantity,
+                  sourceBranchId: item.sourceBranchId || item.branchId,
+                  destinationBranchId: item.destinationBranchId || null,
+                  referenceId: item.referenceId || '',
+                  notes: item.notes || '',
+                  userId: item.userId || 'SYSTEM',
+                  username: item.username || item.createdBy || 'system',
+                  timestamp: item.timestamp || new Date().toISOString().slice(0, 19).replace('T', ' ')
+                };
+                await upsertRecordMysql('inventory_movements', invMovRec, conn);
+              } catch (_) {}
+            }
+
+            await upsertRecordMysql(tableName, item, conn);
           }
         }
       }
@@ -102,14 +137,25 @@ async function executeAtomicPackageMysql(tx) {
         const { id, branchId, productId, quantity, version, updatedAt } = bsUpdate;
         if (!productId || !branchId) continue;
         const bsId = id || `${branchId}_${productId}`;
+        const numQty = quantity !== undefined ? Number(quantity) : 0;
         await upsertRecordMysql(bsTable, {
           id: bsId,
           branchId,
           productId,
-          quantity: quantity !== undefined ? Number(quantity) : 0,
+          quantity: numQty,
           version: version || 1,
           updatedAt: updatedAt || new Date().toISOString().slice(0, 19).replace('T', ' ')
         }, conn);
+
+        // Also update matching inventory rows for this branch
+        try {
+          await conn.execute("UPDATE `inventory` SET `stockQuantity` = ? WHERE (`productId` = ? OR `id` = ?) AND `branchId` = ?", [
+            numQty,
+            productId,
+            productId,
+            branchId
+          ]);
+        } catch (_) {}
       }
     }
 
@@ -117,7 +163,17 @@ async function executeAtomicPackageMysql(tx) {
       const prodTable = KEY_TO_TABLE_MAP['tp_products'] || 'products';
       for (const pUpdate of payload.productUpdates) {
         if (pUpdate && pUpdate.id) {
+          const numProdQty = pUpdate.stockQuantity !== undefined ? Number(pUpdate.stockQuantity) : 0;
           await upsertRecordMysql(prodTable, pUpdate, conn);
+
+          // Also update matching inventory master catalog rows
+          try {
+            await conn.execute("UPDATE `inventory` SET `stockQuantity` = ? WHERE `productId` = ? OR `id` = ?", [
+              numProdQty,
+              pUpdate.id,
+              pUpdate.id
+            ]);
+          } catch (_) {}
         }
       }
     }
@@ -130,7 +186,10 @@ async function executeAtomicPackageMysql(tx) {
     }
     throw err;
   } finally {
-    if (conn) conn.release();
+    if (conn) {
+      try { await conn.query('SET FOREIGN_KEY_CHECKS = 1'); } catch (_) {}
+      conn.release();
+    }
   }
 }
 
@@ -147,6 +206,8 @@ async function handleAtomicTransactionPackage(tx, req) {
 
   const payload = tx.payload || {};
   const keyMap = {
+    shifts: 'tp_shifts',
+    branches: 'tp_branches',
     sales: 'tp_sales',
     saleItems: 'tp_sale_items',
     movements: 'tp_movements',
@@ -154,8 +215,6 @@ async function handleAtomicTransactionPackage(tx, req) {
     ledgerEntries: 'tp_ledger_entries',
     expenses: 'atpos_v2_expenses',
     stockTransfers: 'tp_stock_transfers',
-    shifts: 'tp_shifts',
-    branches: 'tp_branches',
     members: 'tp_members',
     customBills: 'atpos_v2_custom_bills',
     parkedSales: 'tp_parked_sales'
@@ -168,10 +227,10 @@ async function handleAtomicTransactionPackage(tx, req) {
     } catch (mysqlErr) {
       if (isConnectionError(mysqlErr)) {
         markServerDegraded(`Atomic transaction MySQL connection failure: ${mysqlErr.message}`);
-        queueDegradedWrite({ type: 'atomic_package', tx });
       } else {
-        console.error('[MySQL Transaction Query Error]:', mysqlErr.message);
+        console.error('[MySQL Transaction Query Error]:', mysqlErr);
       }
+      queueDegradedWrite({ type: 'atomic_package', tx });
     }
   } else {
     queueDegradedWrite({ type: 'atomic_package', tx });
@@ -236,6 +295,7 @@ async function handleAtomicTransactionPackage(tx, req) {
         db.tp_branch_stock.push(updatedRecord);
       }
       upsertRecordAlasql(bsTable, updatedRecord);
+      try { alasql("UPDATE inventory SET stockQuantity = ? WHERE (productId = ? OR id = ?) AND branchId = ?", [updatedRecord.quantity, productId, productId, branchId]); } catch (_) {}
     }
   }
 
@@ -251,6 +311,7 @@ async function handleAtomicTransactionPackage(tx, req) {
         db.tp_products[idx] = { ...db.tp_products[idx], ...pUpdate };
       }
       upsertRecordAlasql(prodTable, db.tp_products[idx] || pUpdate);
+      try { alasql("UPDATE inventory SET stockQuantity = ? WHERE productId = ? OR id = ?", [Number((db.tp_products[idx] || pUpdate).stockQuantity) || 0, pUpdate.id, pUpdate.id]); } catch (_) {}
     }
   }
 
