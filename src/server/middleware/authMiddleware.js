@@ -122,52 +122,24 @@ export async function verifySessionAndCheckConcurrency(req) {
   payload.role = dbUser.role;
 
   const activeSessions = await getActiveSessionsList();
-  let userSession = activeSessions.find(s => (incomingSessionId && s.id === incomingSessionId) || (payload.sessionId && s.id === payload.sessionId));
-  if (!userSession) {
-    userSession = activeSessions.find(s => s.userId === payload.id);
-  }
+  const currentSessionId = incomingSessionId || payload.sessionId;
+
+  // Enforce single-device session concurrency by checking against the active session for this user
+  const userSession = activeSessions.find(s => s.userId === payload.id);
 
   if (!userSession) {
-    // If no active session was found in table (e.g. server restarted or table pruned),
-    // auto-recreate the session record since token signature is cryptographically valid and user is active
-    const effectiveSessionId = incomingSessionId || payload.sessionId || ("SESS_" + crypto.randomUUID().replace(/-/g, '').substring(0, 12).toUpperCase());
-    userSession = {
-      id: effectiveSessionId,
-      userId: dbUser.id,
-      username: dbUser.username,
-      fullName: dbUser.fullName,
-      role: dbUser.role,
-      branchId: payload.branchId || dbUser.branchAssignmentId || 'B1',
-      branchName: payload.branchName || 'Main Branch',
-      lastActive: new Date().toISOString(),
-      userAgent: req.headers['user-agent'] || '',
-      sessionStartedAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + DEFAULT_SESSION_MAX_DURATION_MINUTES * 60 * 1000).toISOString(),
-      maxDurationMinutes: DEFAULT_SESSION_MAX_DURATION_MINUTES
+    return {
+      valid: false,
+      status: 401,
+      code: 'SESSION_REVOKED',
+      superseded: true,
+      error: 'Session has ended or has been terminated. Please log in again.',
+      user: payload
     };
-    await saveActiveSessionRecord(userSession);
   }
 
-  const now = Date.now();
-
-  // 1. Session Duration Check
-  if (userSession.expiresAt) {
-    const expTime = new Date(userSession.expiresAt).getTime();
-    if (!isNaN(expTime) && now >= expTime) {
-      return {
-        valid: false,
-        status: 401,
-        code: 'SESSION_EXPIRED',
-        expired: true,
-        error: 'Your session duration has expired. Please sign in again to verify your corporate identity.',
-        user: payload,
-        session: userSession
-      };
-    }
-  }
-
-  // 2. Concurrency Validation Check (only when an explicit different session ID was provided and payload token disagrees)
-  if (incomingSessionId && userSession.id && userSession.id !== incomingSessionId && payload.sessionId && payload.sessionId !== userSession.id) {
+  // Concurrency Validation Check: If the active session in DB belongs to a newer login, supersede this session
+  if (currentSessionId && userSession.id !== currentSessionId) {
     return {
       valid: false,
       status: 401,
@@ -183,6 +155,24 @@ export async function verifySessionAndCheckConcurrency(req) {
         deviceInfo: userSession.deviceInfo
       }
     };
+  }
+
+  const now = Date.now();
+
+  // Session Duration Check
+  if (userSession.expiresAt) {
+    const expTime = new Date(userSession.expiresAt).getTime();
+    if (!isNaN(expTime) && now >= expTime) {
+      return {
+        valid: false,
+        status: 401,
+        code: 'SESSION_EXPIRED',
+        expired: true,
+        error: 'Your session duration has expired. Please sign in again to verify your corporate identity.',
+        user: payload,
+        session: userSession
+      };
+    }
   }
 
   // Session is valid; update lastActive in memory & MySQL

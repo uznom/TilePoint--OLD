@@ -10,6 +10,7 @@ import {
   saveAlasqlToDisk
 } from '../../db/alasqlEngine.js';
 import { emitPulseUpdate } from '../../realtime/socketHandler.js';
+import { invalidateDbCache } from '../../db/dbHelpers.js';
 
 const router = express.Router();
 
@@ -111,7 +112,15 @@ router.post(['/sales', '/mysql/sales', '/sqlite/sales'], express.json(), async (
     const grandTotal = Number(sale.grandTotal ?? sale.totalAmount ?? 0);
     const subtotal = Number(sale.subtotal ?? (grandTotal - (Number(sale.taxAmount || 0))));
     const isVoid = sale.isVoided ? 1 : 0;
-    const saleDate = sale.createdAt || new Date().toISOString().slice(0, 19).replace('T', ' ');
+    
+    const toSqlDateTime = (val) => {
+      if (!val) return new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) return d.toISOString().slice(0, 19).replace('T', ' ');
+      return String(val).replace('T', ' ').replace('Z', '').split('.')[0];
+    };
+    const saleDate = toSqlDateTime(sale.createdAt);
+    const saleUpdateDate = toSqlDateTime(sale.updatedAt || sale.createdAt);
     const normalizedShiftId = (sale.shiftId && sale.shiftId !== 'NO-SHIFT-ACTIVE' && String(sale.shiftId).trim() !== '') ? String(sale.shiftId).trim() : null;
 
     try {
@@ -154,7 +163,7 @@ router.post(['/sales', '/mysql/sales', '/sqlite/sales'], express.json(), async (
         sale.notes || '',
         isVoid,
         saleDate,
-        saleDate
+        saleUpdateDate
       ]);
     } catch (insertErr) {
       if (
@@ -168,7 +177,7 @@ router.post(['/sales', '/mysql/sales', '/sqlite/sales'], express.json(), async (
             id, saleNumber, branchId, cashierId, cashierName, shiftId,
             customerName, subtotal, vat, discount, grandTotal, paymentMethod,
             amountTendered, changeAmount, notes, isDeleted, createdAt, updatedAt
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON DUPLICATE KEY UPDATE
             subtotal = VALUES(subtotal),
             vat = VALUES(vat),
@@ -198,7 +207,7 @@ router.post(['/sales', '/mysql/sales', '/sqlite/sales'], express.json(), async (
           sale.notes || '',
           isVoid,
           saleDate,
-          saleDate
+          saleUpdateDate
         ]);
       } else {
         throw insertErr;
@@ -225,7 +234,7 @@ router.post(['/sales', '/mysql/sales', '/sqlite/sales'], express.json(), async (
           Number(item.unitPrice || 0),
           Number(item.discountAmount || 0),
           item.discountType || 'NONE',
-          Number(item.subtotal || 0)
+          Number(item.subtotal || item.total || 0)
         ]);
       }
     }
@@ -233,6 +242,7 @@ router.post(['/sales', '/mysql/sales', '/sqlite/sales'], express.json(), async (
     await conn.commit();
     conn.release();
 
+    invalidateDbCache();
     emitPulseUpdate('tp_sales', '', clientId);
     res.json({ success: true, message: 'Sale recorded to MySQL successfully.' });
   } catch (err) {

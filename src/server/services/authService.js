@@ -279,6 +279,8 @@ export async function saveActiveSessionRecord(session) {
 
   if (getIsMysqlActive() || getMysqlEnforced()) {
     try {
+      // Enforce strict single-device concurrency: prune any prior sessions for this account
+      await pool.query('DELETE FROM `active_sessions` WHERE `userId` = ? AND `id` != ?', [session.userId, session.id]);
       await upsertRecordMysql('active_sessions', {
         ...sessionRow,
         lastActive: new Date(sessionRow.lastActive),
@@ -316,7 +318,9 @@ export async function saveActiveSessionRecord(session) {
 export async function removeActiveSessionRecord(sessionId, userId) {
   if (getIsMysqlActive() || getMysqlEnforced()) {
     try {
-      if (sessionId) {
+      if (sessionId && userId) {
+        await pool.query('DELETE FROM `active_sessions` WHERE `id` = ? OR `userId` = ?', [sessionId, userId]);
+      } else if (sessionId) {
         await pool.query('DELETE FROM `active_sessions` WHERE `id` = ?', [sessionId]);
       } else if (userId) {
         await pool.query('DELETE FROM `active_sessions` WHERE `userId` = ?', [userId]);

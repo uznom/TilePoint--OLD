@@ -56,12 +56,13 @@ export const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
     
-    // Allow localhost, local network IPs, and AI Studio run.app domains dynamically
+    // Allow localhost, local network IPs, AI Studio run.app domains, and DDNS domains dynamically
     const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
     const isRunApp = /\.run\.app$/.test(origin);
     const isLocalNetwork = /^https?:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin);
+    const isDdns = /\.dpdns\.org$/.test(origin);
     
-    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin) || isLocalhost || isRunApp || isLocalNetwork) {
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin) || isLocalhost || isRunApp || isLocalNetwork || isDdns) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));

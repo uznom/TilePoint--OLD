@@ -573,6 +573,9 @@ router.post('/transaction', async (req, res) => {
 
   try {
     const result = await handleAtomicTransactionPackage(tx, req);
+    invalidateDbCache();
+    const { hash } = await readFullDatabase();
+    emitPulseUpdate('tp_sales', hash, req.headers['x-client-id']);
     return res.json(result);
   } catch (err) {
     console.error('[Database] Transaction processing error:', err);
@@ -607,6 +610,9 @@ router.post('/delta', async (req, res) => {
     }
     try {
       const result = await handleAtomicTransactionPackage(delta, req);
+      invalidateDbCache();
+      const { hash } = await readFullDatabase();
+      emitPulseUpdate('tp_sales', hash, req.headers['x-client-id']);
       return res.json(result);
     } catch (err) {
       return res.status(500).json({ success: false, error: err.message });
@@ -797,6 +803,7 @@ router.post('/delta', async (req, res) => {
     db.tp_processed_delta_ids = processedDeltaIds;
 
     writeDbFile(db);
+    invalidateDbCache();
 
     const { hash } = await readFullDatabase();
     emitPulseUpdate(key || 'delta', hash, req.headers['x-client-id']);
