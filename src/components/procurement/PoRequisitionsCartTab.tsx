@@ -3,6 +3,7 @@ import { Product, Supplier, Branch } from "../../types/db";
 import { Trash2, Sparkles, Building2, Search, ShoppingCart } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
 import { HeroButton } from "../common/ui/HeroButton";
+import { HeroAutocomplete, HeroAutocompleteItem } from "../common/ui/HeroAutocomplete";
 
 export interface PoCartItem {
   productId: string;
@@ -31,11 +32,11 @@ export const PoRequisitionsCartTab: React.FC<PoRequisitionsCartTabProps> = ({
   products,
   suppliers,
   branches,
-  procurementProductSearch,
-  setProcurementProductSearch,
-  showProcurementProductDropdown,
-  setShowProcurementProductDropdown,
-  onOpenCreateDraftPoWithSupplier,
+  procurementProductSearch: _procurementProductSearch,
+  setProcurementProductSearch: _setProcurementProductSearch,
+  showProcurementProductDropdown: _showProcurementProductDropdown,
+  setShowProcurementProductDropdown: _setShowProcurementProductDropdown,
+  onOpenCreateDraftPoWithSupplier: _onOpenCreateDraftPoWithSupplier,
   onOpenConsolidationModal,
 }) => {
   // Group cart items by supplier
@@ -49,18 +50,24 @@ export const PoRequisitionsCartTab: React.FC<PoRequisitionsCartTabProps> = ({
     supplierGroups[supId].push(item);
   });
 
-  const matchingProducts = products
-    .filter((p) => !p.isDeleted)
-    .filter((p) => {
-      const q = procurementProductSearch.toLowerCase().trim();
-      if (!q) return true;
-      return (
-        p.productName.toLowerCase().includes(q) ||
-        p.sku.toLowerCase().includes(q) ||
-        (p.brand && p.brand.toLowerCase().includes(q))
-      );
-    })
-    .slice(0, 8);
+  const productAutocompleteItems: HeroAutocompleteItem[] = React.useMemo(() => {
+    return products
+      .filter((p) => !p.isDeleted)
+      .map((p) => {
+        const supplier = suppliers.find((s) => s.id === p.supplierId);
+        return {
+          key: p.id,
+          label: p.productName,
+          description: `SKU: ${p.sku} • Brand: ${p.brand || "N/A"} • Vendor: ${supplier?.name || "Unlinked"}`,
+          textValue: `${p.productName} ${p.sku} ${p.productCode || ""} ${p.brand || ""} ${supplier?.name || ""}`,
+          endContent: (
+            <span className="font-mono font-bold text-xs text-primary shrink-0">
+              {formatCurrency(p.costPrice || 0)}
+            </span>
+          ),
+        };
+      });
+  }, [products, suppliers]);
 
   const handleAddItemToCart = (prod: Product) => {
     const existingIdx = poCart.findIndex((c) => c.productId === prod.id);
@@ -71,8 +78,6 @@ export const PoRequisitionsCartTab: React.FC<PoRequisitionsCartTabProps> = ({
     } else {
       syncPoCart([...poCart, { productId: prod.id, quantity: 20 }]);
     }
-    setProcurementProductSearch("");
-    setShowProcurementProductDropdown(false);
   };
 
   const handleRemoveCartItem = (idx: number) => {
@@ -113,62 +118,31 @@ export const PoRequisitionsCartTab: React.FC<PoRequisitionsCartTabProps> = ({
           )}
         </div>
 
-        <div className="relative">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                value={procurementProductSearch}
-                onFocus={() => setShowProcurementProductDropdown(true)}
-                onChange={(e) => {
-                  setProcurementProductSearch(e.target.value);
-                  setShowProcurementProductDropdown(true);
-                }}
-                placeholder="Type tile SKU, brand or description to quick-add restock item..."
-                className="w-full bg-content2 border border-divider/40 rounded-2xl pl-9 pr-4 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              />
-              <Search className="h-4 w-4 text-default-400 absolute left-3 top-3" />
-            </div>
-            {poCart.length > 0 && (
-              <button
-                type="button"
-                onClick={() => syncPoCart([])}
-                className="px-3 py-2 bg-danger-50 dark:bg-danger-500/10 hover:bg-danger-100 text-danger text-xs font-bold rounded-2xl border border-danger-200 dark:border-danger-500/20 transition-colors cursor-pointer active:scale-[0.98]"
-              >
-                Clear Cart
-              </button>
-            )}
+        <div className="flex gap-2 items-center">
+          <div className="flex-1">
+            <HeroAutocomplete
+              placeholder="Type tile SKU, brand, or name to quick-add restock item..."
+              items={productAutocompleteItems}
+              selectedKey={null}
+              onSelectionChange={(key) => {
+                if (key) {
+                  const prod = products.find((p) => p.id === String(key));
+                  if (prod) handleAddItemToCart(prod);
+                }
+              }}
+              radius="full"
+              variant="flat"
+              startContent={<Search className="h-4 w-4 text-default-400" />}
+            />
           </div>
-
-          {showProcurementProductDropdown && procurementProductSearch.trim() && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-content1 border border-divider/40 rounded-2xl shadow-2xl z-40 overflow-hidden divide-y divide-divider/20 max-h-60 overflow-y-auto">
-              {matchingProducts.length === 0 ? (
-                <div className="p-4 text-center text-xs text-default-500 font-medium">
-                  No matching products in catalog.
-                </div>
-              ) : (
-                matchingProducts.map((p) => {
-                  const supplier = suppliers.find((s) => s.id === p.supplierId);
-                  return (
-                    <div
-                      key={p.id}
-                      onClick={() => handleAddItemToCart(p)}
-                      className="p-3 hover:bg-primary/10 cursor-pointer flex justify-between items-center transition-colors active:scale-[0.98]"
-                    >
-                      <div className="space-y-0.5 text-left">
-                        <div className="font-bold text-xs text-foreground">{p.productName}</div>
-                        <div className="text-[10px] text-default-500">
-                          SKU: {p.sku} • Brand: {p.brand || "N/A"} • Vendor: {supplier?.name || "Unlinked"}
-                        </div>
-                      </div>
-                      <div className="text-right font-mono font-bold text-xs text-primary">
-                        {formatCurrency(p.costPrice || 0)}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+          {poCart.length > 0 && (
+            <button
+              type="button"
+              onClick={() => syncPoCart([])}
+              className="px-3 py-2 bg-danger-50 dark:bg-danger-500/10 hover:bg-danger-100 text-danger text-xs font-bold rounded-2xl border border-danger-200 dark:border-danger-500/20 transition-colors cursor-pointer active:scale-[0.98] whitespace-nowrap"
+            >
+              Clear Cart
+            </button>
           )}
         </div>
       </div>

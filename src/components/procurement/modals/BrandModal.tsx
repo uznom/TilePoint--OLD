@@ -1,6 +1,6 @@
 import React from "react";
 import { HeroModal } from "../../common/ui/HeroModal";
-import { HeroSelect } from "../../common/ui/HeroSelect";
+import { HeroAutocomplete, HeroAutocompleteItem } from "../../common/ui/HeroAutocomplete";
 import { HeroButton } from "../../common/ui/HeroButton";
 import { HeroInput } from "../../common/ui/HeroInput";
 import { HeroTextarea } from "../../common/ui/HeroTextarea";
@@ -36,6 +36,17 @@ export const BrandModal: React.FC<BrandModalProps> = ({
   suppliers,
   onSave,
 }) => {
+  const supplierItems: HeroAutocompleteItem[] = React.useMemo(() => {
+    return suppliers
+      .filter((s) => !s.isDeleted)
+      .map((sup) => ({
+        key: sup.id,
+        label: sup.name,
+        description: [sup.contactPerson, sup.phone].filter(Boolean).join(" • ") || sup.address || undefined,
+        textValue: `${sup.name} ${sup.contactPerson || ""} ${sup.phone || ""} ${sup.email || ""}`,
+      }));
+  }, [suppliers]);
+
   return (
     <HeroModal isOpen={isOpen} onClose={onClose} size="md">
       <div className="p-6 sm:p-7 space-y-5 text-left font-sans text-xs">
@@ -73,22 +84,16 @@ export const BrandModal: React.FC<BrandModalProps> = ({
           />
 
           <div className="space-y-1.5">
-            <HeroSelect
+            <HeroAutocomplete
               label="Associated Supplier Vendor"
               isRequired
-              value={brandSupplierId ?? ''}
-              onChange={(e) => setBrandSupplierId(e.target.value)}
-              placeholder="-- Choose Supplying Vendor --"
-            >
-              <option value="">-- Choose Supplying Vendor --</option>
-              {suppliers
-                .filter((s) => !s.isDeleted)
-                .map((sup) => (
-                  <option key={sup.id} value={sup.id}>
-                    {sup.name}
-                  </option>
-                ))}
-            </HeroSelect>
+              placeholder="Search or choose supplying vendor..."
+              items={supplierItems}
+              selectedKey={brandSupplierId || null}
+              onSelectionChange={(key) => setBrandSupplierId(key ? String(key) : "")}
+              radius="lg"
+              variant="flat"
+            />
           </div>
 
           <HeroTextarea

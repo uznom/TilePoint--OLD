@@ -1,6 +1,6 @@
 import React from "react";
 import { HeroModal } from "../../common/ui/HeroModal";
-import { HeroSelect } from "../../common/ui/HeroSelect";
+import { HeroAutocomplete, HeroAutocompleteItem } from "../../common/ui/HeroAutocomplete";
 import { HeroButton } from "../../common/ui/HeroButton";
 import { HeroInput } from "../../common/ui/HeroInput";
 import { HeroTextarea } from "../../common/ui/HeroTextarea";
@@ -74,19 +74,68 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
   onSavePo,
   isSubmittingPo,
 }) => {
-  const [productSearch, setProductSearch] = React.useState("");
   const [selectedProductId, setSelectedProductId] = React.useState("");
   const [itemQuantity, setItemQuantity] = React.useState<number>(10);
   const [itemCost, setItemCost] = React.useState<number>(0);
 
-  const filteredProducts = products.filter((p) => {
-    if (selectedSupplierId && p.supplierId && p.supplierId !== selectedSupplierId) {
-      return false;
+  const supplierItems: HeroAutocompleteItem[] = React.useMemo(() => {
+    return suppliers
+      .filter((s) => !s.isDeleted)
+      .map((s) => ({
+        key: s.id,
+        label: s.name,
+        description: [s.contactPerson, s.phone].filter(Boolean).join(" • ") || s.address || undefined,
+        textValue: `${s.name} ${s.contactPerson || ""} ${s.phone || ""} ${s.email || ""}`,
+      }));
+  }, [suppliers]);
+
+  const branchItems: HeroAutocompleteItem[] = React.useMemo(() => {
+    return branches
+      .filter((b) => !b.isDeleted)
+      .map((b) => ({
+        key: b.id,
+        label: b.name,
+        description: b.address || (b.branchCode ? `Branch Code: ${b.branchCode}` : undefined),
+        textValue: `${b.name} ${b.branchCode || ""} ${b.address || ""}`,
+      }));
+  }, [branches]);
+
+  const filteredProducts = React.useMemo(() => {
+    return products.filter((p) => {
+      if (p.isDeleted) return false;
+      if (selectedSupplierId && p.supplierId && p.supplierId !== selectedSupplierId) {
+        return false;
+      }
+      return true;
+    });
+  }, [products, selectedSupplierId]);
+
+  const productItems: HeroAutocompleteItem[] = React.useMemo(() => {
+    return filteredProducts.map((p) => ({
+      key: p.id,
+      label: p.productName,
+      description: `SKU: ${p.sku}${p.brand ? ` • ${p.brand}` : ""}${p.category ? ` • ${p.category}` : ""}`,
+      textValue: `${p.productName} ${p.sku} ${p.productCode || ""} ${p.barcode || ""} ${p.brand || ""} ${p.category || ""}`,
+      endContent: (
+        <span className="font-mono font-bold text-primary text-xs shrink-0">
+          {formatCurrency(p.costPrice || 0)}
+        </span>
+      ),
+    }));
+  }, [filteredProducts]);
+
+  const handleProductSelectionChange = (key: string | number | null) => {
+    const pId = key ? String(key) : "";
+    setSelectedProductId(pId);
+    if (pId) {
+      const prod = products.find((p) => p.id === pId);
+      if (prod) {
+        setItemCost(prod.costPrice || 0);
+      }
+    } else {
+      setItemCost(0);
     }
-    if (!productSearch) return true;
-    const q = productSearch.toLowerCase();
-    return p.productName.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q);
-  });
+  };
 
   const handleAddItem = () => {
     if (!selectedProductId) {
@@ -115,7 +164,6 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
       ]);
     }
     setSelectedProductId("");
-    setProductSearch("");
     setItemQuantity(10);
     setItemCost(0);
   };
@@ -143,33 +191,29 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
           {/* Supplier & Destination Select */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div className="space-y-1.5">
-              <HeroSelect
+              <HeroAutocomplete
                 label="Vendor Supplier"
                 isRequired
-                value={selectedSupplierId ?? ''}
-                onChange={(e) => setSelectedSupplierId(e.target.value)}
-                placeholder="-- Choose Vendor --"
-              >
-                <option value="">-- Choose Vendor --</option>
-                {suppliers.filter((s) => !s.isDeleted).map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </HeroSelect>
+                placeholder="Search or choose supplier..."
+                items={supplierItems}
+                selectedKey={selectedSupplierId || null}
+                onSelectionChange={(key) => setSelectedSupplierId(key ? String(key) : "")}
+                radius="lg"
+                variant="flat"
+              />
             </div>
 
             <div className="space-y-1.5">
-              <HeroSelect
+              <HeroAutocomplete
                 label="Destination Warehouse / Branch"
                 isRequired
-                value={selectedBranchId ?? ''}
-                onChange={(e) => setSelectedBranchId(e.target.value)}
-                placeholder="-- Select Receiving Site --"
-              >
-                <option value="">-- Select Receiving Site --</option>
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name} ({b.address || "Main Site"})</option>
-                ))}
-              </HeroSelect>
+                placeholder="Search receiving site..."
+                items={branchItems}
+                selectedKey={selectedBranchId || null}
+                onSelectionChange={(key) => setSelectedBranchId(key ? String(key) : "")}
+                radius="lg"
+                variant="flat"
+              />
             </div>
           </div>
 
@@ -190,24 +234,16 @@ export const CreateEditPoModal: React.FC<CreateEditPoModalProps> = ({
 
             <div className="grid grid-cols-12 gap-2 items-center">
               <div className="col-span-12 sm:col-span-6">
-                <HeroSelect
-                  value={selectedProductId ?? ''}
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    setSelectedProductId(id);
-                    const prod = products.find((p) => p.id === id);
-                    if (prod) setItemCost(prod.costPrice || 0);
-                  }}
-                  placeholder="-- Choose Catalog Product --"
+                <HeroAutocomplete
+                  placeholder="Search SKU, barcode, product name..."
+                  items={productItems}
+                  selectedKey={selectedProductId || null}
+                  onSelectionChange={handleProductSelectionChange}
+                  radius="lg"
+                  variant="flat"
                   size="sm"
-                >
-                  <option value="">-- Choose Catalog Product --</option>
-                  {filteredProducts.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.productName} ({p.sku}) - {formatCurrency(p.costPrice || 0)}
-                    </option>
-                  ))}
-                </HeroSelect>
+                  popoverWidth={420}
+                />
               </div>
 
               <div className="col-span-6 sm:col-span-3">

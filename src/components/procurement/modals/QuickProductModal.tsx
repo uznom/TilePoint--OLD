@@ -3,6 +3,7 @@ import { HeroModal } from "../../common/ui/HeroModal";
 import { HeroSelect } from "../../common/ui/HeroSelect";
 import { HeroButton } from "../../common/ui/HeroButton";
 import { HeroInput } from "../../common/ui/HeroInput";
+import { HeroAutocomplete, HeroAutocompleteItem } from "../../common/ui/HeroAutocomplete";
 import { Brand, Supplier } from "../../../types/db";
 import { Package } from "lucide-react";
 
@@ -55,6 +56,38 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
   onSave,
   onGenerateBarcode,
 }) => {
+  const brandItems: HeroAutocompleteItem[] = React.useMemo(() => {
+    return [
+      { key: "Generic", label: "Generic / Unbranded", description: "Standard unbranded SKU" },
+      ...brands.map((b) => ({
+        key: b.name,
+        label: b.name,
+        description: b.description || "Registered catalog brand",
+        textValue: `${b.name} ${b.description || ""}`,
+      })),
+    ];
+  }, [brands]);
+
+  const supplierItems: HeroAutocompleteItem[] = React.useMemo(() => {
+    return suppliers
+      .filter((s) => !s.isDeleted)
+      .map((s) => ({
+        key: s.id,
+        label: s.name,
+        description: [s.contactPerson, s.phone].filter(Boolean).join(" • ") || s.address || undefined,
+        textValue: `${s.name} ${s.contactPerson || ""} ${s.phone || ""} ${s.email || ""}`,
+      }));
+  }, [suppliers]);
+
+  const handleBrandChange = (key: string | number | null) => {
+    const val = key ? String(key) : "";
+    setQuickProductBrand(val);
+    const matchedBrand = brands.find((b) => b.name.toLowerCase() === val.toLowerCase());
+    if (matchedBrand && matchedBrand.supplierId) {
+      setQuickProductSupplierId(matchedBrand.supplierId);
+    }
+  };
+
   if (!isOpen || typeof document === "undefined") return null;
 
   return (
@@ -143,18 +176,15 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div className="space-y-1.5">
-              <HeroSelect
+              <HeroAutocomplete
                 label="Product Brand"
-                value={quickProductBrand ?? ''}
-                onChange={(e) => setQuickProductBrand(e.target.value)}
-              >
-                <option value="Generic">Generic / Unbranded</option>
-                {brands.map((b) => (
-                  <option key={b.id} value={b.name}>
-                    {b.name}
-                  </option>
-                ))}
-              </HeroSelect>
+                placeholder="Search or pick brand..."
+                items={brandItems}
+                selectedKey={quickProductBrand || null}
+                onSelectionChange={handleBrandChange}
+                radius="lg"
+                variant="flat"
+              />
             </div>
             <div className="space-y-1.5">
               <HeroSelect
@@ -171,21 +201,16 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
           </div>
 
           <div className="space-y-1.5">
-            <HeroSelect
+            <HeroAutocomplete
               label="Primary Supplier Vendor"
               isRequired
-              value={quickProductSupplierId ?? ''}
-              onChange={(e) => setQuickProductSupplierId(e.target.value)}
-            >
-              <option value="">-- Select Vendor --</option>
-              {suppliers
-                .filter((s) => !s.isDeleted)
-                .map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-            </HeroSelect>
+              placeholder="Search or select supplying vendor..."
+              items={supplierItems}
+              selectedKey={quickProductSupplierId || null}
+              onSelectionChange={(key) => setQuickProductSupplierId(key ? String(key) : "")}
+              radius="lg"
+              variant="flat"
+            />
           </div>
 
           <div className="flex justify-end gap-2.5 pt-3 border-t border-divider/20">

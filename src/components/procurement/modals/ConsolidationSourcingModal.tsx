@@ -1,5 +1,5 @@
 import React from "react";
-import { HeroModal, HeroSelect, HeroButton, HeroDatePicker } from "../../common/ui";
+import { HeroModal, HeroButton, HeroDatePicker, HeroAutocomplete, HeroAutocompleteItem } from "../../common/ui";
 import { Branch, Supplier } from "../../../types/db";
 import { Sparkles } from "lucide-react";
 
@@ -36,6 +36,17 @@ export const ConsolidationSourcingModal: React.FC<ConsolidationSourcingModalProp
   setIsCustomPayoutDate,
   onConfirmGeneratePOs,
 }) => {
+  const branchItems: HeroAutocompleteItem[] = React.useMemo(() => {
+    return branches
+      .filter((b) => !b.isDeleted)
+      .map((b) => ({
+        key: b.id,
+        label: b.name,
+        description: b.address || (b.branchCode ? `Branch Code: ${b.branchCode}` : undefined),
+        textValue: `${b.name} ${b.branchCode || ""} ${b.address || ""}`,
+      }));
+  }, [branches]);
+
   if (!isOpen || typeof document === "undefined") return null;
 
   return (
@@ -57,17 +68,16 @@ export const ConsolidationSourcingModal: React.FC<ConsolidationSourcingModalProp
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <HeroSelect
+            <HeroAutocomplete
               label="Destination Delivery Warehouse"
-              value={poDestinationBranch}
-              onChange={(e) => setPoDestinationBranch(e.target.value)}
-            >
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name} ({b.address || "Main Site"})
-                </option>
-              ))}
-            </HeroSelect>
+              isRequired
+              placeholder="Search receiving site..."
+              items={branchItems}
+              selectedKey={poDestinationBranch || null}
+              onSelectionChange={(key) => setPoDestinationBranch(key ? String(key) : "")}
+              radius="lg"
+              variant="flat"
+            />
           </div>
 
           <div className="space-y-1.5">
