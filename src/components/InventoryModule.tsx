@@ -1445,7 +1445,7 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
       }
     }
 
-    let pageCss = '';
+    let pageCss: string;
     if (isLetterSheet) {
       pageCss = `
         @page {

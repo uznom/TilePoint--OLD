@@ -62,6 +62,12 @@ export const BarcodeModal: React.FC<BarcodeModalProps> = React.memo(({
     }
   };
 
+  const sheetsRequired = useMemo(() => {
+    if (selectedPaperSize === 'letter-30') return Math.ceil(quantity / 30);
+    if (selectedPaperSize === 'a4-24') return Math.ceil(quantity / 24);
+    return quantity;
+  }, [selectedPaperSize, quantity]);
+
   if (!isOpen || !product) return null;
 
   const isTile = (product.category || '').toLowerCase().includes('tile');
@@ -71,12 +77,6 @@ export const BarcodeModal: React.FC<BarcodeModalProps> = React.memo(({
   const qtyVal = isTile
     ? `${product.boxQuantity || 1} pcs/box`
     : `${product.boxQuantity || 1} ${unit}`;
-
-  const sheetsRequired = useMemo(() => {
-    if (selectedPaperSize === 'letter-30') return Math.ceil(quantity / 30);
-    if (selectedPaperSize === 'a4-24') return Math.ceil(quantity / 24);
-    return quantity;
-  }, [selectedPaperSize, quantity]);
 
   return (
     <HeroModal

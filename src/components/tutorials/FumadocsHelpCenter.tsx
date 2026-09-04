@@ -25,6 +25,8 @@ import {
   ArrowRight,
   Database,
   HelpCircle,
+  Check,
+  Copy,
   X
 } from 'lucide-react';
 import {
@@ -59,6 +61,7 @@ export const FumadocsHelpCenter: React.FC<FumadocsHelpCenterProps> = ({
 }) => {
   const [activeArticleId, setActiveArticleId] = useState<string>('system-overview');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
     'getting-started': true,
     'pos-billing': true,
@@ -101,6 +104,10 @@ export const FumadocsHelpCenter: React.FC<FumadocsHelpCenterProps> = ({
 
   const handleSelectArticle = (articleId: string) => {
     setActiveArticleId(articleId);
+    const parentCategory = DOCS_CATEGORIES.find(cat => cat.articles.some(a => a.id === articleId));
+    if (parentCategory) {
+      setExpandedCategories(prev => ({ ...prev, [parentCategory.id]: true }));
+    }
     // On mobile or search, clear search or keep it easy to navigate
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -191,6 +198,47 @@ export const FumadocsHelpCenter: React.FC<FumadocsHelpCenterProps> = ({
             ))}
           </tbody>
         </table>
+      </div>
+    );
+  };
+
+  const handleCopyCode = (codeId: string, code: string) => {
+    try {
+      navigator.clipboard.writeText(code);
+      setCopiedCodeId(codeId);
+      setTimeout(() => setCopiedCodeId(null), 2000);
+    } catch (_) {}
+  };
+
+  const renderCodeBlock = (codeBlock: NonNullable<DocSection['codeBlock']>, sectionId: string) => {
+    const isCopied = copiedCodeId === sectionId;
+    return (
+      <div className="my-4 rounded-xl border border-zinc-200/80 dark:border-white/10 bg-zinc-950 text-zinc-100 overflow-hidden font-mono text-xs">
+        <div className="flex items-center justify-between px-3.5 py-1.5 bg-zinc-900 border-b border-zinc-800">
+          <span className="text-[10px] uppercase font-bold text-zinc-400">
+            {codeBlock.language}
+          </span>
+          <button
+            type="button"
+            onClick={() => handleCopyCode(sectionId, codeBlock.code)}
+            className="inline-flex items-center gap-1 text-[10px] text-zinc-400 hover:text-white px-2 py-0.5 rounded-md hover:bg-zinc-800 transition-colors cursor-pointer"
+          >
+            {isCopied ? (
+              <>
+                <Check className="h-3 w-3 text-emerald-400" />
+                <span className="text-emerald-400 font-bold">Copied</span>
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" />
+                <span>Copy</span>
+              </>
+            )}
+          </button>
+        </div>
+        <pre className="p-3.5 overflow-x-auto text-[11px] leading-relaxed">
+          <code>{codeBlock.code}</code>
+        </pre>
       </div>
     );
   };
@@ -416,13 +464,19 @@ export const FumadocsHelpCenter: React.FC<FumadocsHelpCenterProps> = ({
               Jump To:
             </span>
             {activeArticle.sections.map((sec) => (
-              <a
+              <button
                 key={sec.id}
-                href={`#${sec.id}`}
-                className="px-2.5 py-1 rounded-full text-[10px] font-semibold text-default-600 dark:text-default-400 hover:text-foreground hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors shrink-0 font-sans"
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById(sec.id);
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }
+                }}
+                className="px-2.5 py-1 rounded-full text-[10px] font-semibold text-default-600 dark:text-default-400 hover:text-foreground hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors shrink-0 font-sans cursor-pointer"
               >
                 {sec.heading}
-              </a>
+              </button>
             ))}
           </div>
 
@@ -446,6 +500,7 @@ export const FumadocsHelpCenter: React.FC<FumadocsHelpCenterProps> = ({
                 {section.callout && renderCallout(section.callout)}
                 {section.shortcuts && renderShortcuts(section.shortcuts)}
                 {section.table && renderTable(section.table)}
+                {section.codeBlock && renderCodeBlock(section.codeBlock, section.id)}
               </section>
             ))}
 

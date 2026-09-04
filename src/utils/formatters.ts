@@ -335,3 +335,24 @@ export function parseTenderAmount(val: string | number | null | undefined): numb
   return isNaN(num) ? 0 : num;
 }
 
+/**
+ * Automatically formats numeric input with thousands commas and maximum 2 decimal places.
+ */
+export function formatTenderInput(raw: string): string {
+  if (!raw) return '';
+  let clean = raw.replace(/[^\d.]/g, '');
+  const dotIndex = clean.indexOf('.');
+  if (dotIndex !== -1) {
+    const beforeDot = clean.slice(0, dotIndex);
+    const afterDot = clean.slice(dotIndex + 1).replace(/\./g, '');
+    clean = beforeDot + '.' + afterDot;
+  }
+  const parts = clean.split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  if (parts.length > 1) {
+    return `${parts[0]}.${parts[1].slice(0, 2)}`;
+  }
+  return parts[0];
+}
+
+

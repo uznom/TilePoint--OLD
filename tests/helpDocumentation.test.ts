@@ -2,9 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   DOCS_CATEGORIES,
   ALL_DOC_ARTICLES,
-  DocArticle,
-  DocCategory,
-  DocSection
+  type DocArticle
 } from '../src/components/tutorials/docsData';
 
 describe('Help & Documentation (Fumadocs-Inspired) Knowledge Base Suite', () => {

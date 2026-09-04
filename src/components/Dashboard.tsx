@@ -226,7 +226,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const lowStockCount = useMemo(() => {
     return products.filter((p) => {
       if (p.isDeleted) return false;
-      const qty = Number(p.stockQuantity) ?? 0;
+      const qty = Number(p.stockQuantity) || 0;
       const threshold = Number(p.minimumStock ?? p.lowStockThreshold) || 10;
       return qty <= threshold;
     }).length;

@@ -73,7 +73,13 @@ export default tseslint.config(
             'xorDeobfuscateString',
             'encryptString',
             'decryptString',
-            'getSecuritySecretKey'
+            'getSecuritySecretKey',
+            'formatTenderInput',
+            'parseTenderAmount',
+            'resolveSyncStatus',
+            'useTableContext',
+            'generateQrMatrix',
+            'generateQrCodeSvgHtml'
           ]
         }
       ],

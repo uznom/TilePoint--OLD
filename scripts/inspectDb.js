@@ -29,9 +29,11 @@ async function main() {
     console.log(`\n=== EMPTY TABLES (${empty.length}) ===`);
     console.table(empty);
 
+    await pool.end();
     process.exit(0);
   } catch (err) {
     console.error('MySQL connection error:', err.message);
+    try { await pool.end(); } catch (_) {}
     process.exit(1);
   }
 }

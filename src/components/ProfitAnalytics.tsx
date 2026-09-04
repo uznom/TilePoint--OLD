@@ -359,6 +359,7 @@ export function ProfitAnalytics({
     damageLogs,
     shifts,
     purchaseOrders,
+    customBills,
     selectedBranchId,
     selectedPeriod,
     effectiveModifiers,

@@ -423,6 +423,7 @@ export function useDbSyncModule({
       ledgerEntries,
       branchSalesReports,
       deliveries,
+      damageLogs,
       customBills,
       members,
       expenses,
@@ -1367,7 +1368,7 @@ export function useDbSyncModule({
         setDbSyncStatus("offline");
       }
     },
-    [safeApiFetch, setBranches, setSuppliers, setBrands, setProducts, setUsers, setBranchStock, setSales, setSaleItems, setShifts, setMovements, setAuditLogs, setLedgerEntries, setPurchaseOrders, setPoItems, setStockTransfers, setDeliveries, setDamageLogs, setTransmittals, setCustomBills, setMembers, setExpenses, setProductReturns, setBranchSalesReports, optimisticStockCacheRef, getAuthHeaders, currentUser]
+    [safeApiFetch, setBranches, setSuppliers, setBrands, setProducts, setUsers, setBranchStock, setSales, setSaleItems, setShifts, setMovements, setAuditLogs, setLedgerEntries, setPurchaseOrders, setPoItems, setStockTransfers, setDeliveries, setDamageLogs, setTransmittals, setCustomBills, setMembers, setExpenses, setProductReturns, setBranchSalesReports, optimisticStockCacheRef, getAuthHeaders]
   );
 
   // Auto-sync when user becomes authenticated or on mount

@@ -91,7 +91,7 @@ export function parseRowFromMysql(tableName, row) {
     if (val === true || val === 1 || val === '1' || val === 'true' || val === 'TRUE') return true;
     return false;
   };
-  const boolCols = ['isDeleted', 'isDistributionBranch', 'isNew', 'hasExpiration'];
+  const boolCols = ['isDeleted', 'isDistributionBranch', 'isNew', 'hasExpiration', 'mustResetPassword'];
   boolCols.forEach(col => {
     if (col in res) {
       res[col] = parseBoolVal(res[col]);

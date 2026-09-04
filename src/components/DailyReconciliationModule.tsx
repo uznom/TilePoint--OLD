@@ -206,7 +206,7 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
       totalExpenses,
       saleItemCogsMap,
     };
-  }, [sales, saleItems, products, expenses, currentBranchMeta, reportingDate]);
+  }, [sales, saleItems, products, expenses, currentBranchMeta, reportingDate, branches]);
 
   // Auto-reset checklists when changing date or branch
   useEffect(() => {

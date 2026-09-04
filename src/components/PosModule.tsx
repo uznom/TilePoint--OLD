@@ -35,12 +35,12 @@ import { useDb,useDbBranchStock,useDbProducts } from "../context/DbContext";
 import { getBranchStockQuantity,getBranchStockRecord,isProductInBranch,isSameBranch } from "../lib/branchUtils";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
 import { Member,Product,Sale,UserRole } from "../types/db";
-import { formatCurrency } from "../utils/formatters";
+import { formatCurrency, formatTin, formatTenderInput, parseTenderAmount } from "../utils/formatters";
+export { formatTenderInput, parseTenderAmount };
 import { ToastNotification } from "./ToastNotification";
 import { useReceiptFontSize } from "./ReceiptFontSizeControl";
 import { HeroButton } from "./common/ui/HeroButton";
 import { HeroChip } from "./common/ui/HeroChip";
-import { formatTin } from '../utils/formatters';
 import { PosAddMemberModal } from "./pos/modals/PosAddMemberModal";
 import { PosCustomerModal } from "./pos/modals/PosCustomerModal";
 import { PosDiscountModal } from "./pos/modals/PosDiscountModal";
@@ -125,30 +125,6 @@ const CartQtyInput: React.FC<{
  );
 };
 
-export const formatTenderInput = (raw: string): string => {
-  if (!raw) return '';
-  let clean = raw.replace(/[^\d.]/g, '');
-  const dotIndex = clean.indexOf('.');
-  if (dotIndex !== -1) {
-    const beforeDot = clean.slice(0, dotIndex);
-    const afterDot = clean.slice(dotIndex + 1).replace(/\./g, '');
-    clean = beforeDot + '.' + afterDot;
-  }
-  const parts = clean.split('.');
-  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  if (parts.length > 1) {
-    return `${parts[0]}.${parts[1].slice(0, 2)}`;
-  }
-  return parts[0];
-};
-
-export const parseTenderAmount = (val: string | number | null | undefined): number => {
-  if (typeof val === 'number') return isNaN(val) ? 0 : val;
-  if (!val) return 0;
-  const sanitized = val.toString().replace(/,/g, '').trim();
-  const num = parseFloat(sanitized);
-  return isNaN(num) ? 0 : num;
-};
 
 export const PosModule: React.FC<PosModuleProps> = ({
  darkMode,
@@ -1859,7 +1835,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
       .then(() => {
         showToast("Excel-ready Daily sales report saved successfully!");
       })
-      .catch((err) => {
+      .catch((err: any) => {
         console.error(err);
         showToast("Failed to save report. Initiating direct browser download...");
         const blob = new Blob([csvWithBOM], { type: "text/csv;charset=utf-8;" });
@@ -2713,7 +2689,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         variant="flat"
         color="primary"
         radius="full"
-        onClick={async (e) => {
+        onClick={async (e: React.MouseEvent) => {
           e.stopPropagation();
           setIsManualSyncingQueue(true);
           try {
