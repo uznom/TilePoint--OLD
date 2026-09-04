@@ -148,16 +148,17 @@ export const PosModule: React.FC<PosModuleProps> = ({
  addAuditLog,
  currentUser,
  createDelivery,
-		discountSchemes,
+ discountSchemes,
+ paymentMethodsList,
  deliveries,
  branches,
  syncFromSharedServer,
  syncStatus,
- 	members: rawMembers,
-	setMembers,
-	loyaltyConfig,
-	updateLoyaltyConfig,
-	} = useDb();
+ members: rawMembers,
+ setMembers,
+ loyaltyConfig,
+ updateLoyaltyConfig,
+ } = useDb();
 
   const [activePosBranchId, setActivePosBranchId] = useState<string>(
     currentUser?.branchAssignmentId || (branches && branches[0]?.id) || ""
@@ -454,6 +455,52 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  // Checkout payment inputs
  const [paymentMethod, setPaymentMethod] = useState<string>("Cash");
+
+  const enabledPaymentMethods = React.useMemo(() => {
+    const defaultButtons: Array<{ name: string; label: string; color: "default" | "primary" | "secondary" | "success" | "warning" }> = [
+      { name: "Cash", label: "Cash", color: "default" },
+      { name: "GCash", label: "GCash", color: "primary" },
+      { name: "Maya", label: "Maya", color: "success" },
+      { name: "Card / Bank Terminal", label: "Card/POS", color: "secondary" },
+      { name: "Member Credit", label: "Member", color: "warning" },
+    ];
+    if (!paymentMethodsList || paymentMethodsList.length === 0) {
+      return defaultButtons;
+    }
+
+    const categoryColorMap: Record<string, "default" | "primary" | "secondary" | "success" | "warning"> = {
+      Cash: "default",
+      "E-Wallet": "primary",
+      Card: "secondary",
+      Bank: "secondary",
+      Credit: "warning",
+      Other: "default",
+    };
+
+    const activeMethods = paymentMethodsList.filter(
+      (pm) => pm.isEnabled !== false && pm.isActive !== false
+    );
+
+    if (activeMethods.length === 0) {
+      return defaultButtons;
+    }
+
+    return activeMethods.map((pm) => ({
+      name: pm.name,
+      label: pm.name === "Card / Bank Terminal" ? "Card/POS" : (pm.name === "Member Credit" ? "Member" : pm.name),
+      color: categoryColorMap[pm.category] || "default",
+    }));
+  }, [paymentMethodsList]);
+
+  // Keep paymentMethod synchronized to an enabled method if the currently selected one gets disabled
+  useEffect(() => {
+    if (enabledPaymentMethods.length > 0) {
+      const isStillEnabled = enabledPaymentMethods.some((m) => m.name === paymentMethod);
+      if (!isStillEnabled) {
+        setPaymentMethod(enabledPaymentMethods[0].name);
+      }
+    }
+  }, [enabledPaymentMethods, paymentMethod]);
   
 
  const [amountTendered, setAmountTendered] = useState<string>("");
@@ -3153,13 +3200,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
             Settlement Method
           </label>
           <div className="grid grid-cols-3 gap-1.5 font-sans">
-            {[
-              { name: "Cash", label: "Cash", color: "default" as const },
-              { name: "GCash", label: "GCash", color: "primary" as const },
-              { name: "Maya", label: "Maya", color: "success" as const },
-              { name: "Card / Bank Terminal", label: "Card/POS", color: "secondary" as const },
-              { name: "Member Credit", label: "Member", color: "warning" as const },
-            ].map((method) => {
+            {enabledPaymentMethods.map((method) => {
               const isActive = paymentMethod === method.name;
               return (
                 <HeroButton

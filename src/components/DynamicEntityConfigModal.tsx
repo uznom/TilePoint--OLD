@@ -23,6 +23,7 @@ import { HeroSelect } from './common/ui/HeroSelect';
 import { HeroModal } from './common/ui/HeroModal';
 import { HeroButton } from './common/ui/HeroButton';
 import { HeroSwitch } from './common/ui/HeroSwitch';
+import { ToastNotification } from './ToastNotification';
 import { useDb } from '../context/DbContext';
 import { useFeatureFlags } from '../utils/featureFlags';
 import {
@@ -129,6 +130,12 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
   const [dmgAction, setDmgAction] = useState<DamageActionTaken>('Disposed / Scrapped');
   const [dmgDesc, setDmgDesc] = useState('');
   const [showDmgForm, setShowDmgForm] = useState(false);
+
+  // Toast Notification State
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'warning' | 'error' | 'info' } | null>(null);
+  const showToast = (message: string, type: 'success' | 'warning' | 'error' | 'info' = 'warning') => {
+    setToast({ message, type });
+  };
 
   if (!isOpen) return null;
 
@@ -275,6 +282,51 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
     setPmAccountName(p.accountName || '');
     setPmInstructions(p.instructions || '');
     setShowPmForm(true);
+  };
+
+  const activePaymentCount = paymentMethodsList.filter((p) => p.isEnabled).length;
+
+  const handleTogglePaymentMethod = (pm: CustomPaymentMethod, nextValue: boolean) => {
+    if (!isAuthorized) {
+      showToast('Permission Denied: Only Managers and Admins can configure payment methods.', 'error');
+      return;
+    }
+    if (!nextValue && pm.isEnabled && activePaymentCount <= 1) {
+      showToast('Cannot disable: At least one payment method must remain active for POS checkout.', 'warning');
+      return;
+    }
+    togglePaymentMethod(pm.id, nextValue);
+    showToast(
+      `${pm.name} is now ${nextValue ? 'active' : 'disabled'} in POS checkout.`,
+      nextValue ? 'success' : 'info'
+    );
+  };
+
+  const handleDeletePaymentMethod = (pm: CustomPaymentMethod) => {
+    if (!isAuthorized) {
+      showToast('Permission Denied: Only Managers and Admins can delete payment methods.', 'error');
+      return;
+    }
+    if (pm.isEnabled && activePaymentCount <= 1) {
+      showToast('Cannot delete: At least one active payment method must be maintained for POS checkout.', 'error');
+      return;
+    }
+    if (confirm(`Remove payment channel "${pm.name}"?`)) {
+      deletePaymentMethod(pm.id);
+      showToast(`Removed payment channel "${pm.name}".`, 'info');
+    }
+  };
+
+  const handleToggleDiscountScheme = (ds: DiscountScheme, nextValue: boolean) => {
+    if (!isAuthorized) {
+      showToast('Permission Denied: Only Managers and Admins can configure discount schemes.', 'error');
+      return;
+    }
+    toggleDiscountScheme(ds.id, nextValue);
+    showToast(
+      `${ds.name} is now ${nextValue ? 'active' : 'disabled'} in POS checkout.`,
+      nextValue ? 'success' : 'info'
+    );
   };
 
   // Handlers - Discount
@@ -1035,76 +1087,90 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
 
               {/* Payment Methods Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {paymentMethodsList.map((pm) => (
-                  <div
-                    key={pm.id}
-                    className={`p-4 rounded-2xl border transition-all text-left flex flex-col justify-between gap-3 ${
-                      pm.isEnabled
-                        ? 'bg-content2/40 border-divider/20'
-                        : 'bg-content2/10 border-divider/10 opacity-60'
-                    }`}
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[9px] font-mono font-black uppercase px-2 py-0.5 rounded-md bg-default-100 text-default-600">
-                          {pm.category}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => togglePaymentMethod(pm.id)}
-                          className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
-                            pm.isEnabled
-                              ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                              : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                          }`}
-                        >
-                          {pm.isEnabled ? 'Active in POS' : 'Disabled'}
-                        </button>
-                      </div>
+                {paymentMethodsList.map((pm) => {
+                  const isLastActive = pm.isEnabled && activePaymentCount <= 1;
+                  return (
+                    <div
+                      key={pm.id}
+                      className={`p-4 rounded-2xl border transition-all text-left flex flex-col justify-between gap-3 ${
+                        pm.isEnabled
+                          ? 'bg-content2/40 border-divider/20 shadow-2xs'
+                          : 'bg-content2/10 border-divider/10 opacity-60'
+                      }`}
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[9px] font-mono font-black uppercase px-2 py-0.5 rounded-md bg-default-100 text-default-600 shrink-0">
+                            {pm.category}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border transition-all shrink-0 ${
+                                pm.isEnabled
+                                  ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                  : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                              }`}
+                            >
+                              {pm.isEnabled ? 'Active in POS' : 'Disabled'}
+                            </span>
+                            <HeroSwitch
+                              size="sm"
+                              color="success"
+                              isSelected={pm.isEnabled}
+                              isDisabled={!isAuthorized}
+                              onValueChange={(val) => handleTogglePaymentMethod(pm, val)}
+                              aria-label={`Toggle ${pm.name} payment method`}
+                            />
+                          </div>
+                        </div>
 
-                      <div>
-                        <h4 className="text-xs font-black text-foreground">{pm.name}</h4>
-                        {pm.accountNumber && (
-                          <div className="text-[10px] text-default-500 font-mono mt-0.5">
-                            Account: {pm.accountNumber} ({pm.accountName || 'Store'})
+                        {isLastActive && (
+                          <div className="inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                            <AlertTriangle className="h-3 w-3 shrink-0" />
+                            <span>Required (Last Active)</span>
                           </div>
                         )}
-                        {pm.instructions && (
-                          <p className="text-[10.5px] text-default-500/80 mt-1 line-clamp-2">
-                            {pm.instructions}
-                          </p>
-                        )}
-                      </div>
-                    </div>
 
-                    {isAuthorized && (
-                      <div className="flex items-center justify-end gap-1 border-t border-divider/10 pt-2">
-                        <button
-                          type="button"
-                          onClick={() => startEditPayment(pm)}
-                          className="p-1.5 rounded-lg text-default-400 hover:text-primary hover:bg-content1 transition-colors"
-                          title="Edit Channel"
-                        >
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </button>
-                        {!pm.isDefault && (
+                        <div>
+                          <h4 className="text-xs font-black text-foreground">{pm.name}</h4>
+                          {pm.accountNumber && (
+                            <div className="text-[10px] text-default-500 font-mono mt-0.5">
+                              Account: {pm.accountNumber} ({pm.accountName || 'Store'})
+                            </div>
+                          )}
+                          {pm.instructions && (
+                            <p className="text-[10.5px] text-default-500/80 mt-1 line-clamp-2">
+                              {pm.instructions}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {isAuthorized && (
+                        <div className="flex items-center justify-end gap-1 border-t border-divider/10 pt-2">
                           <button
                             type="button"
-                            onClick={() => {
-                              if (confirm(`Remove payment channel "${pm.name}"?`)) {
-                                deletePaymentMethod(pm.id);
-                              }
-                            }}
-                            className="p-1.5 rounded-lg text-default-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
-                            title="Delete Channel"
+                            onClick={() => startEditPayment(pm)}
+                            className="p-1.5 rounded-lg text-default-400 hover:text-primary hover:bg-content1 transition-colors"
+                            title="Edit Channel"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Edit2 className="h-3.5 w-3.5" />
                           </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                          {!pm.isDefault && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePaymentMethod(pm)}
+                              className="p-1.5 rounded-lg text-default-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
+                              title="Delete Channel"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1282,26 +1348,34 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                     key={ds.id}
                     className={`p-4 rounded-2xl border transition-all text-left flex flex-col justify-between gap-3 ${
                       ds.isEnabled
-                        ? 'bg-content2/40 border-divider/20'
+                        ? 'bg-content2/40 border-divider/20 shadow-2xs'
                         : 'bg-content2/10 border-divider/10 opacity-60'
                     }`}
                   >
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-lg border border-primary/20 shrink-0">
                           {ds.type === 'PERCENT' ? `${ds.value}% OFF` : `₱${ds.value} FLAT`}
                         </span>
-                        <button
-                          type="button"
-                          onClick={() => toggleDiscountScheme(ds.id)}
-                          className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
-                            ds.isEnabled
-                              ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                              : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
-                          }`}
-                        >
-                          {ds.isEnabled ? 'Active in POS' : 'Disabled'}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border transition-all shrink-0 ${
+                              ds.isEnabled
+                                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
+                            }`}
+                          >
+                            {ds.isEnabled ? 'Active in POS' : 'Disabled'}
+                          </span>
+                          <HeroSwitch
+                            size="sm"
+                            color="success"
+                            isSelected={ds.isEnabled}
+                            isDisabled={!isAuthorized}
+                            onValueChange={(val) => handleToggleDiscountScheme(ds, val)}
+                            aria-label={`Toggle ${ds.name} discount scheme`}
+                          />
+                        </div>
                       </div>
 
                       <div>
@@ -1342,6 +1416,7 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
                             onClick={() => {
                               if (confirm(`Remove discount scheme "${ds.name}"?`)) {
                                 deleteDiscountScheme(ds.id);
+                                showToast(`Removed discount scheme "${ds.name}".`, 'info');
                               }
                             }}
                             className="p-1.5 rounded-lg text-default-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors"
@@ -1688,6 +1763,11 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
             Close Manager
           </HeroButton>
         </HeroModal.Footer>
+        <ToastNotification
+          message={toast?.message || null}
+          type={toast?.type}
+          onClose={() => setToast(null)}
+        />
     </HeroModal>
   );
 };

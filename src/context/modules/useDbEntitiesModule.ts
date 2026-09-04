@@ -785,32 +785,94 @@ export function useDbEntitiesModule({
 
   const updatePaymentMethod = useCallback(
     (id: string, updates: Partial<CustomPaymentMethod>) => {
-      setPaymentMethodsList((prev) =>
-        prev.map((pm) => (pm.id === id ? { ...pm, ...updates, updatedAt: new Date().toISOString() } : pm))
-      );
-      addAuditLog("PAYMENT_METHOD_UPDATE", `Updated payment method ID: ${id}`, "PaymentMethods", id);
+      let allowed = true;
+      setPaymentMethodsList((prev) => {
+        const target = prev.find((pm) => pm.id === id);
+        if (target && updates.isEnabled === false && target.isEnabled) {
+          const activeCount = prev.filter((pm) => pm.isEnabled).length;
+          if (activeCount <= 1) {
+            allowed = false;
+            console.warn(
+              `[Payment Methods] Cannot disable payment method "${target.name}". At least one payment method must remain active.`
+            );
+            return prev;
+          }
+        }
+        return prev.map((pm) => {
+          if (pm.id !== id) return pm;
+          const isEnabled = updates.isEnabled !== undefined ? updates.isEnabled : pm.isEnabled;
+          return {
+            ...pm,
+            ...updates,
+            isEnabled,
+            isActive: isEnabled,
+            updatedAt: new Date().toISOString(),
+          };
+        });
+      });
+      if (allowed) {
+        addAuditLog("PAYMENT_METHOD_UPDATE", `Updated payment method ID: ${id}`, "PaymentMethods", id);
+      }
     },
     [addAuditLog]
   );
 
   const deletePaymentMethod = useCallback(
     (id: string) => {
-      setPaymentMethodsList((prev) => prev.filter((pm) => pm.id !== id));
-      addAuditLog("PAYMENT_METHOD_DELETE", `Deleted payment method ID: ${id}`, "PaymentMethods", id);
+      let canDelete = true;
+      setPaymentMethodsList((prev) => {
+        const target = prev.find((pm) => pm.id === id);
+        if (target && target.isEnabled) {
+          const activeCount = prev.filter((pm) => pm.isEnabled).length;
+          if (activeCount <= 1) {
+            canDelete = false;
+            console.warn(`[Payment Methods] Cannot delete the only active payment method "${target.name}".`);
+            return prev;
+          }
+        }
+        return prev.filter((pm) => pm.id !== id);
+      });
+      if (canDelete) {
+        addAuditLog("PAYMENT_METHOD_DELETE", `Deleted payment method ID: ${id}`, "PaymentMethods", id);
+      }
     },
     [addAuditLog]
   );
 
   const togglePaymentMethod = useCallback(
     (id: string, enabled?: boolean) => {
-      setPaymentMethodsList((prev) =>
-        prev.map((pm) =>
+      let toggled = false;
+      setPaymentMethodsList((prev) => {
+        const target = prev.find((pm) => pm.id === id);
+        if (!target) return prev;
+        const willBeEnabled = enabled !== undefined ? enabled : !target.isEnabled;
+
+        // RULE: There should always be at least one payment method that is active
+        if (!willBeEnabled) {
+          const activeCount = prev.filter((pm) => pm.isEnabled).length;
+          if (activeCount <= 1 && target.isEnabled) {
+            console.warn(
+              `[Payment Methods] Cannot disable payment method "${target.name}". At least one payment method must remain active.`
+            );
+            return prev;
+          }
+        }
+
+        toggled = true;
+        return prev.map((pm) =>
           pm.id === id
-            ? { ...pm, isEnabled: enabled !== undefined ? enabled : !pm.isEnabled, updatedAt: new Date().toISOString() }
+            ? {
+                ...pm,
+                isEnabled: willBeEnabled,
+                isActive: willBeEnabled,
+                updatedAt: new Date().toISOString(),
+              }
             : pm
-        )
-      );
-      addAuditLog("PAYMENT_METHOD_TOGGLE", `Toggled payment method status for ID: ${id}`, "PaymentMethods", id);
+        );
+      });
+      if (toggled) {
+        addAuditLog("PAYMENT_METHOD_TOGGLE", `Toggled payment method status for ID: ${id}`, "PaymentMethods", id);
+      }
     },
     [addAuditLog]
   );
@@ -823,6 +885,8 @@ export function useDbEntitiesModule({
         name: sanitizeInputText(ds.name || ""),
         code: sanitizeInputText(ds.code || ""),
         description: ds.description ? sanitizeInputText(ds.description) : undefined,
+        isEnabled: ds.isEnabled !== undefined ? ds.isEnabled : true,
+        isActive: ds.isEnabled !== undefined ? ds.isEnabled : true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -836,7 +900,17 @@ export function useDbEntitiesModule({
   const updateDiscountScheme = useCallback(
     (id: string, updates: Partial<DiscountScheme>) => {
       setDiscountSchemes((prev) =>
-        prev.map((ds) => (ds.id === id ? { ...ds, ...updates, updatedAt: new Date().toISOString() } : ds))
+        prev.map((ds) => {
+          if (ds.id !== id) return ds;
+          const isEnabled = updates.isEnabled !== undefined ? updates.isEnabled : ds.isEnabled;
+          return {
+            ...ds,
+            ...updates,
+            isEnabled,
+            isActive: isEnabled,
+            updatedAt: new Date().toISOString(),
+          };
+        })
       );
       addAuditLog("DISCOUNT_SCHEME_UPDATE", `Updated discount scheme ID: ${id}`, "DiscountSchemes", id);
     },
@@ -854,11 +928,16 @@ export function useDbEntitiesModule({
   const toggleDiscountScheme = useCallback(
     (id: string, enabled?: boolean) => {
       setDiscountSchemes((prev) =>
-        prev.map((ds) =>
-          ds.id === id
-            ? { ...ds, isEnabled: enabled !== undefined ? enabled : !ds.isEnabled, updatedAt: new Date().toISOString() }
-            : ds
-        )
+        prev.map((ds) => {
+          if (ds.id !== id) return ds;
+          const willBeEnabled = enabled !== undefined ? enabled : !ds.isEnabled;
+          return {
+            ...ds,
+            isEnabled: willBeEnabled,
+            isActive: willBeEnabled,
+            updatedAt: new Date().toISOString(),
+          };
+        })
       );
       addAuditLog("DISCOUNT_SCHEME_TOGGLE", `Toggled discount scheme status for ID: ${id}`, "DiscountSchemes", id);
     },
