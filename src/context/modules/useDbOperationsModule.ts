@@ -55,8 +55,8 @@ interface UseDbOperationsOptions {
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
   branchStock: InventoryLocationStock[];
   setBranchStock: React.Dispatch<React.SetStateAction<InventoryLocationStock[]>>;
-  movements: InventoryMovement[];
-  setMovements: React.Dispatch<React.SetStateAction<InventoryMovement[]>>;
+  movements?: InventoryMovement[];
+  setMovements?: React.Dispatch<React.SetStateAction<InventoryMovement[]>>;
   optimisticStockCacheRef: React.MutableRefObject<
     Map<
       string,
@@ -99,8 +99,8 @@ export function useDbOperationsModule({
   setProducts,
   branchStock,
   setBranchStock,
-  movements,
-  setMovements,
+  movements: propMovements,
+  setMovements: propSetMovements,
   optimisticStockCacheRef,
   getBranchStockQuantityContext,
   revalidateStockCounts,
@@ -109,6 +109,12 @@ export function useDbOperationsModule({
   enqueueTransaction,
   generateSystemSnapshot,
 }: UseDbOperationsOptions) {
+  const [internalMovements, setInternalMovements] = useState<InventoryMovement[]>(() => {
+    return safeParse<InventoryMovement[]>("tp_movements", []);
+  });
+  const movements = (propMovements && propMovements.length > 0) ? propMovements : internalMovements;
+  const setMovements = propSetMovements || setInternalMovements;
+
   const [shifts, setShifts] = useState<Shift[]>(() => {
     return safeParse<Shift[]>("tp_shifts", SEED_SHIFTS);
   });
@@ -150,18 +156,26 @@ export function useDbOperationsModule({
   });
 
   const [customBills, setCustomBills] = useState<CustomCorporateBill[]>(() => {
+    const fromTp = safeParse<CustomCorporateBill[]>("tp_custom_corporate_bills", []);
+    if (fromTp && fromTp.length > 0) return fromTp;
     return safeParse<CustomCorporateBill[]>("atpos_v2_custom_bills", []);
   });
 
   const [members, setMembers] = useState<Member[]>(() => {
+    const fromTp = safeParse<Member[]>("tp_members", []);
+    if (fromTp && fromTp.length > 0) return fromTp;
     return safeParse<Member[]>("atpos_v2_members_list", []);
   });
 
   const [expenses, setExpenses] = useState<Expense[]>(() => {
+    const fromTp = safeParse<Expense[]>("tp_expenses", []);
+    if (fromTp && fromTp.length > 0) return fromTp;
     return safeParse<Expense[]>("atpos_v2_expenses", []);
   });
 
   const [productReturns, setProductReturns] = useState<ProductReturn[]>(() => {
+    const fromTp = safeParse<ProductReturn[]>("tp_product_returns", []);
+    if (fromTp && fromTp.length > 0) return fromTp;
     return safeParse<ProductReturn[]>("atpos_v2_returns", []);
   });
 
@@ -899,10 +913,10 @@ export function useDbOperationsModule({
             if (s.id === activeShift.id) {
               return {
                 ...s,
-                shiftSalesCount: s.shiftSalesCount + 1,
-                shiftSalesTotal: s.shiftSalesTotal + grandTotal,
-                shiftVatTotal: s.shiftVatTotal + vat,
-                shiftDiscountTotal: s.shiftDiscountTotal + discountAmount,
+                shiftSalesCount: (Number(s.shiftSalesCount) || 0) + 1,
+                shiftSalesTotal: (Number(s.shiftSalesTotal) || 0) + grandTotal,
+                shiftVatTotal: (Number(s.shiftVatTotal) || 0) + vat,
+                shiftDiscountTotal: (Number(s.shiftDiscountTotal) || 0) + discountAmount,
               };
             }
             return s;
@@ -972,10 +986,10 @@ export function useDbOperationsModule({
             ? [
                 {
                   ...activeShift,
-                  shiftSalesCount: activeShift.shiftSalesCount + 1,
-                  shiftSalesTotal: activeShift.shiftSalesTotal + grandTotal,
-                  shiftVatTotal: activeShift.shiftVatTotal + vat,
-                  shiftDiscountTotal: activeShift.shiftDiscountTotal + discountAmount,
+                  shiftSalesCount: (Number(activeShift.shiftSalesCount) || 0) + 1,
+                  shiftSalesTotal: (Number(activeShift.shiftSalesTotal) || 0) + grandTotal,
+                  shiftVatTotal: (Number(activeShift.shiftVatTotal) || 0) + vat,
+                  shiftDiscountTotal: (Number(activeShift.shiftDiscountTotal) || 0) + discountAmount,
                 },
               ]
             : [],
@@ -1197,12 +1211,12 @@ export function useDbOperationsModule({
             if (s.id === activeShift.id) {
               return {
                 ...s,
-                shiftSalesCount: Math.max(0, s.shiftSalesCount - 1),
-                shiftSalesTotal: Math.max(0, s.shiftSalesTotal - targetSale.grandTotal),
-                shiftVatTotal: Math.max(0, s.shiftVatTotal - targetSale.vat),
+                shiftSalesCount: Math.max(0, (Number(s.shiftSalesCount) || 0) - 1),
+                shiftSalesTotal: Math.max(0, (Number(s.shiftSalesTotal) || 0) - (Number(targetSale.grandTotal) || 0)),
+                shiftVatTotal: Math.max(0, (Number(s.shiftVatTotal) || 0) - (Number(targetSale.vat) || 0)),
                 shiftDiscountTotal: Math.max(
                   0,
-                  s.shiftDiscountTotal - targetSale.discount
+                  (Number(s.shiftDiscountTotal) || 0) - (Number(targetSale.discount) || 0)
                 ),
               };
             }
@@ -2639,6 +2653,8 @@ export function useDbOperationsModule({
     setDayMemos,
     parkedSales,
     setParkedSales,
+    movements,
+    setMovements,
     pessimisticLocks,
     acquirePessimisticLock,
     releasePessimisticLock,

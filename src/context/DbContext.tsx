@@ -118,8 +118,6 @@ export const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
     setProducts: productsModule.setProducts,
     branchStock: productsModule.branchStock,
     setBranchStock: productsModule.setBranchStock,
-    movements: [],
-    setMovements: setMovementsRef.current,
     optimisticStockCacheRef: productsModule.optimisticStockCacheRef,
     getBranchStockQuantityContext: productsModule.getBranchStockQuantityContext,
     revalidateStockCounts: productsModule.revalidateStockCounts,
@@ -159,8 +157,8 @@ export const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
     setSales: operationsModule.setSales,
     saleItems: operationsModule.saleItems,
     setSaleItems: operationsModule.setSaleItems,
-    movements: [],
-    setMovements: setMovementsRef.current,
+    movements: operationsModule.movements,
+    setMovements: operationsModule.setMovements,
     auditLogs: authModule.auditLogs,
     setAuditLogs: authModule.setAuditLogs,
     parkedSales: operationsModule.parkedSales,
@@ -198,6 +196,7 @@ export const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
   setBranchStockRef.current = productsModule.setBranchStock;
   setShiftsRef.current = operationsModule.setShifts;
   setSalesRef.current = operationsModule.setSales;
+  setMovementsRef.current = operationsModule.setMovements;
   setDeliveriesRef.current = operationsModule.setDeliveries;
   setStockTransfersRef.current = operationsModule.setStockTransfers;
   setDamageLogsRef.current = operationsModule.setDamageLogs;
@@ -440,7 +439,7 @@ export const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
       shifts: operationsModule.shifts,
       sales: operationsModule.sales,
       saleItems: operationsModule.saleItems,
-      movements: authModule.auditLogs as any,
+      movements: operationsModule.movements,
       auditLogs: authModule.auditLogs,
       activeShift: operationsModule.activeShift,
       stockTransfers: operationsModule.stockTransfers,

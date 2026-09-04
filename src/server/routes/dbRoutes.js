@@ -369,6 +369,25 @@ router.get(['/', '/full'], async (req, res) => {
     delete dbCopy.tp_db_snapshots;
     delete dbCopy.tp_processed_delta_ids;
 
+    // Strip duplicate mirror/alias keys to reduce payload size.
+    // The client's pickArr() function already checks tp_ prefixed keys first
+    // with fallback to unprefixed alternatives, so we only need the tp_ keys.
+    const MIRROR_STRIP_KEYS = [
+      'sales', 'saleItems', 'sale_items', 'shifts', 'movements',
+      'inventory_movements', 'stock_movements', 'auditLogs', 'audit_logs',
+      'ledgerEntries', 'ledger_entries', 'purchaseOrders', 'purchase_orders',
+      'poItems', 'po_items', 'purchase_order_items', 'stockTransfers',
+      'stock_transfers', 'deliveries', 'damageLogs', 'damage_logs',
+      'transmittals', 'customBills', 'custom_corporate_bills',
+      'members', 'expenses', 'productReturns', 'product_returns',
+      'branchSalesReports', 'branch_sales_reports',
+      'branches', 'users', 'suppliers', 'brands', 'products',
+      'branchStock', 'branch_stock', 'inventory',
+    ];
+    for (const k of MIRROR_STRIP_KEYS) {
+      delete dbCopy[k];
+    }
+
     res.json({
       success: true,
       unchanged: false,

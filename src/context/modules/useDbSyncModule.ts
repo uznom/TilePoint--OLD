@@ -369,6 +369,8 @@ export function useDbSyncModule({
         ledgerEntries,
         branchSalesReports,
         deliveries,
+        damageLogs,
+        tp_damage_logs: damageLogs,
         atpos_v2_custom_bills: customBills,
         atpos_v2_members_list: members,
         atpos_v2_expenses: expenses,
@@ -989,21 +991,40 @@ export function useDbSyncModule({
           const body = await res.json().catch(() => ({}));
           if (body && body.data) {
             const d = body.data;
-            if (Array.isArray(d.tp_branches) && d.tp_branches.length > 0) {
-              setBranches(d.tp_branches);
-              try { localStorage.setItem("tp_branches", JSON.stringify(d.tp_branches)); } catch (_) {}
+            const pickArr = (tpKey: string, altKeys: string[] = []): any[] | null => {
+              if (Array.isArray(d[tpKey]) && d[tpKey].length > 0) return d[tpKey];
+              for (const alt of altKeys) {
+                if (Array.isArray(d[alt]) && d[alt].length > 0) return d[alt];
+              }
+              if (Array.isArray(d[tpKey])) return d[tpKey];
+              for (const alt of altKeys) {
+                if (Array.isArray(d[alt])) return d[alt];
+              }
+              return null;
+            };
+
+            const branchesArr = pickArr("tp_branches", ["branches"]);
+            if (branchesArr && branchesArr.length > 0) {
+              setBranches(branchesArr);
+              try { localStorage.setItem("tp_branches", JSON.stringify(branchesArr)); } catch (_) {}
             }
-            if (Array.isArray(d.tp_suppliers) && d.tp_suppliers.length > 0) {
-              setSuppliers(d.tp_suppliers);
-              try { localStorage.setItem("tp_suppliers", JSON.stringify(d.tp_suppliers)); } catch (_) {}
+
+            const suppliersArr = pickArr("tp_suppliers", ["suppliers"]);
+            if (suppliersArr && suppliersArr.length > 0) {
+              setSuppliers(suppliersArr);
+              try { localStorage.setItem("tp_suppliers", JSON.stringify(suppliersArr)); } catch (_) {}
             }
-            if (Array.isArray(d.tp_brands) && d.tp_brands.length > 0) {
-              setBrands(d.tp_brands);
-              try { localStorage.setItem("tp_brands", JSON.stringify(d.tp_brands)); } catch (_) {}
+
+            const brandsArr = pickArr("tp_brands", ["brands"]);
+            if (brandsArr && brandsArr.length > 0) {
+              setBrands(brandsArr);
+              try { localStorage.setItem("tp_brands", JSON.stringify(brandsArr)); } catch (_) {}
             }
-            if (Array.isArray(d.tp_products) && d.tp_products.length > 0) {
+
+            const productsArr = pickArr("tp_products", ["products"]);
+            if (productsArr && productsArr.length > 0) {
               const now = Date.now();
-              const mergedProducts = d.tp_products.map((p: any) => {
+              const mergedProducts = productsArr.map((p: any) => {
                 const cached = optimisticStockCacheRef?.current?.get(`prod:${p.id}`);
                 if (cached && now - cached.lastSaleCommitTime < 60000) {
                   return { ...p, stockQuantity: Math.min(p.stockQuantity ?? 0, cached.quantity) };
@@ -1013,13 +1034,17 @@ export function useDbSyncModule({
               setProducts(mergedProducts);
               try { localStorage.setItem("tp_products", JSON.stringify(mergedProducts)); } catch (_) {}
             }
-            if (Array.isArray(d.tp_users) && d.tp_users.length > 0) {
-              setUsers(d.tp_users);
-              try { localStorage.setItem("tp_users", JSON.stringify(d.tp_users)); } catch (_) {}
+
+            const usersArr = pickArr("tp_users", ["users"]);
+            if (usersArr && usersArr.length > 0) {
+              setUsers(usersArr);
+              try { localStorage.setItem("tp_users", JSON.stringify(usersArr)); } catch (_) {}
             }
-            if (Array.isArray(d.tp_branch_stock)) {
+
+            const branchStockArr = pickArr("tp_branch_stock", ["branch_stock", "branchStock"]);
+            if (branchStockArr) {
               const now = Date.now();
-              const mergedBs = d.tp_branch_stock.map((bs: any) => {
+              const mergedBs = branchStockArr.map((bs: any) => {
                 const cached = optimisticStockCacheRef?.current?.get(`bs:${bs.branchId}:${bs.productId}`);
                 if (cached && now - cached.lastSaleCommitTime < 60000) {
                   return { ...bs, quantity: Math.min(bs.quantity ?? 0, cached.quantity) };
@@ -1029,19 +1054,259 @@ export function useDbSyncModule({
               setBranchStock(mergedBs);
               try { localStorage.setItem("tp_branch_stock", JSON.stringify(mergedBs)); } catch (_) {}
             }
+
+            // 1. sales
+            const salesArr = pickArr("tp_sales", ["sales"]);
+            if (salesArr) {
+              const cleanSales = salesArr.map((s: any) => ({
+                ...s,
+                subtotal: Number(s.subtotal) || 0,
+                vat: Number(s.vat) || 0,
+                discount: Number(s.discount) || 0,
+                grandTotal: Number(s.grandTotal) || 0,
+                amountTendered: Number(s.amountTendered) || 0,
+                changeAmount: Number(s.changeAmount) || 0,
+                pointsEarned: Number(s.pointsEarned) || 0,
+                pointsRedeemed: Number(s.pointsRedeemed) || 0,
+                isDeleted: Boolean(s.isDeleted),
+              }));
+              setSales(cleanSales);
+              try { localStorage.setItem("tp_sales", JSON.stringify(cleanSales)); } catch (_) {}
+            }
+
+            // 2. sale_items
+            const saleItemsArr = pickArr("tp_sale_items", ["sale_items", "saleItems"]);
+            if (saleItemsArr) {
+              const cleanItems = saleItemsArr.map((it: any) => ({
+                ...it,
+                quantity: Number(it.quantity) || 0,
+                unitPrice: Number(it.unitPrice) || 0,
+                total: Number(it.total) || 0,
+                discount: Number(it.discount) || 0,
+                isDeleted: Boolean(it.isDeleted),
+              }));
+              setSaleItems(cleanItems);
+              try { localStorage.setItem("tp_sale_items", JSON.stringify(cleanItems)); } catch (_) {}
+            }
+
+            // 3. shifts
+            const shiftsArr = pickArr("tp_shifts", ["shifts"]);
+            if (shiftsArr) {
+              const cleanShifts = shiftsArr.map((s: any) => ({
+                ...s,
+                startCash: Number(s.startCash) || 0,
+                endCash: Number(s.endCash) || 0,
+                cashCount: Number(s.cashCount) || 0,
+                variance: Number(s.variance) || 0,
+                shiftSalesTotal: Number(s.shiftSalesTotal) || 0,
+                shiftVatTotal: Number(s.shiftVatTotal) || 0,
+                shiftDiscountTotal: Number(s.shiftDiscountTotal) || 0,
+                shiftSalesCount: Number(s.shiftSalesCount) || 0,
+              }));
+              setShifts(cleanShifts);
+              try { localStorage.setItem("tp_shifts", JSON.stringify(cleanShifts)); } catch (_) {}
+            }
+
+            // 4. movements
+            const movementsArr = pickArr("tp_inventory_movements", ["tp_movements", "inventory_movements", "stock_movements", "movements"]);
+            if (movementsArr) {
+              const cleanMoves = movementsArr.map((m: any) => ({
+                id: m.id || `M-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                productId: m.productId || '',
+                type: m.type || 'ADJUST',
+                quantity: Math.abs(Number(m.quantity)) || 0,
+                sourceBranchId: m.sourceBranchId || m.branchId || undefined,
+                destinationBranchId: m.destinationBranchId || undefined,
+                referenceId: m.referenceId || '',
+                notes: m.notes || '',
+                timestamp: m.timestamp || m.createdAt || new Date().toISOString(),
+                userId: m.userId || m.createdBy || 'SYSTEM',
+                username: m.username || m.createdBy || 'SYSTEM',
+                isDeleted: Boolean(m.isDeleted),
+                deletedAt: m.deletedAt || null,
+              }));
+              setMovements(cleanMoves);
+              try { localStorage.setItem("tp_movements", JSON.stringify(cleanMoves)); } catch (_) {}
+            }
+
+            // 5. audit_logs
+            const auditLogsArr = pickArr("tp_audit_logs", ["audit_logs", "auditLogs"]);
+            if (auditLogsArr) {
+              setAuditLogs(auditLogsArr);
+              try { localStorage.setItem("tp_audit_logs", JSON.stringify(auditLogsArr)); } catch (_) {}
+            }
+
+            // 6. ledger_entries
+            const ledgerArr = pickArr("tp_ledger_entries", ["ledger_entries", "ledgerEntries"]);
+            if (ledgerArr) {
+              const cleanLedger = ledgerArr.map((l: any) => ({
+                ...l,
+                quantity: Number(l.quantity) || 0,
+                isDeleted: Boolean(l.isDeleted),
+              }));
+              setLedgerEntries(cleanLedger);
+              try { localStorage.setItem("tp_ledger_entries", JSON.stringify(cleanLedger)); } catch (_) {}
+            }
+
+            // 7. purchase_orders
+            const poArr = pickArr("tp_purchase_orders", ["purchase_orders", "purchaseOrders"]);
+            if (poArr) {
+              const cleanPOs = poArr.map((po: any) => ({
+                ...po,
+                totalAmount: Number(po.totalAmount) || 0,
+                termsLength: Number(po.termsLength) || 0,
+                isDeleted: Boolean(po.isDeleted),
+              }));
+              setPurchaseOrders(cleanPOs);
+              try { localStorage.setItem("tp_purchase_orders", JSON.stringify(cleanPOs)); } catch (_) {}
+            }
+
+            // 8. po_items
+            const poItemsArr = pickArr("tp_po_items", ["purchase_order_items", "po_items", "poItems"]);
+            if (poItemsArr) {
+              const cleanPoItems = poItemsArr.map((pi: any) => ({
+                ...pi,
+                quantityOrdered: Number(pi.quantityOrdered) || 0,
+                quantityReceived: Number(pi.quantityReceived) || 0,
+                quantityRequested: Number(pi.quantityRequested) || 0,
+                unitCost: Number(pi.unitCost) || 0,
+                totalCost: Number(pi.totalCost) || 0,
+                costPrice: Number(pi.costPrice) || 0,
+                isDeleted: Boolean(pi.isDeleted),
+              }));
+              setPoItems(cleanPoItems);
+              try { localStorage.setItem("tp_po_items", JSON.stringify(cleanPoItems)); } catch (_) {}
+            }
+
+            // 9. stock_transfers
+            const transfersArr = pickArr("tp_stock_transfers", ["stock_transfers", "stockTransfers"]);
+            if (transfersArr) {
+              const cleanTransfers = transfersArr.map((st: any) => ({
+                ...st,
+                isDeleted: Boolean(st.isDeleted),
+              }));
+              setStockTransfers(cleanTransfers);
+              try { localStorage.setItem("tp_stock_transfers", JSON.stringify(cleanTransfers)); } catch (_) {}
+            }
+
+            // 10. deliveries
+            const deliveriesArr = pickArr("tp_deliveries", ["deliveries"]);
+            if (deliveriesArr) {
+              const cleanDeliveries = deliveriesArr.map((del: any) => ({
+                ...del,
+                isDeleted: Boolean(del.isDeleted),
+              }));
+              setDeliveries(cleanDeliveries);
+              try { localStorage.setItem("tp_deliveries", JSON.stringify(cleanDeliveries)); } catch (_) {}
+            }
+
+            // 11. damage_logs
+            const damageLogsArr = pickArr("tp_damage_logs", ["damage_logs", "damageLogs"]);
+            if (damageLogsArr) {
+              const cleanDamage = damageLogsArr.map((dmg: any) => ({
+                ...dmg,
+                quantity: Number(dmg.quantity) || 0,
+                isDeleted: Boolean(dmg.isDeleted),
+              }));
+              setDamageLogs(cleanDamage);
+              try { localStorage.setItem("tp_damage_logs", JSON.stringify(cleanDamage)); } catch (_) {}
+            }
+
+            // 12. transmittals
+            const transmittalsArr = pickArr("tp_transmittals", ["transmittals"]);
+            if (transmittalsArr) {
+              const cleanTransmittals = transmittalsArr.map((t: any) => ({
+                ...t,
+                isDeleted: Boolean(t.isDeleted),
+              }));
+              setTransmittals(cleanTransmittals);
+              try { localStorage.setItem("tp_transmittals", JSON.stringify(cleanTransmittals)); } catch (_) {}
+            }
+
+            // 13. custom_corporate_bills
+            const billsArr = pickArr("tp_custom_corporate_bills", ["atpos_v2_custom_bills", "custom_corporate_bills", "customBills"]);
+            if (billsArr) {
+              const cleanBills = billsArr.map((b: any) => ({
+                ...b,
+                totalAmount: Number(b.totalAmount) || 0,
+                remainingBalance: Number(b.remainingBalance) || 0,
+                installmentsCount: Number(b.installmentsCount) || 0,
+                isDeleted: Boolean(b.isDeleted),
+              }));
+              setCustomBills(cleanBills);
+              try {
+                localStorage.setItem("tp_custom_corporate_bills", JSON.stringify(cleanBills));
+                localStorage.setItem("atpos_v2_custom_bills", JSON.stringify(cleanBills));
+              } catch (_) {}
+            }
+
+            // 14. members
+            const membersArr = pickArr("tp_members", ["atpos_v2_members_list", "members"]);
+            if (membersArr) {
+              const cleanMembers = membersArr.map((m: any) => ({
+                ...m,
+                points: Number(m.points) || 0,
+                creditLimit: Number(m.creditLimit) || 0,
+                outstandingBalance: Number(m.outstandingBalance) || 0,
+              }));
+              setMembers(cleanMembers);
+              try {
+                localStorage.setItem("tp_members", JSON.stringify(cleanMembers));
+                localStorage.setItem("atpos_v2_members_list", JSON.stringify(cleanMembers));
+              } catch (_) {}
+            }
+
+            // 15. expenses
+            const expensesArr = pickArr("tp_expenses", ["atpos_v2_expenses", "expenses"]);
+            if (expensesArr) {
+              const cleanExpenses = expensesArr.map((e: any) => ({
+                ...e,
+                amount: Number(e.amount) || 0,
+                isDeleted: Boolean(e.isDeleted),
+              }));
+              setExpenses(cleanExpenses);
+              try {
+                localStorage.setItem("tp_expenses", JSON.stringify(cleanExpenses));
+                localStorage.setItem("atpos_v2_expenses", JSON.stringify(cleanExpenses));
+              } catch (_) {}
+            }
+
+            // 16. product_returns
+            const returnsArr = pickArr("tp_product_returns", ["atpos_v2_returns", "product_returns", "productReturns"]);
+            if (returnsArr) {
+              const cleanReturns = returnsArr.map((r: any) => ({
+                ...r,
+                quantityReturned: Number(r.quantityReturned) || 0,
+                amountRefunded: Number(r.amountRefunded) || 0,
+                damageRestockFee: Number(r.damageRestockFee) || 0,
+                isDeleted: Boolean(r.isDeleted),
+              }));
+              setProductReturns(cleanReturns);
+              try {
+                localStorage.setItem("tp_product_returns", JSON.stringify(cleanReturns));
+                localStorage.setItem("atpos_v2_returns", JSON.stringify(cleanReturns));
+              } catch (_) {}
+            }
+
+            // 17. branch_sales_reports
+            const reportsArr = pickArr("tp_branch_sales_reports", ["branch_sales_reports", "branchSalesReports"]);
+            if (reportsArr) {
+              const cleanReports = reportsArr.map((br: any) => ({
+                ...br,
+                totalSalesCount: Number(br.totalSalesCount) || 0,
+                totalSalesAmount: Number(br.totalSalesAmount) || 0,
+                totalVatAmount: Number(br.totalVatAmount) || 0,
+                totalDiscountAmount: Number(br.totalDiscountAmount) || 0,
+              }));
+              setBranchSalesReports(cleanReports);
+              try { localStorage.setItem("tp_branch_sales_reports", JSON.stringify(cleanReports)); } catch (_) {}
+            }
           }
           setServerConnected(true);
           setDbSyncStatus("synced");
           const nowIso = new Date().toISOString();
           setLastSyncTime(nowIso);
           try { localStorage.setItem("tp_last_sync_time", nowIso); } catch (_) {}
-        } else if (res.status === 401 || res.status === 403) {
-          // Token expired or invalid: fallback gracefully to /api/db/status without throwing
-          const statusRes = await safeApiFetch('/api/db/status');
-          if (statusRes.ok) {
-            setServerConnected(true);
-            setDbSyncStatus('synced');
-          }
         } else {
           const statusRes = await safeApiFetch("/api/db/status");
           if (statusRes.ok) {
@@ -1050,6 +1315,9 @@ export function useDbSyncModule({
             const nowIso = new Date().toISOString();
             setLastSyncTime(nowIso);
             try { localStorage.setItem("tp_last_sync_time", nowIso); } catch (_) {}
+          } else {
+            setServerConnected(false);
+            setDbSyncStatus("offline");
           }
         }
       } catch (err) {
@@ -1057,8 +1325,25 @@ export function useDbSyncModule({
         setDbSyncStatus("offline");
       }
     },
-    [safeApiFetch, setBranches, setSuppliers, setBrands, setProducts, setUsers, setBranchStock, optimisticStockCacheRef, getAuthHeaders, currentUser]
+    [safeApiFetch, setBranches, setSuppliers, setBrands, setProducts, setUsers, setBranchStock, setSales, setSaleItems, setShifts, setMovements, setAuditLogs, setLedgerEntries, setPurchaseOrders, setPoItems, setStockTransfers, setDeliveries, setDamageLogs, setTransmittals, setCustomBills, setMembers, setExpenses, setProductReturns, setBranchSalesReports, optimisticStockCacheRef, getAuthHeaders, currentUser]
   );
+
+  // Auto-sync when user becomes authenticated or on mount
+  useEffect(() => {
+    if (currentUser?.id) {
+      syncFromSharedServer(true).catch(() => {});
+    }
+  }, [currentUser?.id, syncFromSharedServer]);
+
+  // Periodic background synchronization across network/clients
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible' && currentUser?.id) {
+        syncFromSharedServer(true).catch(() => {});
+      }
+    }, 20000);
+    return () => clearInterval(interval);
+  }, [currentUser?.id, syncFromSharedServer]);
 
   const forceSyncAll = useCallback(async () => {
     return syncFromSharedServer(false);

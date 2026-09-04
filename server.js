@@ -27,6 +27,7 @@ import {
   invalidateAllSessionsOnBoot,
   enforceGlobalCompromisedPasswordReset
 } from './src/server/services/authService.js';
+import { cleanStaleSettingsFromMysql } from './src/server/db/dbHelpers.js';
 import { initSocketServer } from './src/server/realtime/socketHandler.js';
 
 import authRoutes from './src/server/routes/authRoutes.js';
@@ -120,6 +121,7 @@ if (isProduction && fs.existsSync(path.join(distPath, 'index.html'))) {
 if (process.env.NODE_ENV !== 'test') {
   server.listen(PORT, '0.0.0.0', async () => {
     await initDatabaseSchema();
+    await cleanStaleSettingsFromMysql();
     await invalidateAllSessionsOnBoot();
     await enforceGlobalCompromisedPasswordReset();
     console.log(`========================================`);

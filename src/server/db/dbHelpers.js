@@ -10,6 +10,22 @@ import {
   setExecuteReplayOpHandler
 } from './degradedStore.js';
 
+// Legacy system_settings keys that now live in dedicated MySQL tables.
+// These must be purged from system_settings and stripped from the in-memory
+// db object to prevent stale empty-array data from shadowing real table data.
+const STALE_SETTINGS_KEYS = new Set([
+  'sales', 'saleItems', 'shifts', 'movements', 'products', 'branchStock',
+  'users', 'branches', 'suppliers', 'brands', 'customBills', 'damageLogs',
+  'deliveries', 'expenses', 'ledgerEntries', 'members', 'poItems',
+  'productReturns', 'purchaseOrders', 'transmittals',
+  // Also strip any mirror-style keys that collide with mirrorStandardDbKeys()
+  'auditLogs', 'stockTransfers', 'inventory_movements', 'stock_movements',
+  'purchase_order_items', 'branch_stock', 'sale_items', 'audit_logs',
+  'ledger_entries', 'purchase_orders', 'po_items', 'stock_transfers',
+  'damage_logs', 'product_returns', 'branch_sales_reports', 'branchSalesReports',
+  'custom_corporate_bills', 'inventory',
+]);
+
 let cachedFullDb = null;
 let cachedDbHash = null;
 let isDbCacheDirty = true;
@@ -94,8 +110,26 @@ export function parseRowFromMysql(tableName, row) {
     }
   });
 
+  NUMERIC_COLUMNS.forEach(col => {
+    if (col in res && res[col] !== null && res[col] !== undefined && typeof res[col] !== 'number') {
+      const n = Number(res[col]);
+      if (!isNaN(n)) {
+        res[col] = n;
+      }
+    }
+  });
+
   return res;
 }
+
+export const NUMERIC_COLUMNS = new Set([
+  'subtotal', 'vat', 'discount', 'grandTotal', 'amountTendered', 'changeAmount', 'pointsEarned', 'pointsRedeemed',
+  'quantity', 'unitPrice', 'total', 'costPrice', 'sellingPrice', 'stockQuantity', 'boxQuantity', 'coveragePerBox',
+  'minimumStock', 'markupPercent', 'lowStockThreshold', 'lowStockThresholdOverride', 'sellingPriceOverride', 'costPriceOverride',
+  'startCash', 'endCash', 'cashCount', 'variance', 'shiftSalesTotal', 'shiftVatTotal', 'shiftDiscountTotal', 'shiftSalesCount',
+  'totalAmount', 'termsLength', 'quantityOrdered', 'quantityReceived', 'unitCost', 'totalCost', 'quantityRequested',
+  'amount', 'refundAmount', 'downpayment', 'balance', 'totalSpent', 'points', 'creditLimit', 'outstandingBalance', 'damageRestockFee'
+]);
 
 export async function upsertRecordMysql(tableName, record, executor = pool) {
   if (!record || typeof record !== 'object') return;
@@ -111,6 +145,11 @@ export async function upsertRecordMysql(tableName, record, executor = pool) {
 
   const formatValue = (val, k) => {
     if (val === null || val === undefined) return null;
+    if (NUMERIC_COLUMNS.has(k)) {
+      if (typeof val === 'number') return isNaN(val) ? 0 : val;
+      const n = Number(val);
+      return isNaN(n) ? 0 : n;
+    }
     if (typeof val === 'boolean') return val ? 1 : 0;
     if (val instanceof Date) {
       return val.toISOString().slice(0, 19).replace('T', ' ');
@@ -326,6 +365,100 @@ export async function getInternalUserById(userId) {
   return getInternalUserSync(userId);
 }
 
+/**
+ * Strips stale legacy collection keys that were loaded from system_settings.
+ * Must be called AFTER loading system_settings but BEFORE loading real table data
+ * or running mirrorStandardDbKeys(), so that stale empty arrays don't shadow real data.
+ */
+export function cleanStaleSettingsFromDb(db) {
+  if (!db || typeof db !== 'object') return db;
+  for (const key of STALE_SETTINGS_KEYS) {
+    if (key in db) {
+      delete db[key];
+    }
+  }
+  return db;
+}
+
+/**
+ * One-time cleanup: DELETE stale collection keys from the system_settings MySQL table.
+ * These keys now live in dedicated tables and their system_settings copies are outdated.
+ */
+export async function cleanStaleSettingsFromMysql() {
+  if (!getIsMysqlActive() && !getMysqlEnforced()) return;
+  try {
+    const keys = Array.from(STALE_SETTINGS_KEYS);
+    if (keys.length === 0) return;
+    const placeholders = keys.map(() => '?').join(', ');
+    const [result] = await pool.query(
+      `DELETE FROM system_settings WHERE setting_key IN (${placeholders})`,
+      keys
+    );
+    if (result.affectedRows > 0) {
+      console.log(`[DB Cleanup] Purged ${result.affectedRows} stale system_settings keys: ${keys.filter(k => result.affectedRows > 0).join(', ')}`);
+      invalidateDbCache();
+    }
+  } catch (err) {
+    console.warn('[DB Cleanup] Could not purge stale system_settings:', err.message);
+  }
+}
+
+export function mirrorStandardDbKeys(db) {
+  if (!db || typeof db !== 'object') return db;
+
+  // Use direct reference assignment so all aliases point to the same array object
+  if (db.tp_sales) { db.sales = db.tp_sales; }
+  if (db.tp_sale_items) { db.sale_items = db.tp_sale_items; db.saleItems = db.tp_sale_items; }
+  if (db.tp_shifts) { db.shifts = db.tp_shifts; }
+  if (db.tp_movements || db.tp_inventory_movements) {
+    db.movements = (db.tp_inventory_movements && db.tp_inventory_movements.length > 0) ? db.tp_inventory_movements : (db.tp_movements || []);
+    db.inventory_movements = db.tp_inventory_movements || [];
+    db.stock_movements = db.tp_movements || [];
+  }
+  if (db.tp_audit_logs) { db.audit_logs = db.tp_audit_logs; db.auditLogs = db.tp_audit_logs; }
+  if (db.tp_ledger_entries) { db.ledger_entries = db.tp_ledger_entries; db.ledgerEntries = db.tp_ledger_entries; }
+  if (db.tp_purchase_orders) { db.purchase_orders = db.tp_purchase_orders; db.purchaseOrders = db.tp_purchase_orders; }
+  if (db.tp_po_items) { db.po_items = db.tp_po_items; db.purchase_order_items = db.tp_po_items; db.poItems = db.tp_po_items; }
+  if (db.tp_stock_transfers) { db.stock_transfers = db.tp_stock_transfers; db.stockTransfers = db.tp_stock_transfers; }
+  if (db.tp_deliveries) { db.deliveries = db.tp_deliveries; }
+  if (db.tp_damage_logs) { db.damage_logs = db.tp_damage_logs; db.damageLogs = db.tp_damage_logs; }
+  if (db.tp_transmittals) { db.transmittals = db.tp_transmittals; }
+  if (db.tp_custom_corporate_bills || db.atpos_v2_custom_bills) {
+    const bills = db.tp_custom_corporate_bills || db.atpos_v2_custom_bills || [];
+    db.custom_corporate_bills = bills;
+    db.customBills = bills;
+    db.atpos_v2_custom_bills = bills;
+  }
+  if (db.tp_members || db.atpos_v2_members_list) {
+    const mems = db.tp_members || db.atpos_v2_members_list || [];
+    db.members = mems;
+    db.atpos_v2_members_list = mems;
+  }
+  if (db.tp_expenses || db.atpos_v2_expenses) {
+    const exps = db.tp_expenses || db.atpos_v2_expenses || [];
+    db.expenses = exps;
+    db.atpos_v2_expenses = exps;
+  }
+  if (db.tp_product_returns || db.atpos_v2_returns) {
+    const rets = db.tp_product_returns || db.atpos_v2_returns || [];
+    db.product_returns = rets;
+    db.productReturns = rets;
+    db.atpos_v2_returns = rets;
+  }
+  if (db.tp_branch_sales_reports) {
+    db.branch_sales_reports = db.tp_branch_sales_reports;
+    db.branchSalesReports = db.tp_branch_sales_reports;
+  }
+  if (db.tp_branches) { db.branches = db.tp_branches; }
+  if (db.tp_users) { db.users = db.tp_users; }
+  if (db.tp_suppliers) { db.suppliers = db.tp_suppliers; }
+  if (db.tp_brands) { db.brands = db.tp_brands; }
+  if (db.tp_products) { db.products = db.tp_products; }
+  if (db.tp_branch_stock) { db.branch_stock = db.tp_branch_stock; db.branchStock = db.tp_branch_stock; }
+
+  return db;
+}
+
 export function readFullDatabaseFromAlasql() {
   const db = {};
 
@@ -339,6 +472,9 @@ export function readFullDatabaseFromAlasql() {
       }
     }
   } catch (e) {}
+
+  // Strip stale legacy collection keys before loading real table data
+  cleanStaleSettingsFromDb(db);
 
   for (const [tpKey, tableName] of Object.entries(KEY_TO_TABLE_MAP)) {
     if (tpKey === 'tp_db_snapshots') continue;
@@ -356,6 +492,7 @@ export function readFullDatabaseFromAlasql() {
   }
 
   sanitizeDatabaseFields(db);
+  mirrorStandardDbKeys(db);
 
   const hash = computeDatabaseHash(db);
   return { db, hash };
@@ -374,6 +511,9 @@ export async function readFullDatabaseFromMysql() {
       }
     }
   } catch (e) {}
+
+  // Strip stale legacy collection keys before loading real table data
+  cleanStaleSettingsFromDb(db);
 
   const entries = Object.entries(KEY_TO_TABLE_MAP).filter(([tpKey]) => tpKey !== 'tp_db_snapshots');
 
@@ -399,6 +539,7 @@ export async function readFullDatabaseFromMysql() {
   }
 
   sanitizeDatabaseFields(db);
+  mirrorStandardDbKeys(db);
 
   const hash = computeDatabaseHash(db);
   return { db, hash };

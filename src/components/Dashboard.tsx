@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ShoppingCart,
   Layers,
@@ -36,6 +36,18 @@ const LazyTopAndSlowSellingModal = React.lazy(() =>
   import('./dashboard/TopAndSlowSellingModal').then((m) => ({ default: m.TopAndSlowSellingModal }))
 );
 
+const parseDate = (d: any): Date => {
+  if (!d) return new Date(0);
+  if (d instanceof Date) return d;
+  if (typeof d === 'number') return new Date(d);
+  if (typeof d === 'string') {
+    const normalized = d.includes(' ') && !d.includes('T') ? d.replace(' ', 'T') : d;
+    const parsed = new Date(normalized);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+  return new Date(d);
+};
+
 interface DashboardProps {
   darkMode?: boolean;
   onNavigate: (tab: string) => void;
@@ -51,8 +63,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     branches,
     deliveries,
     shifts,
-    parkedSales
+    parkedSales,
+    syncFromSharedServer
   } = useDb();
+
+  // Auto-sync dashboard metrics from shared server on mount and periodically
+  useEffect(() => {
+    if (typeof syncFromSharedServer === 'function') {
+      syncFromSharedServer(true).catch(() => {});
+      const interval = setInterval(() => {
+        if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+          syncFromSharedServer(true).catch(() => {});
+        }
+      }, 15000);
+      return () => clearInterval(interval);
+    }
+  }, [syncFromSharedServer]);
 
   // Active time range for revenue graph
   const [timeRange, setTimeRange] = useState<'1D' | '1W' | '1M' | '3M' | '1Y' | 'All'>('1M');
@@ -120,7 +146,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const totalRevenue = useMemo(() => {
     return sales
       .filter((s) => !s.isDeleted)
-      .reduce((sum, s) => sum + (s.grandTotal || 0), 0);
+      .reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0);
   }, [sales]);
 
   // Total Inventory Valuation (sum of cost price * aggregate stock or branch stock)
@@ -128,8 +154,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     return products
       .filter((p) => !p.isDeleted)
       .reduce((sum, p) => {
-        const qty = p.stockQuantity || 0;
-        const price = p.sellingPrice || p.costPrice || 0;
+        const qty = Number(p.stockQuantity) || 0;
+        const price = Number(p.sellingPrice) || Number(p.costPrice) || 0;
         return sum + qty * price;
       }, 0);
   }, [products]);
@@ -158,8 +184,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           revenue: 0
         };
       }
-      qtyByProduct[key].qty += item.quantity || 0;
-      qtyByProduct[key].revenue += item.total || 0;
+      qtyByProduct[key].qty += Number(item.quantity) || 0;
+      qtyByProduct[key].revenue += Number(item.total) || 0;
     });
 
     const entries = Object.values(qtyByProduct);
@@ -200,8 +226,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const lowStockCount = useMemo(() => {
     return products.filter((p) => {
       if (p.isDeleted) return false;
-      const qty = p.stockQuantity ?? 0;
-      const threshold = p.minimumStock ?? p.lowStockThreshold ?? 10;
+      const qty = Number(p.stockQuantity) ?? 0;
+      const threshold = Number(p.minimumStock ?? p.lowStockThreshold) || 10;
       return qty <= threshold;
     }).length;
   }, [products]);
@@ -215,15 +241,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     const validSales = sales.filter((s) => !s.isDeleted && s.createdAt);
 
     const currentPeriodSales = validSales
-      .filter((s) => new Date(s.createdAt).getTime() >= thirtyDaysAgo.getTime())
-      .reduce((sum, s) => sum + (s.grandTotal || 0), 0);
+      .filter((s) => parseDate(s.createdAt).getTime() >= thirtyDaysAgo.getTime())
+      .reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0);
 
     const prevPeriodSales = validSales
       .filter((s) => {
-        const t = new Date(s.createdAt).getTime();
+        const t = parseDate(s.createdAt).getTime();
         return t >= sixtyDaysAgo.getTime() && t < thirtyDaysAgo.getTime();
       })
-      .reduce((sum, s) => sum + (s.grandTotal || 0), 0);
+      .reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0);
 
     let growth = 0;
     if (prevPeriodSales > 0) {
@@ -253,14 +279,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       const values = hourRanges.map((hr, idx) => {
         const nextHr = idx < hourRanges.length - 1 ? hourRanges[idx + 1] : 24;
         const bucketSales = validSales.filter((s) => {
-          const d = new Date(s.createdAt);
+          const d = parseDate(s.createdAt);
           return d.getTime() >= todayStart && d.getHours() >= hr && d.getHours() < nextHr;
         });
-        return bucketSales.reduce((sum, s) => sum + (s.grandTotal || 0), 0);
+        return bucketSales.reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0);
       });
 
       const todayTotal = values.reduce((a, b) => a + b, 0);
-      // If 0 today, fallback smoothly to cumulative curve or actual values
       const displayVals = values.some(v => v > 0) ? values : [0, 0, 0, 0, 0, 0, todayTotal || 0];
 
       return {
@@ -287,10 +312,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         const daySum = validSales
           .filter((s) => {
-            const st = new Date(s.createdAt).getTime();
+            const st = parseDate(s.createdAt).getTime();
             return st >= dayStart && st < dayEnd;
           })
-          .reduce((sum, s) => sum + (s.grandTotal || 0), 0);
+          .reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0);
 
         values.push(daySum);
         totalWeek += daySum;
@@ -319,10 +344,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         labels.push(`Day -${endDay || 0}`);
         const sum = validSales
           .filter((s) => {
-            const st = new Date(s.createdAt).getTime();
+            const st = parseDate(s.createdAt).getTime();
             return st >= dStart && st < dEnd;
           })
-          .reduce((acc, s) => acc + (s.grandTotal || 0), 0);
+          .reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
 
         values.push(sum);
         totalMonth += sum;
@@ -351,10 +376,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
         const sum = validSales
           .filter((s) => {
-            const st = new Date(s.createdAt).getTime();
+            const st = parseDate(s.createdAt).getTime();
             return st >= mStart && st < mEnd;
           })
-          .reduce((acc, s) => acc + (s.grandTotal || 0), 0);
+          .reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
 
         values.push(sum);
         total3M += sum;
@@ -374,11 +399,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       const curYear = now.getFullYear();
 
       validSales.forEach((s) => {
-        const d = new Date(s.createdAt);
+        const d = parseDate(s.createdAt);
         if (d.getFullYear() === curYear) {
           const q = Math.floor(d.getMonth() / 3);
           if (q >= 0 && q < 4) {
-            values[q] += s.grandTotal || 0;
+            values[q] += Number(s.grandTotal) || 0;
           }
         }
       });
@@ -398,8 +423,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     const labels = years.map(String);
     const values = years.map((y) => {
       return validSales
-        .filter((s) => new Date(s.createdAt).getFullYear() === y)
-        .reduce((sum, s) => sum + (s.grandTotal || 0), 0);
+        .filter((s) => parseDate(s.createdAt).getFullYear() === y)
+        .reduce((sum, s) => sum + (Number(s.grandTotal) || 0), 0);
     });
 
     return {
@@ -415,18 +440,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     const width = 800;
     const height = 240;
     const padding = 20;
-    const values = chartData.values;
+    const values = chartData.values.map((v) => Number(v) || 0);
+    if (values.length === 0) return { dLine: '', dArea: '', points: [] };
+
     const min = Math.min(...values) * 0.9;
     const max = Math.max(...values) * 1.05;
-    const range = max - min || 1;
+    const range = (max - min) || 1;
 
     const points = values.map((val, idx) => {
-      const x = padding + (idx / (values.length - 1)) * (width - padding * 2);
+      const divisor = values.length > 1 ? values.length - 1 : 1;
+      const x = padding + (idx / divisor) * (width - padding * 2);
       const y = height - padding - ((val - min) / range) * (height - padding * 2);
-      return { x, y, val };
+      return { x, y: isFinite(y) ? y : height - padding, val };
     });
-
-    if (points.length === 0) return { dLine: '', dArea: '', points: [] };
 
     // Build smooth bezier curve
     let dLine = `M ${points[0].x} ${points[0].y}`;
@@ -455,8 +481,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       customerName: (s) => s.customerName || 'Walk-In Customer',
       cashierName: (s) => s.cashierName || 'Cashier',
       paymentMethod: (s) => s.paymentMethod || '',
-      grandTotal: (s) => s.grandTotal || 0,
-      createdAt: (s) => new Date(s.createdAt || Date.now()).getTime(),
+      grandTotal: (s) => Number(s.grandTotal) || 0,
+      createdAt: (s) => parseDate(s.createdAt || Date.now()).getTime(),
     }
   });
 
@@ -626,9 +652,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               size="md"
               variant="flat"
               radius="full"
-              onClick={() => {
+              onClick={async () => {
                 setIsRefreshing(true);
-                setTimeout(() => setIsRefreshing(false), 500);
+                try {
+                  if (typeof syncFromSharedServer === 'function') {
+                    await syncFromSharedServer(false);
+                  }
+                } catch (err) {
+                  console.warn('[Dashboard] Refresh error:', err);
+                } finally {
+                  setIsRefreshing(false);
+                }
               }}
               className="bg-default-100 hover:bg-default-200 dark:bg-content2 dark:hover:bg-content3 text-foreground active:scale-[0.98]"
               aria-label="Refresh Metrics"
@@ -639,7 +673,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             <HeroDropdownSelect
               items={periodFilterItems}
               selectedKey={dashboardPeriod}
-              onSelectionChange={(k) => setDashboardPeriod(k)}
+              onSelectionChange={(k) => {
+                setDashboardPeriod(k);
+                if (k === 'daily') setTimeRange('1D');
+                else if (k === 'weekly') setTimeRange('1W');
+                else if (k === 'monthly') setTimeRange('1M');
+                else if (k === 'yearly') setTimeRange('1Y');
+              }}
               startIcon={<Calendar className="h-4 w-4" />}
               size="md"
               variant="pill"
