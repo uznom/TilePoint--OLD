@@ -41,6 +41,7 @@ import { ToastNotification } from "./ToastNotification";
 import { useReceiptFontSize } from "./ReceiptFontSizeControl";
 import { HeroButton } from "./common/ui/HeroButton";
 import { HeroChip } from "./common/ui/HeroChip";
+import { HeroDatePicker } from "./common/ui/HeroDatePicker";
 import { PosAddMemberModal } from "./pos/modals/PosAddMemberModal";
 import { PosCustomerModal } from "./pos/modals/PosCustomerModal";
 import { PosDiscountModal } from "./pos/modals/PosDiscountModal";
@@ -4172,15 +4173,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
  </div>
 
  <div className="space-y-1">
- <label className="text-[9px] font-black text-primary uppercase tracking-widest pl-1 block">
- Unloading Date *
- </label>
- <input
- type="date"
- required
+ <HeroDatePicker
+ label="Unloading Date *"
+ isRequired
  value={deliveryDate ?? ''}
- onChange={(e) => setDeliveryDate(e.target.value)}
- className="w-full bg-content1 border-b-2 border-divider/60 focus:border-primary px-3 py-1.5 text-xs focus:outline-none transition-colors rounded-lg font-bold cursor-pointer active:scale-[0.98]"
+ onChange={(val) => setDeliveryDate(val)}
+ size="sm"
+ radius="md"
+ placeholder="Select date"
  />
  </div>
 

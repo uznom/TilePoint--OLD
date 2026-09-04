@@ -17,7 +17,7 @@ import {
 import { Branch, Supplier, User, UserRole } from '../../types/db';
 import { useDb } from '../../context/DbContext';
 import { getBranchOptionLabel } from '../../lib/branchUtils';
-import { HeroButton, HeroCheckbox, HeroSelect } from '../common/ui';
+import { HeroButton, HeroCheckbox, HeroSelect, HeroDatePicker } from '../common/ui';
 import { HeroInput } from '../common/ui/HeroInput';
 import { HeroModal } from '../common/ui/HeroModal';
 
@@ -761,14 +761,14 @@ export const AddEditProductModal: React.FC<AddEditProductModalProps> = ({
                         Set the standard catalog expiration date for this listing. The system will flag this item in inventory tables and sales invoices when approaching or past expiration.
                       </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
-                        <HeroInput
+                        <HeroDatePicker
                           label="Catalog Expiry Date *"
-                          type="date"
-                          required={hasExpiration}
+                          isRequired={hasExpiration}
                           value={expirationDate ?? ''}
-                          onValueChange={val => setExpirationDate(val)}
+                          onChange={val => setExpirationDate(val)}
                           radius="lg"
                           variant="flat"
+                          placeholder="Select expiration date"
                         />
                         <div className="bg-white dark:bg-zinc-900 p-3.5 rounded-2xl border border-amber-500/20 text-[11px] text-default-500 flex flex-col justify-center gap-0.5 shadow-2xs">
                           <div className="font-bold text-amber-500 flex items-center gap-1">

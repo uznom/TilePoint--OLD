@@ -12,6 +12,7 @@ import {
 import { CustomCorporateBill, PoItem, PurchaseOrder, Supplier, User, UserRole } from "../../../types/db";
 import { HeroSelect } from "../../common/ui/HeroSelect";
 import { HeroDropdownSelect } from "../../common/ui/HeroDropdown";
+import { HeroDatePicker } from "../../common/ui/HeroDatePicker";
 
 export interface SuppliersCalendarTabProps {
   currentUser: User | null;
@@ -552,12 +553,14 @@ export const SuppliersCalendarTab: React.FC<SuppliersCalendarTabProps> = ({
                 />
               </div>
               <div className="space-y-1">
-                <label className="font-bold text-default-500">Target Start Due Date *</label>
-                <input
-                  type="date"
+                <HeroDatePicker
+                  label="Target Start Due Date *"
+                  isRequired
                   value={billDueDate}
-                  onChange={(e) => setBillDueDate(e.target.value)}
-                  className="w-full bg-content1 border border-divider rounded-lg p-2.5 outline-none cursor-pointer font-bold text-foreground"
+                  onChange={(val) => setBillDueDate(val)}
+                  size="sm"
+                  radius="md"
+                  placeholder="Select start due date"
                 />
               </div>
               <button

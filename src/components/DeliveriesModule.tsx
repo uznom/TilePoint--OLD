@@ -35,6 +35,7 @@ import { HeroTable } from './common/ui/HeroTable';
 import { HeroButton } from './common/ui/HeroButton';
 import { HeroSelect } from './common/ui/HeroSelect';
 import { HeroDropdownSelect } from './common/ui/HeroDropdown';
+import { HeroDatePicker } from './common/ui/HeroDatePicker';
 import { useMultiSort } from '../hooks/useMultiSort';
 import { Delivery } from '../types/db';
 
@@ -1618,14 +1619,13 @@ export const DeliveriesModule: React.FC<DeliveriesModuleProps> = ({ darkMode: _d
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-black uppercase text-default-500 mb-1">
-                Target Unloading Date
-              </label>
-              <input
-                type="date"
+              <HeroDatePicker
+                label="Target Unloading Date"
                 value={posDelivDate ?? ''}
-                onChange={(e) => setPosDelivDate(e.target.value)}
-                className="w-full bg-content1 text-xs font-bold text-foreground border border-divider/30 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-primary"
+                onChange={(val) => setPosDelivDate(val)}
+                size="sm"
+                radius="md"
+                placeholder="Select unloading date"
               />
             </div>
             <div>
