@@ -787,8 +787,17 @@ function AppContent() {
   }, [cleanupProgressTimers, setActiveTab]);
 
   const handleChangeTab = useCallback((tabId: string) => {
-    if (tabId === activeTab) return;
-    const targetItem = allSubModules.find((sub) => sub.id === tabId);
+    const aliasMap: Record<string, string> = {
+      stocks: "inventory-stocks",
+      inventory: "inventory-stocks",
+      deliveries: "deliveries-panel",
+      birReports: "reconciliation-transmission",
+      adminProfit: "profit-analytics",
+      procurement: "procurement-po",
+    };
+    const resolvedTab = aliasMap[tabId] || tabId;
+    if (resolvedTab === activeTab) return;
+    const targetItem = allSubModules.find((sub) => sub.id === resolvedTab);
     if (targetItem && currentUser && targetItem.roles && !targetItem.roles.includes(currentUser.role)) {
       showToastMsg(`Access Restricted: ${currentUser.role} role cannot view ${targetItem.name}.`);
       return;
@@ -814,7 +823,7 @@ function AppContent() {
       }
     }
 
-    handleSmoothTabChange(tabId);
+    handleSmoothTabChange(resolvedTab);
   }, [activeTab, currentUser, holdSale, showToastMsg, handleSmoothTabChange]);
 
   useEffect(() => {
@@ -1034,7 +1043,7 @@ function AppContent() {
                         <Dashboard darkMode={darkMode} onNavigate={handleChangeTab} />
                       )}
 
-                      {activeTab === "profit-analytics" && (
+                      {(activeTab === "profit-analytics" || activeTab === "adminProfit") && (
                         <AdminProfitModule
                           darkMode={darkMode}
                           selectedBranchId={selectedBranchId}
@@ -1062,7 +1071,7 @@ function AppContent() {
                         />
                       )}
 
-                      {activeTab === "inventory" && (
+                      {(activeTab === "inventory" || activeTab === "stocks") && (
                         <InventoryModule
                           darkMode={darkMode}
                           initialSubTab="catalog"
@@ -1106,7 +1115,7 @@ function AppContent() {
 
                       {activeTab === "users" && <UsersModule darkMode={darkMode} />}
 
-                      {activeTab === "reconciliation-transmission" && (
+                      {(activeTab === "reconciliation-transmission" || activeTab === "birReports") && (
                         <ReconciliationTransmissionModule darkMode={darkMode} />
                       )}
 
@@ -1118,7 +1127,7 @@ function AppContent() {
                         <DailyReconciliationModule darkMode={darkMode} />
                       )}
 
-                      {activeTab === "deliveries-panel" && (
+                      {(activeTab === "deliveries-panel" || activeTab === "deliveries") && (
                         <DeliveriesModule darkMode={darkMode} />
                       )}
 

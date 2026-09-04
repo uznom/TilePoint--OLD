@@ -465,6 +465,8 @@ export const DOCS_CATEGORIES: DocCategory[] = [
         description: 'Complete hotkey cheat-sheet for rapid, mouse-free cashiering and quick module navigation.',
         readTime: '3 min read',
         iconName: 'Command',
+        targetTab: 'pos',
+        targetTabLabel: 'Open POS Terminal',
         keywords: ['shortcuts', 'hotkeys', 'keyboard', 'f7', 'f2', 'f8', 'esc', 'quick switch'],
         sections: [
           {
@@ -500,6 +502,8 @@ export const DOCS_CATEGORIES: DocCategory[] = [
         description: 'Solutions for common operational challenges: sync warnings, receipt printer jams, offline mode recovery, and PIN resets.',
         readTime: '4 min read',
         iconName: 'AlertCircle',
+        targetTab: 'dashboard',
+        targetTabLabel: 'Open Dashboard',
         keywords: ['troubleshooting', 'faq', 'printer jam', 'sync error', 'pin reset', 'offline recovery'],
         sections: [
           {
