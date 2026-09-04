@@ -10,3 +10,5 @@ export * from "./modals/QuickProductModal";
 export * from "./modals/PoDetailsModal";
 export * from "./modals/SupplierProfileModal";
 export * from "./modals/ConsolidationSourcingModal";
+export * from "./modals/BrandProductsModal";
+export * from "./modals/SupplierBrandsModal";

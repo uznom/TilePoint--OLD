@@ -1,28 +1,56 @@
 import React, { useState } from "react";
-import { Supplier, User, UserRole } from "../../types/db";
-import { Building2, Plus, Edit2, Trash2, Mail, Phone, Search } from "lucide-react";
+import { Supplier, Brand, Product, User, UserRole } from "../../types/db";
+import { Building2, Plus, Edit2, Trash2, Mail, Search, Tag, AlertTriangle, ArrowRight } from "lucide-react";
 import { HeroButton } from "../common/ui/HeroButton";
 import { HeroTable } from "../common/ui/HeroTable";
+import { SupplierBrandsModal } from "./modals/SupplierBrandsModal";
 
 export interface SuppliersManagementTabProps {
   suppliers: Supplier[];
+  brands?: Brand[];
+  products?: Product[];
   currentUser: User | null;
   onOpenAddSupplier: () => void;
   onOpenEditSupplier: (sup: Supplier) => void;
   onDeleteSupplier: (sup: Supplier) => void;
   onViewSupplierProfile: (sup: Supplier) => void;
+  onNavigateToBrands?: () => void;
+  onViewSupplierBrands?: (sup: Supplier) => void;
+  onMapBrand?: (brandId: string, supplierId: string) => void;
+  onUnmapBrand?: (brandId: string) => void;
+  onViewBrandProducts?: (brand: Brand) => void;
+  onOpenAddBrand?: () => void;
 }
 
 export const SuppliersManagementTab: React.FC<SuppliersManagementTabProps> = ({
   suppliers,
+  brands = [],
+  products = [],
   currentUser,
   onOpenAddSupplier,
   onOpenEditSupplier,
   onDeleteSupplier,
   onViewSupplierProfile,
+  onNavigateToBrands,
+  onViewSupplierBrands,
+  onMapBrand,
+  onUnmapBrand,
+  onViewBrandProducts,
+  onOpenAddBrand,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewingSupplierBrands, setViewingSupplierBrands] = useState<Supplier | null>(null);
   const activeSuppliers = suppliers.filter((s) => !s.isDeleted);
+  const activeBrands = brands.filter((b) => !b.isDeleted);
+  const unmappedBrands = activeBrands.filter(
+    (b) =>
+      !b.supplierId ||
+      b.supplierId.trim() === "" ||
+      b.supplierId === "unassigned" ||
+      !suppliers.some((s) => s.id === b.supplierId && !s.isDeleted)
+  );
+  const mappedBrandsCount = activeBrands.length - unmappedBrands.length;
+
   const filteredSuppliers = activeSuppliers.filter(
     (s) =>
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -35,7 +63,7 @@ export const SuppliersManagementTab: React.FC<SuppliersManagementTabProps> = ({
   return (
     <div className="space-y-6 animate-fade-in text-left">
       {/* Metrics Banner */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div className="bg-content1 p-4 rounded-2xl border border-divider/20 shadow-xs flex items-center gap-4">
           <div className="p-3 rounded-xl bg-primary/10 text-primary shrink-0">
             <Building2 className="h-5 w-5" />
@@ -62,16 +90,64 @@ export const SuppliersManagementTab: React.FC<SuppliersManagementTabProps> = ({
 
         <div className="bg-content1 p-4 rounded-2xl border border-divider/20 shadow-xs flex items-center gap-4">
           <div className="p-3 rounded-xl bg-sky-500/10 text-sky-500 shrink-0">
-            <Phone className="h-5 w-5" />
+            <Tag className="h-5 w-5" />
           </div>
           <div>
-            <span className="block text-[8px] font-extrabold text-default-500 uppercase tracking-widest">Direct Contact</span>
+            <span className="block text-[8px] font-extrabold text-default-500 uppercase tracking-widest">Brands Associated</span>
             <div className="text-xl font-black mt-1 text-sky-500">
-              {activeSuppliers.filter((s) => s.phone).length} Direct Lines
+              {mappedBrandsCount} Mapped
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-content1 p-4 rounded-2xl border border-divider/20 shadow-xs flex items-center gap-4">
+          <div className={`p-3 rounded-xl shrink-0 ${
+            unmappedBrands.length > 0 ? "bg-amber-500/10 text-amber-500" : "bg-emerald-500/10 text-emerald-500"
+          }`}>
+            <AlertTriangle className="h-5 w-5" />
+          </div>
+          <div>
+            <span className="block text-[8px] font-extrabold text-default-500 uppercase tracking-widest">Unmapped Brands</span>
+            <div className={`text-xl font-black mt-1 ${
+              unmappedBrands.length > 0 ? "text-amber-500" : "text-emerald-500"
+            }`}>
+              {unmappedBrands.length > 0 ? `${unmappedBrands.length} Need Vendor` : "All Mapped"}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Unmapped Brands Banner Alert */}
+      {unmappedBrands.length > 0 && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0">
+              <AlertTriangle className="h-4 w-4" />
+            </div>
+            <div>
+              <span className="font-black text-xs text-foreground">
+                {unmappedBrands.length} Brand{unmappedBrands.length > 1 ? "s" : ""} currently unmapped in catalog
+              </span>
+              <p className="text-[11px] text-default-500 mt-0.5">
+                Open any vendor profile to easily link these brands, or manage all associations under Brands Mapping.
+              </p>
+            </div>
+          </div>
+          {onNavigateToBrands && (
+            <HeroButton
+              size="sm"
+              color="primary"
+              variant="flat"
+              radius="full"
+              onClick={onNavigateToBrands}
+              endIcon={<ArrowRight className="h-3 w-3" />}
+              className="font-bold shrink-0 text-xs"
+            >
+              Go to Brands Mapping
+            </HeroButton>
+          )}
+        </div>
+      )}
 
       {/* Action Header & Search */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -104,6 +180,7 @@ export const SuppliersManagementTab: React.FC<SuppliersManagementTabProps> = ({
       <HeroTable isStriped className="min-w-full">
         <HeroTable.Header>
           <HeroTable.Column>Enterprise Vendor</HeroTable.Column>
+          <HeroTable.Column>Mapped Brands</HeroTable.Column>
           <HeroTable.Column>Contact Representative</HeroTable.Column>
           <HeroTable.Column>Direct Phone</HeroTable.Column>
           <HeroTable.Column>Invoicing Email</HeroTable.Column>
@@ -113,63 +190,133 @@ export const SuppliersManagementTab: React.FC<SuppliersManagementTabProps> = ({
         <HeroTable.Body>
           {filteredSuppliers.length === 0 ? (
             <HeroTable.Row isHoverable={false}>
-              <HeroTable.Cell colSpan={6} className="p-8 text-center text-default-500 font-medium">
+              <HeroTable.Cell colSpan={7} className="p-8 text-center text-default-500 font-medium">
                 No suppliers match your search criteria.
               </HeroTable.Cell>
             </HeroTable.Row>
           ) : (
-            filteredSuppliers.map((sup) => (
-              <HeroTable.Row key={sup.id}>
-                <HeroTable.Cell>
-                  <button
-                    type="button"
-                    onClick={() => onViewSupplierProfile(sup)}
-                    className="font-black text-primary hover:underline cursor-pointer block text-left"
-                  >
-                    {sup.name}
-                  </button>
-                </HeroTable.Cell>
-                <HeroTable.Cell className="font-bold text-foreground">{sup.contactPerson}</HeroTable.Cell>
-                <HeroTable.Cell className="font-mono text-default-500">{sup.phone || "N/A"}</HeroTable.Cell>
-                <HeroTable.Cell className="font-mono text-default-500 truncate max-w-[180px]">{sup.email || "N/A"}</HeroTable.Cell>
-                <HeroTable.Cell className="text-default-500 truncate max-w-[200px]">{sup.address || "N/A"}</HeroTable.Cell>
-                <HeroTable.Cell align="end">
-                  <div className="flex items-center justify-end gap-1.5">
+            filteredSuppliers.map((sup) => {
+              const supBrands = activeBrands.filter((b) => b.supplierId === sup.id);
+              return (
+                <HeroTable.Row key={sup.id}>
+                  <HeroTable.Cell>
                     <button
                       type="button"
                       onClick={() => onViewSupplierProfile(sup)}
-                      className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-primary transition-colors cursor-pointer active:scale-95"
-                      title="View Profile & Products"
+                      className="font-black text-primary hover:underline cursor-pointer block text-left"
                     >
-                      <Building2 className="h-4 w-4" />
+                      {sup.name}
                     </button>
-                    {isAdmin && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => onOpenEditSupplier(sup)}
-                          className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer active:scale-95"
-                          title="Edit Vendor"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onDeleteSupplier(sup)}
-                          className="p-1.5 rounded-xl hover:bg-danger/10 text-default-500 hover:text-danger transition-colors cursor-pointer active:scale-95"
-                          title="Delete Vendor"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </>
+                  </HeroTable.Cell>
+                  <HeroTable.Cell>
+                    {supBrands.length === 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewingSupplierBrands(sup);
+                          onViewSupplierBrands?.(sup);
+                        }}
+                        className="text-[10px] text-amber-500 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                        title="Click to view and map brands for this vendor"
+                      >
+                        <Plus className="h-3 w-3" /> Link Brands
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewingSupplierBrands(sup);
+                          onViewSupplierBrands?.(sup);
+                        }}
+                        className="flex flex-wrap gap-1 max-w-[200px] text-left hover:opacity-80 transition-opacity cursor-pointer"
+                        title="Click to view all brands supplied by this vendor"
+                      >
+                        {supBrands.slice(0, 2).map((b) => (
+                          <span
+                            key={b.id}
+                            className="px-1.5 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold truncate max-w-[90px]"
+                          >
+                            {b.name}
+                          </span>
+                        ))}
+                        {supBrands.length > 2 && (
+                          <span className="px-1 py-0.5 rounded-md bg-content2 text-default-500 text-[9px] font-bold">
+                            +{supBrands.length - 2}
+                          </span>
+                        )}
+                      </button>
                     )}
-                  </div>
-                </HeroTable.Cell>
-              </HeroTable.Row>
-            ))
+                  </HeroTable.Cell>
+                  <HeroTable.Cell className="font-bold text-foreground">{sup.contactPerson}</HeroTable.Cell>
+                  <HeroTable.Cell className="font-mono text-default-500">{sup.phone || "N/A"}</HeroTable.Cell>
+                  <HeroTable.Cell className="font-mono text-default-500 truncate max-w-[180px]">{sup.email || "N/A"}</HeroTable.Cell>
+                  <HeroTable.Cell className="text-default-500 truncate max-w-[200px]">{sup.address || "N/A"}</HeroTable.Cell>
+                  <HeroTable.Cell align="end">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setViewingSupplierBrands(sup);
+                          onViewSupplierBrands?.(sup);
+                        }}
+                        className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-sky-500 transition-colors cursor-pointer active:scale-95"
+                        title="View Brands Portfolio"
+                      >
+                        <Tag className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onViewSupplierProfile(sup)}
+                        className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-primary transition-colors cursor-pointer active:scale-95"
+                        title="View Profile & Manage Brand Mapping"
+                      >
+                        <Building2 className="h-4 w-4" />
+                      </button>
+                      {isAdmin && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => onOpenEditSupplier(sup)}
+                            className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer active:scale-95"
+                            title="Edit Vendor"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onDeleteSupplier(sup)}
+                            className="p-1.5 rounded-xl hover:bg-danger/10 text-default-500 hover:text-danger transition-colors cursor-pointer active:scale-95"
+                            title="Delete Vendor"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </HeroTable.Cell>
+                </HeroTable.Row>
+              );
+            })
           )}
         </HeroTable.Body>
       </HeroTable>
+
+      {/* Supplier Brands Modal */}
+      <SupplierBrandsModal
+        isOpen={Boolean(viewingSupplierBrands)}
+        onClose={() => setViewingSupplierBrands(null)}
+        supplier={viewingSupplierBrands}
+        brands={brands}
+        products={products}
+        isAdmin={isAdmin}
+        onMapBrand={onMapBrand}
+        onUnmapBrand={onUnmapBrand}
+        onViewBrandProducts={onViewBrandProducts}
+        onOpenAddBrand={() => {
+          setViewingSupplierBrands(null);
+          onOpenAddBrand?.();
+        }}
+      />
     </div>
   );
 };

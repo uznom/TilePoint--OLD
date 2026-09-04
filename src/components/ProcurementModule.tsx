@@ -25,6 +25,7 @@ import {
   PoDetailsModal,
   SupplierProfileModal,
   ConsolidationSourcingModal,
+  BrandProductsModal,
   DraftPoItem,
   PoTemplateItem,
   PoCartItem,
@@ -149,6 +150,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
   const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
   const [isEditingBrand, setIsEditingBrand] = useState(false);
   const [editingBrandId, setEditingBrandId] = useState<string | null>(null);
+  const [viewingBrandProducts, setViewingBrandProducts] = useState<Brand | null>(null);
 
   // Supplier Form State
   const [supplierName, setSupplierName] = useState("");
@@ -260,6 +262,75 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
     }
   };
 
+  // Discover and synthesize all unique brand names from inventory products
+  const inventoryBrandNames = useMemo(() => {
+    const set = new Set<string>();
+    products.forEach((p) => {
+      if (!p.isDeleted && p.brand && p.brand.trim() !== "") {
+        set.add(p.brand.trim());
+      }
+    });
+    return Array.from(set);
+  }, [products]);
+
+  // Combine registered brands with any distinct brands discovered in inventory products
+  const allBrands = useMemo(() => {
+    const brandMap = new Map<string, Brand>();
+
+    // 1. First register all explicitly created brands from tp_brands
+    brands.forEach((b) => {
+      if (!b.isDeleted && b.name?.trim()) {
+        brandMap.set(b.name.trim().toLowerCase(), b);
+      }
+    });
+
+    // 2. Discover any brand names present in inventory products
+    inventoryBrandNames.forEach((brandName) => {
+      const normalized = brandName.toLowerCase();
+      if (!brandMap.has(normalized)) {
+        // Find if any product with this brand has a supplierId
+        const matchingProducts = products.filter(
+          (p) => !p.isDeleted && p.brand?.trim().toLowerCase() === normalized
+        );
+        const inferredSupplierId = matchingProducts.find((p) => p.supplierId)?.supplierId || "";
+
+        brandMap.set(normalized, {
+          id: `INV-BND-${encodeURIComponent(normalized)}`,
+          name: brandName,
+          supplierId: inferredSupplierId,
+          description: `Discovered from ${matchingProducts.length} inventory product${matchingProducts.length !== 1 ? "s" : ""}`,
+          isDeleted: false,
+          createdAt: matchingProducts[0]?.createdAt || new Date().toISOString(),
+        });
+      }
+    });
+
+    return Array.from(brandMap.values());
+  }, [brands, inventoryBrandNames, products]);
+
+  // Check if there are inventory brands not yet in tp_brands
+  const unsyncedInventoryBrands = useMemo(() => {
+    const registeredNames = new Set(
+      brands.filter((b) => !b.isDeleted).map((b) => b.name.trim().toLowerCase())
+    );
+    return inventoryBrandNames.filter((name) => !registeredNames.has(name.toLowerCase()));
+  }, [brands, inventoryBrandNames]);
+
+  // Handler to permanently persist all discovered inventory brands into tp_brands
+  const handleSyncInventoryBrands = useCallback(async () => {
+    if (unsyncedInventoryBrands.length === 0) return;
+    for (const name of unsyncedInventoryBrands) {
+      const matching = products.filter((p) => !p.isDeleted && p.brand?.trim().toLowerCase() === name.toLowerCase());
+      const supplierId = matching.find((p) => p.supplierId)?.supplierId || "";
+      await createBrand({
+        name,
+        supplierId,
+        description: `Discovered from ${matching.length} inventory product${matching.length !== 1 ? "s" : ""}`,
+      });
+    }
+    showToast(`Synced ${unsyncedInventoryBrands.length} inventory brand(s) to catalog!`);
+  }, [unsyncedInventoryBrands, products, createBrand, showToast]);
+
   const handleOpenAddBrand = () => {
     setIsEditingBrand(false);
     setEditingBrandId(null);
@@ -287,12 +358,21 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
       return;
     }
     if (isEditingBrand && editingBrandId) {
-      await updateBrand(editingBrandId, {
-        name: brandName.trim(),
-        supplierId: brandSupplierId,
-        description: brandDescription.trim(),
-      });
-      showToast(`Brand "${brandName}" updated.`);
+      if (brands.some((b) => b.id === editingBrandId)) {
+        await updateBrand(editingBrandId, {
+          name: brandName.trim(),
+          supplierId: brandSupplierId,
+          description: brandDescription.trim(),
+        });
+        showToast(`Brand "${brandName}" updated.`);
+      } else {
+        await createBrand({
+          name: brandName.trim(),
+          supplierId: brandSupplierId,
+          description: brandDescription.trim(),
+        });
+        showToast(`Inventory brand "${brandName}" cataloged.`);
+      }
     } else {
       await createBrand({
         name: brandName.trim(),
@@ -306,10 +386,45 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
 
   const handleDeleteBrand = async (brand: Brand) => {
     if (window.confirm(`Are you sure you want to delete brand "${brand.name}"?`)) {
-      await deleteBrand(brand.id);
+      if (brands.some((b) => b.id === brand.id)) {
+        await deleteBrand(brand.id);
+      }
       showToast(`Brand "${brand.name}" removed.`);
     }
   };
+
+  const handleMapBrandToSupplier = useCallback(
+    async (brandId: string, supId: string) => {
+      const existing = brands.find((b) => b.id === brandId);
+      const sup = suppliers.find((s) => s.id === supId);
+      if (existing) {
+        await updateBrand(brandId, { supplierId: supId });
+        showToast(`Brand "${existing.name}" mapped to "${sup?.name || supId}"!`);
+      } else {
+        const discovered = allBrands.find((b) => b.id === brandId);
+        if (discovered) {
+          await createBrand({
+            name: discovered.name,
+            supplierId: supId,
+            description: discovered.description || "Active product line from inventory",
+          });
+          showToast(`Inventory brand "${discovered.name}" registered and mapped to "${sup?.name || supId}"!`);
+        }
+      }
+    },
+    [brands, allBrands, suppliers, updateBrand, createBrand, showToast]
+  );
+
+  const handleUnmapBrand = useCallback(
+    async (brandId: string) => {
+      const existing = brands.find((b) => b.id === brandId);
+      if (existing) {
+        await updateBrand(brandId, { supplierId: "" });
+        showToast(`Brand "${existing.name}" unlinked from vendor.`);
+      }
+    },
+    [brands, updateBrand, showToast]
+  );
 
   const handleOpenCreatePo = () => {
     setSelectedSupplierId(suppliers[0]?.id || "");
@@ -484,7 +599,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
           {[
             { id: "po", label: "Purchase Orders", icon: FileText, count: purchaseOrders.length },
             ...(currentUser?.role === UserRole.ADMIN ? [{ id: "suppliers", label: "Suppliers Directory", icon: Building2, count: suppliers.filter((s) => !s.isDeleted).length }] : []),
-            { id: "brands", label: "Brands Mapping", icon: Tag, count: brands.filter((b) => !b.isDeleted).length },
+            { id: "brands", label: "Brands Mapping", icon: Tag, count: allBrands.length },
             { id: "consolidation", label: "Requisitions Cart", icon: ShoppingCart, count: poCart.length },
           ].map((tab: any) => {
             const Icon = tab.icon;
@@ -543,6 +658,8 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
       {activeSubTab === "suppliers" && (
         <SuppliersManagementTab
           suppliers={suppliers}
+          brands={allBrands}
+          products={products}
           currentUser={currentUser}
           onOpenAddSupplier={handleOpenAddSupplier}
           onOpenEditSupplier={handleOpenEditSupplier}
@@ -551,17 +668,27 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
             setActiveSupplierProfile(sup);
             setShowSupplierProfileModal(true);
           }}
+          onNavigateToBrands={() => setActiveSubTab("brands")}
+          onMapBrand={handleMapBrandToSupplier}
+          onUnmapBrand={handleUnmapBrand}
+          onViewBrandProducts={(brand) => setViewingBrandProducts(brand)}
+          onOpenAddBrand={handleOpenAddBrand}
         />
       )}
 
       {activeSubTab === "brands" && (
         <BrandsManagementTab
-          brands={brands}
+          brands={allBrands}
           suppliers={suppliers}
+          products={products}
           currentUser={currentUser}
+          hasUnsyncedInventoryBrands={unsyncedInventoryBrands.length > 0}
           onOpenAddBrand={handleOpenAddBrand}
           onOpenEditBrand={handleOpenEditBrand}
           onDeleteBrand={handleDeleteBrand}
+          onQuickMapSupplier={handleMapBrandToSupplier}
+          onSyncInventoryBrands={handleSyncInventoryBrands}
+          onViewBrandProducts={(brand) => setViewingBrandProducts(brand)}
         />
       )}
 
@@ -676,7 +803,7 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
         setQuickProductPrice={setQuickProductPrice}
         quickProductSupplierId={quickProductSupplierId}
         setQuickProductSupplierId={setQuickProductSupplierId}
-        brands={brands}
+        brands={allBrands}
         suppliers={suppliers}
         onSave={handleSaveQuickProduct}
         onGenerateBarcode={() => setQuickProductBarcode(generateEan13Barcode())}
@@ -696,6 +823,21 @@ export const ProcurementModule: React.FC<ProcurementModuleProps> = ({
         isOpen={showSupplierProfileModal}
         onClose={() => setShowSupplierProfileModal(false)}
         supplier={activeSupplierProfile}
+        products={products}
+        brands={allBrands}
+        suppliers={suppliers}
+        currentUser={currentUser}
+        isAdmin={currentUser?.role === UserRole.ADMIN}
+        onMapBrand={handleMapBrandToSupplier}
+        onUnmapBrand={handleUnmapBrand}
+        onViewBrandProducts={(brand) => setViewingBrandProducts(brand)}
+      />
+
+      <BrandProductsModal
+        isOpen={Boolean(viewingBrandProducts)}
+        onClose={() => setViewingBrandProducts(null)}
+        brand={viewingBrandProducts}
+        supplier={suppliers.find((s) => s.id === viewingBrandProducts?.supplierId)}
         products={products}
       />
 
