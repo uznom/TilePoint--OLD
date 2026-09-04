@@ -2491,12 +2491,14 @@ export const InventoryModule: React.FC<InventoryModuleProps> = ({
     onCancel={() => setConfirmDeleteBatchId(null)}
   />
 
-  {/* Master Data Dynamic Entity Config Modal */}
-  <DynamicEntityConfigModal
-    isOpen={showDynamicConfigModal}
-    onClose={() => setShowDynamicConfigModal(false)}
-    initialTab={dynamicConfigTab}
-  />
+  {/* Master Data Dynamic Entity Config Modal - Admin only */}
+  {isAdminUser && (
+    <DynamicEntityConfigModal
+      isOpen={showDynamicConfigModal}
+      onClose={() => setShowDynamicConfigModal(false)}
+      initialTab={dynamicConfigTab}
+    />
+  )}
 
   {/* Non-dismissable High-Priority CSV Import Progress Modal Overlay */}
   <ImportProgressOverlay

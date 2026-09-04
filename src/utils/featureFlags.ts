@@ -45,6 +45,20 @@ export function saveStoredFeatureFlags(flags: Partial<BusinessFeatureFlags>): Bu
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       window.dispatchEvent(new CustomEvent('tilepoint_feature_flags_changed', { detail: updated }));
+
+      // Persist to database system_settings so it applies to all users and terminals
+      const token = sessionStorage.getItem("tp_session_token") || localStorage.getItem("tp_session_token");
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      fetch('/api/db/', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ key: 'tp_feature_flags', value: updated }),
+      }).catch((e) => {
+        console.warn('[FeatureFlags] Database sync warning:', e);
+      });
     } catch (e) {
       console.warn('[FeatureFlags] Save error:', e);
     }

@@ -175,8 +175,11 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
     lastSyncTime,
     outboxStats,
     setIsOutboxModalOpen,
+    safeApiFetch,
+    getAuthHeaders,
   } = useDb();
 
+  const isAdmin = currentUser?.role === UserRole.ADMIN;
   const isAuthorized =
     currentUser &&
     (currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.MANAGER);
@@ -448,6 +451,27 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
       updateCurrentUser({ managerPin });
     }
 
+    if (safeApiFetch) {
+      safeApiFetch('/api/db/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(getAuthHeaders ? getAuthHeaders() : {}),
+        },
+        body: JSON.stringify({
+          key: 'tp_store_settings',
+          value: {
+            companyName,
+            taxRate,
+            currency,
+            logoSize,
+          },
+        }),
+      }).catch((err) => {
+        console.warn('[StoreSettings Sync] Push to database failed:', err);
+      });
+    }
+
     window.dispatchEvent(new Event('tilepoint-theme-updated'));
     setSavedToast(true);
     setTimeout(() => setSavedToast(false), 2000);
@@ -552,142 +576,144 @@ export const SystemSettingsModule: React.FC<SystemSettingsModuleProps> = ({
         </div>
       </div>
 
-      {/* STORE OPTIONS & CATALOGS */}
-      <div className="p-5 rounded-2xl border border-primary/30 bg-primary/5 space-y-4 shadow-2xs">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="p-3 rounded-xl bg-primary text-primary-foreground shadow-2xs shrink-0">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-xs font-black uppercase text-foreground tracking-wider">
-                  Store Options &amp; Catalogs
-                </h4>
-                <span className="text-[9px] uppercase font-black px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                  Active
-                </span>
+      {/* STORE OPTIONS & CATALOGS - Admin only */}
+      {isAdmin && (
+        <div className="p-5 rounded-2xl border border-primary/30 bg-primary/5 space-y-4 shadow-2xs">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="p-3 rounded-xl bg-primary text-primary-foreground shadow-2xs shrink-0">
+                <Sparkles className="h-5 w-5" />
               </div>
-              <p className="text-[11px] text-default-500 font-medium mt-0.5">
-                Manage product categories, measurement units, payment methods, discounts, and damage causes.
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-black uppercase text-foreground tracking-wider">
+                    Store Options &amp; Catalogs
+                  </h4>
+                  <span className="text-[9px] uppercase font-black px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                    Active
+                  </span>
+                </div>
+                <p className="text-[11px] text-default-500 font-medium mt-0.5">
+                  Manage product categories, measurement units, payment methods, discounts, and damage causes.
+                </p>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                setDynamicConfigTab('categories');
+                setShowDynamicConfig(true);
+              }}
+              className="px-4 py-2.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl shadow-md hover:opacity-90 active:scale-95 transition-all cursor-pointer shrink-0 flex items-center gap-2"
+            >
+              <Sliders className="h-4 w-4" />
+              <span>Manage Options</span>
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setDynamicConfigTab('categories');
-              setShowDynamicConfig(true);
-            }}
-            className="px-4 py-2.5 bg-primary text-primary-foreground font-black text-xs uppercase tracking-wider rounded-xl shadow-md hover:opacity-90 active:scale-95 transition-all cursor-pointer shrink-0 flex items-center gap-2"
-          >
-            <Sliders className="h-4 w-4" />
-            <span>Manage Options</span>
-          </button>
+
+          {/* Quick entity overview chips */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 pt-2 border-t border-primary/10">
+            <button
+              type="button"
+              onClick={() => {
+                setDynamicConfigTab('categories');
+                setShowDynamicConfig(true);
+              }}
+              className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer active:scale-[0.98]"
+            >
+              <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1 active:scale-[0.98]">
+                <Tag className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-black">{productCategories.length}</span>
+              </div>
+              <div className="text-[11px] font-bold text-foreground">Categories</div>
+              <div className="text-[9px] text-default-400">Product groups</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setDynamicConfigTab('units');
+                setShowDynamicConfig(true);
+              }}
+              className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer active:scale-[0.98]"
+            >
+              <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1 active:scale-[0.98]">
+                <Ruler className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-black">{unitTypes.length}</span>
+              </div>
+              <div className="text-[11px] font-bold text-foreground">Units of Measure</div>
+              <div className="text-[9px] text-default-400">Pcs, Boxes, Sqm...</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setDynamicConfigTab('payments');
+                setShowDynamicConfig(true);
+              }}
+              className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer active:scale-[0.98]"
+            >
+              <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1 active:scale-[0.98]">
+                <CreditCard className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-black">{paymentMethodsList.length}</span>
+              </div>
+              <div className="text-[11px] font-bold text-foreground">Payment Methods</div>
+              <div className="text-[9px] text-default-400">Cash, Cards, GCash...</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setDynamicConfigTab('discounts');
+                setShowDynamicConfig(true);
+              }}
+              className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer active:scale-[0.98]"
+            >
+              <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1 active:scale-[0.98]">
+                <Percent className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-black">{discountSchemes.length}</span>
+              </div>
+              <div className="text-[11px] font-bold text-foreground">Discounts</div>
+              <div className="text-[9px] text-default-400">Senior, PWD, Promo...</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setDynamicConfigTab('damages');
+                setShowDynamicConfig(true);
+              }}
+              className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer active:scale-[0.98]"
+            >
+              <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1 active:scale-[0.98]">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span className="text-[10px] font-black">{damageReasonsList.length}</span>
+              </div>
+              <div className="text-[11px] font-bold text-foreground">Damage Causes</div>
+              <div className="text-[9px] text-default-400">Breakage, Defects...</div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setDynamicConfigTab('features');
+                setShowDynamicConfig(true);
+              }}
+              className="p-2.5 rounded-xl border border-primary/30 bg-primary/10 hover:border-primary hover:bg-primary/15 transition-all text-left group cursor-pointer active:scale-[0.98]"
+            >
+              <div className="flex items-center justify-between text-primary mb-1 active:scale-[0.98]">
+                <Sliders className="h-3.5 w-3.5" />
+                <span className="text-[9px] font-black px-1 py-0.2 rounded-full bg-primary/20">Custom</span>
+              </div>
+              <div className="text-[11px] font-bold text-foreground">Feature Modules</div>
+              <div className="text-[9px] text-default-400">Enable/Disable</div>
+            </button>
+          </div>
         </div>
+      )}
 
-        {/* Quick entity overview chips */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 pt-2 border-t border-primary/10">
-          <button
-            type="button"
-            onClick={() => {
-              setDynamicConfigTab('categories');
-              setShowDynamicConfig(true);
-            }}
-            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer active:scale-[0.98]"
-          >
-            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1 active:scale-[0.98]">
-              <Tag className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-black">{productCategories.length}</span>
-            </div>
-            <div className="text-[11px] font-bold text-foreground">Categories</div>
-            <div className="text-[9px] text-default-400">Product groups</div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setDynamicConfigTab('units');
-              setShowDynamicConfig(true);
-            }}
-            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer active:scale-[0.98]"
-          >
-            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1 active:scale-[0.98]">
-              <Ruler className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-black">{unitTypes.length}</span>
-            </div>
-            <div className="text-[11px] font-bold text-foreground">Units of Measure</div>
-            <div className="text-[9px] text-default-400">Pcs, Boxes, Sqm...</div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setDynamicConfigTab('payments');
-              setShowDynamicConfig(true);
-            }}
-            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer active:scale-[0.98]"
-          >
-            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1 active:scale-[0.98]">
-              <CreditCard className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-black">{paymentMethodsList.length}</span>
-            </div>
-            <div className="text-[11px] font-bold text-foreground">Payment Methods</div>
-            <div className="text-[9px] text-default-400">Cash, Cards, GCash...</div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setDynamicConfigTab('discounts');
-              setShowDynamicConfig(true);
-            }}
-            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer active:scale-[0.98]"
-          >
-            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1 active:scale-[0.98]">
-              <Percent className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-black">{discountSchemes.length}</span>
-            </div>
-            <div className="text-[11px] font-bold text-foreground">Discounts</div>
-            <div className="text-[9px] text-default-400">Senior, PWD, Promo...</div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setDynamicConfigTab('damages');
-              setShowDynamicConfig(true);
-            }}
-            className="p-2.5 rounded-xl border border-divider/20 bg-content1 hover:border-primary/40 hover:bg-primary/5 transition-all text-left group cursor-pointer active:scale-[0.98]"
-          >
-            <div className="flex items-center justify-between text-default-500 group-hover:text-primary mb-1 active:scale-[0.98]">
-              <AlertTriangle className="h-3.5 w-3.5" />
-              <span className="text-[10px] font-black">{damageReasonsList.length}</span>
-            </div>
-            <div className="text-[11px] font-bold text-foreground">Damage Causes</div>
-            <div className="text-[9px] text-default-400">Breakage, Defects...</div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setDynamicConfigTab('features');
-              setShowDynamicConfig(true);
-            }}
-            className="p-2.5 rounded-xl border border-primary/30 bg-primary/10 hover:border-primary hover:bg-primary/15 transition-all text-left group cursor-pointer active:scale-[0.98]"
-          >
-            <div className="flex items-center justify-between text-primary mb-1 active:scale-[0.98]">
-              <Sliders className="h-3.5 w-3.5" />
-              <span className="text-[9px] font-black px-1 py-0.2 rounded-full bg-primary/20">Custom</span>
-            </div>
-            <div className="text-[11px] font-bold text-foreground">Feature Modules</div>
-            <div className="text-[9px] text-default-400">Enable/Disable</div>
-          </button>
-        </div>
-      </div>
-
-      {/* Dynamic Entity Modal */}
-      {showDynamicConfig && (
+      {/* Dynamic Entity Modal - Admin only */}
+      {isAdmin && showDynamicConfig && (
         <DynamicEntityConfigModal
           isOpen={showDynamicConfig}
           onClose={() => setShowDynamicConfig(false)}

@@ -32,6 +32,11 @@ import {
   PurgeResult,
   RetentionPolicyMap,
   UserRole,
+  ProductCategory,
+  UnitType,
+  CustomPaymentMethod,
+  DiscountScheme,
+  DamageReasonOption,
 } from "../../types/db";
 import { DbSnapshot, IngestionSnapshot } from "../../types/dbContext.types";
 import { safeParse, performSyncPruning } from "../dbContextStorage";
@@ -113,6 +118,16 @@ interface UseDbSyncOptions {
     affectedItems?: { productId: string; branchId?: string; quantityDelta?: number }[]
   ) => Promise<void>;
   optimisticStockCacheRef?: React.MutableRefObject<Map<string, any>>;
+  productCategories?: ProductCategory[];
+  setProductCategories?: React.Dispatch<React.SetStateAction<ProductCategory[]>>;
+  unitTypes?: UnitType[];
+  setUnitTypes?: React.Dispatch<React.SetStateAction<UnitType[]>>;
+  paymentMethodsList?: CustomPaymentMethod[];
+  setPaymentMethodsList?: React.Dispatch<React.SetStateAction<CustomPaymentMethod[]>>;
+  discountSchemes?: DiscountScheme[];
+  setDiscountSchemes?: React.Dispatch<React.SetStateAction<DiscountScheme[]>>;
+  damageReasonsList?: DamageReasonOption[];
+  setDamageReasonsList?: React.Dispatch<React.SetStateAction<DamageReasonOption[]>>;
 }
 
 export function useDbSyncModule({
@@ -174,6 +189,16 @@ export function useDbSyncModule({
   getAuthHeaders,
   revalidateStockCounts,
   optimisticStockCacheRef,
+  productCategories = [],
+  setProductCategories,
+  unitTypes = [],
+  setUnitTypes,
+  paymentMethodsList = [],
+  setPaymentMethodsList,
+  discountSchemes = [],
+  setDiscountSchemes,
+  damageReasonsList = [],
+  setDamageReasonsList,
 }: UseDbSyncOptions) {
   const [dbSnapshots, setDbSnapshots] = useState<DbSnapshot[]>(() => {
     return safeParse<DbSnapshot[]>("tp_db_snapshots", []);
@@ -1344,6 +1369,72 @@ export function useDbSyncModule({
               setBranchSalesReports(cleanReports);
               try { localStorage.setItem("tp_branch_sales_reports", JSON.stringify(cleanReports)); } catch (_) {}
             }
+
+            // 18. Store Options & Catalogs: product_categories
+            if (setProductCategories) {
+              const catsArr = pickArr("tp_product_categories", ["product_categories", "productCategories"]);
+              if (catsArr && Array.isArray(catsArr) && catsArr.length > 0) {
+                setProductCategories(catsArr);
+                try { localStorage.setItem("tp_product_categories", JSON.stringify(catsArr)); } catch (_) {}
+              }
+            }
+
+            // 19. Store Options & Catalogs: unit_types
+            if (setUnitTypes) {
+              const unitsArr = pickArr("tp_unit_types", ["unit_types", "unitTypes"]);
+              if (unitsArr && Array.isArray(unitsArr) && unitsArr.length > 0) {
+                setUnitTypes(unitsArr);
+                try { localStorage.setItem("tp_unit_types", JSON.stringify(unitsArr)); } catch (_) {}
+              }
+            }
+
+            // 20. Store Options & Catalogs: payment_methods
+            if (setPaymentMethodsList) {
+              const pmsArr = pickArr("tp_payment_methods", ["payment_methods", "paymentMethodsList"]);
+              if (pmsArr && Array.isArray(pmsArr) && pmsArr.length > 0) {
+                setPaymentMethodsList(pmsArr);
+                try { localStorage.setItem("tp_payment_methods", JSON.stringify(pmsArr)); } catch (_) {}
+              }
+            }
+
+            // 21. Store Options & Catalogs: discount_schemes
+            if (setDiscountSchemes) {
+              const discArr = pickArr("tp_discount_schemes", ["discount_schemes", "discountSchemes"]);
+              if (discArr && Array.isArray(discArr) && discArr.length > 0) {
+                setDiscountSchemes(discArr);
+                try { localStorage.setItem("tp_discount_schemes", JSON.stringify(discArr)); } catch (_) {}
+              }
+            }
+
+            // 22. Store Options & Catalogs: damage_reasons
+            if (setDamageReasonsList) {
+              const dmgsArr = pickArr("tp_damage_reasons", ["damage_reasons", "damageReasonsList"]);
+              if (dmgsArr && Array.isArray(dmgsArr) && dmgsArr.length > 0) {
+                setDamageReasonsList(dmgsArr);
+                try { localStorage.setItem("tp_damage_reasons", JSON.stringify(dmgsArr)); } catch (_) {}
+              }
+            }
+
+            // 23. Feature flags sync
+            const remoteFlags = d.tp_feature_flags || d.tilepoint_business_features_v1;
+            if (remoteFlags && typeof remoteFlags === "object") {
+              try {
+                localStorage.setItem("tilepoint_business_features_v1", JSON.stringify(remoteFlags));
+                window.dispatchEvent(new CustomEvent("tilepoint_feature_flags_changed", { detail: remoteFlags }));
+              } catch (_) {}
+            }
+
+            // 24. Store enterprise settings sync
+            const remoteStoreSettings = d.tp_store_settings;
+            if (remoteStoreSettings && typeof remoteStoreSettings === "object") {
+              try {
+                if (remoteStoreSettings.companyName) localStorage.setItem("tilepoint_company_name_v1", remoteStoreSettings.companyName);
+                if (remoteStoreSettings.taxRate !== undefined) localStorage.setItem("tilepoint_tax_rate_v1", String(remoteStoreSettings.taxRate));
+                if (remoteStoreSettings.currency) localStorage.setItem("tilepoint_currency_v1", remoteStoreSettings.currency);
+                if (remoteStoreSettings.logoSize !== undefined) localStorage.setItem("tilepoint_receipt_logo_size_v1", String(remoteStoreSettings.logoSize));
+                window.dispatchEvent(new Event("tilepoint-theme-updated"));
+              } catch (_) {}
+            }
           }
           setServerConnected(true);
           setDbSyncStatus("synced");
@@ -1368,7 +1459,7 @@ export function useDbSyncModule({
         setDbSyncStatus("offline");
       }
     },
-    [safeApiFetch, setBranches, setSuppliers, setBrands, setProducts, setUsers, setBranchStock, setSales, setSaleItems, setShifts, setMovements, setAuditLogs, setLedgerEntries, setPurchaseOrders, setPoItems, setStockTransfers, setDeliveries, setDamageLogs, setTransmittals, setCustomBills, setMembers, setExpenses, setProductReturns, setBranchSalesReports, optimisticStockCacheRef, getAuthHeaders]
+    [safeApiFetch, setBranches, setSuppliers, setBrands, setProducts, setUsers, setBranchStock, setSales, setSaleItems, setShifts, setMovements, setAuditLogs, setLedgerEntries, setPurchaseOrders, setPoItems, setStockTransfers, setDeliveries, setDamageLogs, setTransmittals, setCustomBills, setMembers, setExpenses, setProductReturns, setBranchSalesReports, setProductCategories, setUnitTypes, setPaymentMethodsList, setDiscountSchemes, setDamageReasonsList, optimisticStockCacheRef, getAuthHeaders]
   );
 
   // Auto-sync when user becomes authenticated or on mount
@@ -1714,6 +1805,11 @@ export function useDbSyncModule({
       members,
       expenses,
       productReturns,
+      tp_product_categories: productCategories,
+      tp_unit_types: unitTypes,
+      tp_payment_methods: paymentMethodsList,
+      tp_discount_schemes: discountSchemes,
+      tp_damage_reasons: damageReasonsList,
     });
   }, [
     users,
@@ -1736,6 +1832,11 @@ export function useDbSyncModule({
     members,
     expenses,
     productReturns,
+    productCategories,
+    unitTypes,
+    paymentMethodsList,
+    discountSchemes,
+    damageReasonsList,
   ]);
 
   const getMysqlStatus = useCallback(async () => {

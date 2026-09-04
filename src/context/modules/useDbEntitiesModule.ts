@@ -693,7 +693,27 @@ export function useDbEntitiesModule({
     [brands, addAuditLog]
   );
 
-  // --- DYNAMIC BUSINESS MATRICES ---
+  // --- DYNAMIC BUSINESS MATRICES & STORE OPTIONS PERSISTENCE ---
+  const syncStoreOptionToDb = useCallback(
+    (key: string, value: any) => {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (_) {}
+
+      safeApiFetch("/api/db/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ key, value }),
+      }).catch((err) => {
+        console.warn(`[StoreOptions Sync] Push ${key} to database failed:`, err);
+      });
+    },
+    [safeApiFetch, getAuthHeaders]
+  );
+
   const createProductCategory = useCallback(
     (category: Omit<ProductCategory, "id" | "createdAt" | "updatedAt"> & Partial<ProductCategory>): ProductCategory => {
       const newCategory: ProductCategory = {
@@ -704,29 +724,39 @@ export function useDbEntitiesModule({
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      setProductCategories((prev) => [...prev, newCategory]);
+      setProductCategories((prev) => {
+        const next = [...prev, newCategory];
+        syncStoreOptionToDb("tp_product_categories", next);
+        return next;
+      });
       addAuditLog("CATEGORY_CREATE", `Created product category: ${newCategory.name}`, "ProductCategories", newCategory.id);
       return newCategory;
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   const updateProductCategory = useCallback(
     (id: string, updates: Partial<ProductCategory>) => {
-      setProductCategories((prev) =>
-        prev.map((cat) => (cat.id === id ? { ...cat, ...updates, updatedAt: new Date().toISOString() } : cat))
-      );
+      setProductCategories((prev) => {
+        const next = prev.map((cat) => (cat.id === id ? { ...cat, ...updates, updatedAt: new Date().toISOString() } : cat));
+        syncStoreOptionToDb("tp_product_categories", next);
+        return next;
+      });
       addAuditLog("CATEGORY_UPDATE", `Updated product category ID: ${id}`, "ProductCategories", id);
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   const deleteProductCategory = useCallback(
     (id: string) => {
-      setProductCategories((prev) => prev.filter((cat) => cat.id !== id));
+      setProductCategories((prev) => {
+        const next = prev.filter((cat) => cat.id !== id);
+        syncStoreOptionToDb("tp_product_categories", next);
+        return next;
+      });
       addAuditLog("CATEGORY_DELETE", `Deleted product category ID: ${id}`, "ProductCategories", id);
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   const createUnitType = useCallback(
@@ -740,29 +770,39 @@ export function useDbEntitiesModule({
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      setUnitTypes((prev) => [...prev, newUnit]);
+      setUnitTypes((prev) => {
+        const next = [...prev, newUnit];
+        syncStoreOptionToDb("tp_unit_types", next);
+        return next;
+      });
       addAuditLog("UNIT_CREATE", `Created unit type: ${newUnit.name} (${newUnit.abbreviation})`, "UnitTypes", newUnit.id);
       return newUnit;
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   const updateUnitType = useCallback(
     (id: string, updates: Partial<UnitType>) => {
-      setUnitTypes((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, ...updates, updatedAt: new Date().toISOString() } : u))
-      );
+      setUnitTypes((prev) => {
+        const next = prev.map((u) => (u.id === id ? { ...u, ...updates, updatedAt: new Date().toISOString() } : u));
+        syncStoreOptionToDb("tp_unit_types", next);
+        return next;
+      });
       addAuditLog("UNIT_UPDATE", `Updated unit type ID: ${id}`, "UnitTypes", id);
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   const deleteUnitType = useCallback(
     (id: string) => {
-      setUnitTypes((prev) => prev.filter((u) => u.id !== id));
+      setUnitTypes((prev) => {
+        const next = prev.filter((u) => u.id !== id);
+        syncStoreOptionToDb("tp_unit_types", next);
+        return next;
+      });
       addAuditLog("UNIT_DELETE", `Deleted unit type ID: ${id}`, "UnitTypes", id);
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   const createPaymentMethod = useCallback(
@@ -776,11 +816,15 @@ export function useDbEntitiesModule({
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      setPaymentMethodsList((prev) => [...prev, newPm]);
+      setPaymentMethodsList((prev) => {
+        const next = [...prev, newPm];
+        syncStoreOptionToDb("tp_payment_methods", next);
+        return next;
+      });
       addAuditLog("PAYMENT_METHOD_CREATE", `Created payment method: ${newPm.name}`, "PaymentMethods", newPm.id);
       return newPm;
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   const updatePaymentMethod = useCallback(
@@ -798,7 +842,7 @@ export function useDbEntitiesModule({
             return prev;
           }
         }
-        return prev.map((pm) => {
+        const next = prev.map((pm) => {
           if (pm.id !== id) return pm;
           const isEnabled = updates.isEnabled !== undefined ? updates.isEnabled : pm.isEnabled;
           return {
@@ -809,12 +853,14 @@ export function useDbEntitiesModule({
             updatedAt: new Date().toISOString(),
           };
         });
+        syncStoreOptionToDb("tp_payment_methods", next);
+        return next;
       });
       if (allowed) {
         addAuditLog("PAYMENT_METHOD_UPDATE", `Updated payment method ID: ${id}`, "PaymentMethods", id);
       }
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   const deletePaymentMethod = useCallback(
@@ -830,13 +876,15 @@ export function useDbEntitiesModule({
             return prev;
           }
         }
-        return prev.filter((pm) => pm.id !== id);
+        const next = prev.filter((pm) => pm.id !== id);
+        syncStoreOptionToDb("tp_payment_methods", next);
+        return next;
       });
       if (canDelete) {
         addAuditLog("PAYMENT_METHOD_DELETE", `Deleted payment method ID: ${id}`, "PaymentMethods", id);
       }
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   const togglePaymentMethod = useCallback(
@@ -859,7 +907,7 @@ export function useDbEntitiesModule({
         }
 
         toggled = true;
-        return prev.map((pm) =>
+        const next = prev.map((pm) =>
           pm.id === id
             ? {
                 ...pm,
@@ -869,12 +917,14 @@ export function useDbEntitiesModule({
               }
             : pm
         );
+        syncStoreOptionToDb("tp_payment_methods", next);
+        return next;
       });
       if (toggled) {
         addAuditLog("PAYMENT_METHOD_TOGGLE", `Toggled payment method status for ID: ${id}`, "PaymentMethods", id);
       }
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   const createDiscountScheme = useCallback(
@@ -890,17 +940,21 @@ export function useDbEntitiesModule({
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      setDiscountSchemes((prev) => [...prev, newDs]);
+      setDiscountSchemes((prev) => {
+        const next = [...prev, newDs];
+        syncStoreOptionToDb("tp_discount_schemes", next);
+        return next;
+      });
       addAuditLog("DISCOUNT_SCHEME_CREATE", `Created discount scheme: ${newDs.name}`, "DiscountSchemes", newDs.id);
       return newDs;
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   const updateDiscountScheme = useCallback(
     (id: string, updates: Partial<DiscountScheme>) => {
-      setDiscountSchemes((prev) =>
-        prev.map((ds) => {
+      setDiscountSchemes((prev) => {
+        const next = prev.map((ds) => {
           if (ds.id !== id) return ds;
           const isEnabled = updates.isEnabled !== undefined ? updates.isEnabled : ds.isEnabled;
           return {
@@ -910,25 +964,31 @@ export function useDbEntitiesModule({
             isActive: isEnabled,
             updatedAt: new Date().toISOString(),
           };
-        })
-      );
+        });
+        syncStoreOptionToDb("tp_discount_schemes", next);
+        return next;
+      });
       addAuditLog("DISCOUNT_SCHEME_UPDATE", `Updated discount scheme ID: ${id}`, "DiscountSchemes", id);
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   const deleteDiscountScheme = useCallback(
     (id: string) => {
-      setDiscountSchemes((prev) => prev.filter((ds) => ds.id !== id));
+      setDiscountSchemes((prev) => {
+        const next = prev.filter((ds) => ds.id !== id);
+        syncStoreOptionToDb("tp_discount_schemes", next);
+        return next;
+      });
       addAuditLog("DISCOUNT_SCHEME_DELETE", `Deleted discount scheme ID: ${id}`, "DiscountSchemes", id);
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   const toggleDiscountScheme = useCallback(
     (id: string, enabled?: boolean) => {
-      setDiscountSchemes((prev) =>
-        prev.map((ds) => {
+      setDiscountSchemes((prev) => {
+        const next = prev.map((ds) => {
           if (ds.id !== id) return ds;
           const willBeEnabled = enabled !== undefined ? enabled : !ds.isEnabled;
           return {
@@ -937,11 +997,13 @@ export function useDbEntitiesModule({
             isActive: willBeEnabled,
             updatedAt: new Date().toISOString(),
           };
-        })
-      );
+        });
+        syncStoreOptionToDb("tp_discount_schemes", next);
+        return next;
+      });
       addAuditLog("DISCOUNT_SCHEME_TOGGLE", `Toggled discount scheme status for ID: ${id}`, "DiscountSchemes", id);
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   const createDamageReason = useCallback(
@@ -955,43 +1017,55 @@ export function useDbEntitiesModule({
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      setDamageReasonsList((prev) => [...prev, newDr]);
+      setDamageReasonsList((prev) => {
+        const next = [...prev, newDr];
+        syncStoreOptionToDb("tp_damage_reasons", next);
+        return next;
+      });
       addAuditLog("DAMAGE_REASON_CREATE", `Created damage reason: ${newDr.name}`, "DamageReasons", newDr.id);
       return newDr;
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   const updateDamageReason = useCallback(
     (id: string, updates: Partial<DamageReasonOption>) => {
-      setDamageReasonsList((prev) =>
-        prev.map((dr) => (dr.id === id ? { ...dr, ...updates, updatedAt: new Date().toISOString() } : dr))
-      );
+      setDamageReasonsList((prev) => {
+        const next = prev.map((dr) => (dr.id === id ? { ...dr, ...updates, updatedAt: new Date().toISOString() } : dr));
+        syncStoreOptionToDb("tp_damage_reasons", next);
+        return next;
+      });
       addAuditLog("DAMAGE_REASON_UPDATE", `Updated damage reason ID: ${id}`, "DamageReasons", id);
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   const deleteDamageReason = useCallback(
     (id: string) => {
-      setDamageReasonsList((prev) => prev.filter((dr) => dr.id !== id));
+      setDamageReasonsList((prev) => {
+        const next = prev.filter((dr) => dr.id !== id);
+        syncStoreOptionToDb("tp_damage_reasons", next);
+        return next;
+      });
       addAuditLog("DAMAGE_REASON_DELETE", `Deleted damage reason ID: ${id}`, "DamageReasons", id);
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   const toggleDamageReason = useCallback(
     (id: string, enabled?: boolean) => {
-      setDamageReasonsList((prev) =>
-        prev.map((dr) =>
+      setDamageReasonsList((prev) => {
+        const next = prev.map((dr) =>
           dr.id === id
             ? { ...dr, isEnabled: enabled !== undefined ? enabled : !dr.isEnabled, updatedAt: new Date().toISOString() }
             : dr
-        )
-      );
+        );
+        syncStoreOptionToDb("tp_damage_reasons", next);
+        return next;
+      });
       addAuditLog("DAMAGE_REASON_TOGGLE", `Toggled damage reason status for ID: ${id}`, "DamageReasons", id);
     },
-    [addAuditLog]
+    [addAuditLog, syncStoreOptionToDb]
   );
 
   // --- ARCHIVES PURGE & BULK RESTORE ---

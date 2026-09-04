@@ -78,7 +78,8 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
 
   const { flags: featureFlags, updateFlag: updateFeatureFlag } = useFeatureFlags();
 
-  const isAuthorized = currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.MANAGER;
+  const isAdmin = currentUser?.role === UserRole.ADMIN;
+  const isAuthorized = isAdmin;
   const [activeTab, setActiveTab] = useState<DynamicConfigTab>(initialTab);
 
   // Category Form State
@@ -430,6 +431,8 @@ export const DynamicEntityConfigModal: React.FC<DynamicEntityConfigModalProps> =
     setDmgDesc(d.description || '');
     setShowDmgForm(true);
   };
+
+  if (!isOpen || !isAdmin) return null;
 
   return (
     <HeroModal

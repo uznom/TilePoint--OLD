@@ -578,6 +578,7 @@ export interface DbContextType {
   clearServerErrorState: () => void;
   invalidateLocalCache: () => Promise<void>;
   safeApiFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  getAuthHeaders: () => Record<string, string>;
   exportAndPurgeCategoryData: (
     category: ArchivableCategory,
     ageMonths: number
