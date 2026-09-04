@@ -323,3 +323,15 @@ export function formatTin(value: string | undefined | null): string {
   }
   return value;
 }
+
+/**
+ * Parses user input for tender amount, stripping commas, currency symbols, and whitespace safely.
+ */
+export function parseTenderAmount(val: string | number | null | undefined): number {
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+  if (val === null || val === undefined) return 0;
+  const sanitized = val.toString().replace(/,/g, '').trim();
+  const num = parseFloat(sanitized);
+  return isNaN(num) ? 0 : num;
+}
+

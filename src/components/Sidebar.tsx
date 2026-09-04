@@ -21,6 +21,7 @@ import {
   Settings
 } from "lucide-react";
 import { useFeatureFlags } from "../utils/featureFlags";
+import { HeroAvatar, HeroAvatarSyncStatus } from "./common/ui/HeroAvatar";
 
 export interface SidebarCategoryItem {
   id: string;
@@ -53,6 +54,7 @@ interface SidebarProps {
   categories: SidebarCategoryItem[];
   isMobileOpen?: boolean;
   onCloseMobile?: () => void;
+  syncStatus?: HeroAvatarSyncStatus;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -73,7 +75,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   getBranchName,
   categories,
   isMobileOpen,
-  onCloseMobile
+  onCloseMobile,
+  syncStatus = 'connected'
 }) => {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
@@ -274,19 +277,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             }`}
             title="User Profile & Account Menu"
           >
-            {/* Gradient Avatar */}
-            <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-cyan-400 via-sky-400 to-emerald-400 flex items-center justify-center text-slate-900 font-black text-xs shadow-xs shrink-0 overflow-hidden ring-2 ring-background">
-              {currentUser.profilePicture ? (
-                <img
-                  src={currentUser.profilePicture}
-                  alt={currentUser.fullName}
-                  className="h-full w-full object-cover"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                currentUser.fullName?.charAt(0) || "U"
-              )}
-            </div>
+            {/* HeroUI v3 Database Sync-Aware Avatar */}
+            <HeroAvatar
+              src={currentUser.profilePicture}
+              name={currentUser.fullName || "User"}
+              size="sm"
+              syncStatus={syncStatus}
+              syncVariant="both"
+              showSyncTooltip
+            />
 
             {/* Name, Role & Branch */}
             {isSidebarExpanded && (
@@ -484,18 +483,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="flex flex-col gap-4 overflow-hidden flex-1">
                 <div className="flex items-center justify-between border-b border-divider/20 pb-3">
                   <div className="flex items-center gap-2.5">
-                    <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-cyan-400 to-emerald-400 flex items-center justify-center text-slate-900 font-black text-xs shadow-xs overflow-hidden">
-                      {currentUser.profilePicture ? (
-                        <img
-                          src={currentUser.profilePicture}
-                          alt={currentUser.fullName}
-                          className="h-full w-full object-cover"
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        currentUser.fullName?.charAt(0) || "U"
-                      )}
-                    </div>
+                    <HeroAvatar
+                      src={currentUser.profilePicture}
+                      name={currentUser.fullName || "User"}
+                      size="sm"
+                      syncStatus={syncStatus}
+                      syncVariant="both"
+                      showSyncTooltip
+                    />
                     <div>
                       <div className="text-xs font-black text-foreground leading-tight">
                         {currentUser.fullName || "User"}

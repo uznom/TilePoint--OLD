@@ -154,11 +154,17 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
               required
               min="0"
               step="0.01"
+              size="lg"
               value={quickProductCost === "" ? "" : String(quickProductCost)}
               onValueChange={(val) => setQuickProductCost(val === "" ? "" : Number(val))}
               placeholder="0.00"
               radius="lg"
               variant="flat"
+              startContent={<span className="text-lg font-black text-default-400 font-mono select-none">₱</span>}
+              classNames={{
+                input: "text-lg font-black font-mono tracking-tight",
+                inputWrapper: "h-13 shadow-inner border border-divider/40",
+              }}
             />
             <HeroInput
               label="Suggested Selling Price (PHP)"
@@ -166,11 +172,17 @@ export const QuickProductModal: React.FC<QuickProductModalProps> = ({
               required
               min="0"
               step="0.01"
+              size="lg"
               value={quickProductPrice === "" ? "" : String(quickProductPrice)}
               onValueChange={(val) => setQuickProductPrice(val === "" ? "" : Number(val))}
               placeholder="0.00"
               radius="lg"
               variant="flat"
+              startContent={<span className="text-lg font-black text-default-400 font-mono select-none">₱</span>}
+              classNames={{
+                input: "text-lg font-black font-mono tracking-tight",
+                inputWrapper: "h-13 shadow-inner border border-divider/40",
+              }}
             />
           </div>
 

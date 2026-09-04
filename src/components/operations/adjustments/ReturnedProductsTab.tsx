@@ -117,12 +117,19 @@ export const ReturnedProductsTab: React.FC<ReturnedProductsTabProps> = ({
           <HeroInput
             label="Gross Item Cost Refundable (PHP) *"
             type="number"
+            step="any"
             required
+            size="lg"
             value={retRef}
             onValueChange={(val) => setRetRef(val)}
-            placeholder="580.00"
+            placeholder="0.00"
             radius="lg"
             variant="flat"
+            startContent={<span className="text-xl sm:text-2xl font-black text-default-400 font-mono select-none">₱</span>}
+            classNames={{
+              input: "text-xl sm:text-2xl font-black font-mono tracking-tight",
+              inputWrapper: "h-14 sm:h-16 shadow-inner border border-divider/40",
+            }}
           />
 
           <div className="space-y-1.5">

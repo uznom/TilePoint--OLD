@@ -122,12 +122,19 @@ export const AddExpenseTab: React.FC<AddExpenseTabProps> = ({
           <HeroInput
             label="Amount Disbursed (PHP)"
             type="number"
+            step="any"
             required
+            size="lg"
             value={expAmount}
             onValueChange={(val) => setExpAmount(val)}
-            placeholder="500.00"
+            placeholder="0.00"
             radius="lg"
             variant="flat"
+            startContent={<span className="text-xl sm:text-2xl font-black text-default-400 font-mono select-none">₱</span>}
+            classNames={{
+              input: "text-xl sm:text-2xl font-black font-mono tracking-tight",
+              inputWrapper: "h-14 sm:h-16 shadow-inner border border-divider/40",
+            }}
           />
 
           <HeroTextarea

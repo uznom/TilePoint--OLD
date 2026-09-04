@@ -12,6 +12,7 @@ import {
 import { User, Branch, UserRole } from '../../types/db';
 import { SidebarCategoryItem } from '../Sidebar';
 import { HeroTooltip } from '../common/ui';
+import { HeroAvatar, HeroAvatarSyncStatus } from '../common/ui/HeroAvatar';
 
 export interface AppHeaderProps {
   activeTab: string;
@@ -38,6 +39,7 @@ export interface AppHeaderProps {
   onRefreshServerStatus?: () => void;
   unreadNotificationsCount?: number;
   onOpenNotifications?: () => void;
+  syncStatus?: HeroAvatarSyncStatus;
 }
 
 export const AppHeader: React.FC<AppHeaderProps> = ({
@@ -61,6 +63,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onRefreshServerStatus,
   unreadNotificationsCount = 0,
   onOpenNotifications,
+  syncStatus,
 }) => {
   const activeBranchName = getBranchName(selectedBranchId || currentUser?.branchAssignmentId || null);
 
@@ -211,19 +214,18 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           <button
             type="button"
             onClick={onOpenProfileModal}
-            className="h-8 w-8 rounded-full bg-gradient-to-tr from-cyan-400 via-sky-400 to-emerald-400 flex items-center justify-center text-slate-900 font-black text-xs shadow-2xs shrink-0 overflow-hidden ring-2 ring-background hover:ring-primary/40 transition-all active:scale-95 cursor-pointer ml-1"
+            className="flex items-center justify-center p-0.5 rounded-full hover:ring-2 hover:ring-primary/40 transition-all active:scale-95 cursor-pointer ml-1"
             title={`Account Settings (${currentUser.fullName || currentUser.username})`}
+            aria-label={`Account Settings for ${currentUser.fullName || currentUser.username}`}
           >
-            {currentUser.profilePicture ? (
-              <img
-                src={currentUser.profilePicture}
-                alt={currentUser.fullName || 'User'}
-                className="h-full w-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              currentUser.fullName?.charAt(0) || 'U'
-            )}
+            <HeroAvatar
+              src={currentUser.profilePicture}
+              name={currentUser.fullName || currentUser.username}
+              size="sm"
+              syncStatus={syncStatus || (serverDegradedState?.isDegraded ? 'not connected' : 'connected')}
+              syncVariant="both"
+              showSyncTooltip
+            />
           </button>
         )}
       </div>

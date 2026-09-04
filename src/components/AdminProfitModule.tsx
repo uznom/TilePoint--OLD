@@ -1051,16 +1051,22 @@ export function AdminProfitModule({
                   />
                 </div>
 
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   <label className="text-[10px] font-extrabold uppercase text-default-500">Amount (PHP)</label>
-                  <input
-                    type="number"
-                    required
-                    placeholder="0.00"
-                    value={expenseAmount ?? ''}
-                    onChange={(e) => setExpenseAmount(e.target.value)}
- className="w-full bg-content1 border border-divider/30 text-xs px-3 py-2 rounded-xl text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-bold"
-                  />
+                  <div className="relative flex items-center">
+                    <span className="absolute left-3.5 text-xl font-black text-default-400 font-mono select-none pointer-events-none">
+                      ₱
+                    </span>
+                    <input
+                      type="number"
+                      step="any"
+                      required
+                      placeholder="0.00"
+                      value={expenseAmount ?? ''}
+                      onChange={(e) => setExpenseAmount(e.target.value)}
+                      className="w-full bg-content1 border border-divider/30 text-xl font-black font-mono pl-9 pr-3.5 py-3 rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 h-14 shadow-inner"
+                    />
+                  </div>
                 </div>
               </div>
 

@@ -518,16 +518,22 @@ export const SuppliersCalendarTab: React.FC<SuppliersCalendarTabProps> = ({
                   className="w-full bg-content1 border border-divider rounded-lg p-2.5 outline-none font-semibold focus:border-primary text-foreground"
                 />
               </div>
-              <div className="space-y-1">
-                <label className="font-bold text-default-500">Payout Amount (PHP) *</label>
-                <input
-                  required
-                  type="number"
-                  value={billAmount}
-                  onChange={(e) => setBillAmount(e.target.value)}
-                  placeholder="12500"
-                  className="w-full bg-content1 border border-divider rounded-lg p-2.5 outline-none focus:border-primary text-foreground font-bold"
-                />
+              <div className="space-y-1.5">
+                <label className="font-bold text-default-500 text-xs">Payout Amount (PHP) *</label>
+                <div className="relative flex items-center">
+                  <span className="absolute left-3.5 text-xl font-black text-default-400 font-mono select-none pointer-events-none">
+                    ₱
+                  </span>
+                  <input
+                    required
+                    type="number"
+                    step="any"
+                    value={billAmount}
+                    onChange={(e) => setBillAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full bg-content1 border border-divider rounded-xl pl-9 pr-3.5 py-3 outline-none focus:border-primary text-foreground font-black font-mono text-xl h-14 shadow-inner"
+                  />
+                </div>
               </div>
               <div className="space-y-1">
                 <HeroSelect

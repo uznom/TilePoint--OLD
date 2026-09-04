@@ -219,18 +219,24 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
             </h3>
 
             <form onSubmit={handleCloseLocalShift} className="space-y-4 pt-1 text-xs text-left">
-              <div>
-                <label className="text-xs font-bold text-foreground tracking-tight block mb-1.5 pl-0.5">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-foreground tracking-tight block pl-0.5">
                   Actual Counted Drawer Cash (PHP)
                 </label>
-                <input
-                  type="number"
-                  required
-                  value={closingCashInput ?? ''}
-                  onChange={e => setClosingCashInput(e.target.value)}
-                  placeholder="3000"
-                  className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-white/5 focus:ring-2 focus:ring-primary/30 px-4 py-2 text-sm text-center font-bold tracking-tight text-foreground focus:outline-none transition-all rounded-full font-mono"
-                />
+                <div className="relative flex items-center">
+                  <span className="absolute left-4 text-xl sm:text-2xl font-black text-default-400 font-mono select-none pointer-events-none">
+                    ₱
+                  </span>
+                  <input
+                    type="number"
+                    step="any"
+                    required
+                    value={closingCashInput ?? ''}
+                    onChange={e => setClosingCashInput(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-white/5 focus:ring-2 focus:ring-primary/30 pl-10 pr-4 py-3.5 text-xl sm:text-2xl text-center font-black tracking-tight text-foreground focus:outline-none transition-all rounded-2xl font-mono h-14 shadow-inner"
+                  />
+                </div>
               </div>
 
               {/* Informative summary calculation preview */}
@@ -324,15 +330,20 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
                 </label>
                 <span className="text-[11px] text-default-400 font-mono">Standard Retail Float</span>
               </div>
-              <input
-                type="number"
-                step="any"
-                required
-                placeholder="e.g. 1000.00"
-                value={startCashInput ?? ''}
-                onChange={e => setStartCashInput(e.target.value)}
-                className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-white/5 focus:ring-2 focus:ring-primary/30 px-4 py-2 text-base text-center font-bold tracking-tight text-foreground focus:outline-none transition-all rounded-full font-mono"
-              />
+              <div className="relative flex items-center">
+                <span className="absolute left-4 text-xl sm:text-2xl font-black text-default-400 font-mono select-none pointer-events-none">
+                  ₱
+                </span>
+                <input
+                  type="number"
+                  step="any"
+                  required
+                  placeholder="0.00"
+                  value={startCashInput ?? ''}
+                  onChange={e => setStartCashInput(e.target.value)}
+                  className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200/50 dark:border-white/5 focus:ring-2 focus:ring-primary/30 pl-10 pr-4 py-3.5 text-xl sm:text-2xl text-center font-black tracking-tight text-foreground focus:outline-none transition-all rounded-2xl font-mono h-14 shadow-inner"
+                />
+              </div>
               <div className="grid grid-cols-4 gap-1.5 pt-1 font-mono">
                 {[500, 1000, 2000, 3000].map((amt) => (
                   <button

@@ -183,4 +183,42 @@ describe('formatters.ts - Standard Currency & Number Formatting Suite', () => {
       expect(formatTin(null)).toBe('');
     });
   });
+
+  describe('formatTenderInput & parseTenderAmount - POS Amount Tendered Auto-Commas Suite', () => {
+    // Dynamic import from PosModule
+    it('automatically formats thousands commas as numbers are typed', async () => {
+      const { formatTenderInput } = await import('../src/components/PosModule');
+      expect(formatTenderInput('1000')).toBe('1,000');
+      expect(formatTenderInput('15000')).toBe('15,000');
+      expect(formatTenderInput('1234567')).toBe('1,234,567');
+      expect(formatTenderInput('10000000')).toBe('10,000,000');
+    });
+
+    it('preserves decimals with up to two digits during auto-comma formatting', async () => {
+      const { formatTenderInput } = await import('../src/components/PosModule');
+      expect(formatTenderInput('1000.')).toBe('1,000.');
+      expect(formatTenderInput('1000.5')).toBe('1,000.5');
+      expect(formatTenderInput('1000.50')).toBe('1,000.50');
+      expect(formatTenderInput('1000.509')).toBe('1,000.50');
+      expect(formatTenderInput('1000.50.99')).toBe('1,000.50');
+    });
+
+    it('correctly handles backspacing, empty strings, and non-numeric inputs', async () => {
+      const { formatTenderInput } = await import('../src/components/PosModule');
+      expect(formatTenderInput('')).toBe('');
+      expect(formatTenderInput('10,00')).toBe('1,000');
+      expect(formatTenderInput('abc')).toBe('');
+      expect(formatTenderInput('₱ 5000')).toBe('5,000');
+    });
+
+    it('correctly parses comma-formatted tender strings into numbers for calculations', async () => {
+      const { parseTenderAmount } = await import('../src/components/PosModule');
+      expect(parseTenderAmount('1,500')).toBe(1500);
+      expect(parseTenderAmount('1,234,567.50')).toBe(1234567.5);
+      expect(parseTenderAmount('500')).toBe(500);
+      expect(parseTenderAmount('')).toBe(0);
+      expect(parseTenderAmount(null)).toBe(0);
+      expect(parseTenderAmount(2500)).toBe(2500);
+    });
+  });
 });

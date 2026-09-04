@@ -11,6 +11,7 @@ import { Sidebar, SidebarCategoryItem } from '../Sidebar';
 import { HeaderNavTabs } from '../HeaderNavTabs';
 import { AppAlertBanners, AppAlertBannersProps } from './AppAlertBanners';
 import { MobileBottomNav } from '../MobileBottomNav';
+import { HeroAvatarSyncStatus } from '../common/ui/HeroAvatar';
 
 export interface AppShellProps {
   activeTab: string;
@@ -44,6 +45,7 @@ export interface AppShellProps {
   hasInventoryAlert?: boolean;
   hasSaleAlert?: boolean;
   hasTotalAlerts?: boolean;
+  syncStatus?: HeroAvatarSyncStatus;
   children: React.ReactNode;
 }
 
@@ -79,6 +81,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   hasInventoryAlert = false,
   hasSaleAlert = false,
   hasTotalAlerts = false,
+  syncStatus,
   children,
 }) => {
   return (
@@ -121,6 +124,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             categories={categories}
             isMobileOpen={isMobileMenuOpen}
             onCloseMobile={() => setIsMobileMenuOpen(false)}
+            syncStatus={syncStatus}
           />
         )}
 

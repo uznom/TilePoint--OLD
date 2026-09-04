@@ -240,11 +240,17 @@ export const PosDiscountModal: React.FC<PosDiscountModalProps> = ({
               <HeroInput
                 label="Discount Amount / Value"
                 type="number"
+                size="lg"
                 value={discountInput}
                 onValueChange={(val) => setDiscountInput(val)}
                 placeholder={discountType === "PERCENT" ? "e.g. 15 for 15%" : "e.g. 100 for ₱100"}
                 radius="lg"
                 variant="flat"
+                startContent={<span className="text-lg font-black text-default-400 font-mono select-none">₱ / %</span>}
+                classNames={{
+                  input: "text-xl font-black font-mono tracking-tight",
+                  inputWrapper: "h-14 shadow-inner border border-divider/40",
+                }}
               />
             </div>
 

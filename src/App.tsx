@@ -4,7 +4,7 @@
  */
 
 import { MotionConfig } from "motion/react";
-import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { LoginModule } from "./components/LoginModule";
 import { SetupModule } from "./components/SetupModule";
 import { DbProvider, DbSnapshot, useDb } from "./context/DbContext";
@@ -58,6 +58,7 @@ import { DatabaseBackupModal } from "./components/modals/DatabaseBackupModal";
 import { SystemSettingsModal } from "./components/modals/SystemSettingsModal";
 import { SessionSupersededModal } from "./components/modals/SessionSupersededModal";
 import { HeroSpinner } from "./components/common/ui/HeroSpinner";
+import { HeroAvatarSyncStatus } from "./components/common/ui/HeroAvatar";
 import { PATH_TO_TAB, useRouteSyncManager } from "./hooks";
 import { isSameBranch } from "./lib/branchUtils";
 
@@ -227,6 +228,7 @@ function AppContent() {
     createDbSnapshot,
     restoreDbSnapshot,
     deleteDbSnapshot,
+    serverConnected,
     serverDegradedState,
     refreshServerStatus,
     autoBackupEnabled,
@@ -318,6 +320,17 @@ function AppContent() {
       setToastMessage(null);
     }, 3500);
   }, []);
+
+  // Compute canonical DB sync status for HeroAvatar display
+  const avatarSyncStatus: HeroAvatarSyncStatus = useMemo(() => {
+    if (serverDegradedState?.isDegraded || serverConnected === false) {
+      return 'not connected';
+    }
+    if (dbSyncStatus === 'syncing' || dbSyncStatus === 'queued') {
+      return 'syncing';
+    }
+    return 'connected';
+  }, [serverDegradedState?.isDegraded, serverConnected, dbSyncStatus]);
 
   // Dynamic automatic routing on login/identity-switch to ensure Cashier goes to pos, Admin/Manager goes to dashboard
   const prevUserIdRef = useRef<string | null>(null);
@@ -986,6 +999,7 @@ function AppContent() {
           setIsSidebarHidden={setIsSidebarHidden}
           isMobileMenuOpen={isMobileMenuOpen}
           setIsMobileMenuOpen={setIsMobileMenuOpen}
+          syncStatus={avatarSyncStatus}
           alertBannersProps={{
             serverDegradedState,
             refreshServerStatus,

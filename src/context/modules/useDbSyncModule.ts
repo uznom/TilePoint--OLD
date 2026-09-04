@@ -1077,7 +1077,12 @@ export function useDbSyncModule({
 
               const pendingSales = pendingOutboxItems
                 .filter(it => it.txType === 'POS_CHECKOUT' || it.endpoint?.includes('/sales'))
-                .map(it => it.payload?.sale || it.payload)
+                .flatMap(it => {
+                  if (Array.isArray(it.payload?.sales)) return it.payload.sales;
+                  if (it.payload?.sale) return [it.payload.sale];
+                  if (it.payload && it.payload.id) return [it.payload];
+                  return [];
+                })
                 .filter(Boolean);
 
               const serverSaleIds = new Set(cleanSales.map((s: any) => s.id));
@@ -1106,9 +1111,14 @@ export function useDbSyncModule({
 
               const pendingSaleItems: any[] = [];
               pendingOutboxItems.forEach(it => {
-                const items = it.payload?.items || it.payload?.sale?.items;
+                const items = it.payload?.saleItems || it.payload?.items || it.payload?.sale?.items;
                 if (Array.isArray(items)) {
                   pendingSaleItems.push(...items);
+                } else if (Array.isArray(it.payload?.sales)) {
+                  it.payload.sales.forEach((s: any) => {
+                    if (Array.isArray(s.items)) pendingSaleItems.push(...s.items);
+                    if (Array.isArray(s.saleItems)) pendingSaleItems.push(...s.saleItems);
+                  });
                 }
               });
 

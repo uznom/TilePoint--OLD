@@ -4,29 +4,31 @@
  */
 
 import {
-AlertCircle,
-Calculator,
-ChevronDown,
-ChevronUp,
-FileText,
-History,
-Keyboard,
-Loader2,
-LockKeyhole,
-Receipt,
-RefreshCw,
-RotateCcw,
-Scissors,
-ShieldCheck,
-ShoppingBag,
-ShoppingCart,
-Sparkles,
-Trash2,
-Truck,
-UserPlus,
-Users,
-X
+  CheckCircle2,
+  AlertCircle,
+  Calculator,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  History,
+  Keyboard,
+  Loader2,
+  LockKeyhole,
+  Receipt,
+  RefreshCw,
+  RotateCcw,
+  Scissors,
+  ShieldCheck,
+  ShoppingBag,
+  ShoppingCart,
+  Sparkles,
+  Trash2,
+  Truck,
+  UserPlus,
+  Users,
+  X
 } from "lucide-react";
+import { transactionOutboxService } from "../services/transactionOutboxService";
 import { AnimatePresence,motion } from "motion/react";
 import React,{ useCallback,useEffect,useRef,useState } from "react";
 import { useDb,useDbBranchStock,useDbProducts } from "../context/DbContext";
@@ -121,6 +123,31 @@ const CartQtyInput: React.FC<{
  } focus:outline-none focus:bg-content1 rounded-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
  />
  );
+};
+
+export const formatTenderInput = (raw: string): string => {
+  if (!raw) return '';
+  let clean = raw.replace(/[^\d.]/g, '');
+  const dotIndex = clean.indexOf('.');
+  if (dotIndex !== -1) {
+    const beforeDot = clean.slice(0, dotIndex);
+    const afterDot = clean.slice(dotIndex + 1).replace(/\./g, '');
+    clean = beforeDot + '.' + afterDot;
+  }
+  const parts = clean.split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  if (parts.length > 1) {
+    return `${parts[0]}.${parts[1].slice(0, 2)}`;
+  }
+  return parts[0];
+};
+
+export const parseTenderAmount = (val: string | number | null | undefined): number => {
+  if (typeof val === 'number') return isNaN(val) ? 0 : val;
+  if (!val) return 0;
+  const sanitized = val.toString().replace(/,/g, '').trim();
+  const num = parseFloat(sanitized);
+  return isNaN(num) ? 0 : num;
 };
 
 export const PosModule: React.FC<PosModuleProps> = ({
@@ -456,6 +483,41 @@ export const PosModule: React.FC<PosModuleProps> = ({
  // Checkout payment inputs
  const [paymentMethod, setPaymentMethod] = useState<string>("Cash");
 
+  const handleTenderInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const originalVal = input.value;
+    const selectionStart = input.selectionStart || 0;
+
+    // Count how many digits exist before the cursor
+    const digitsBeforeCursor = originalVal.slice(0, selectionStart).replace(/[^\d.]/g, '').length;
+
+    const formatted = formatTenderInput(originalVal);
+    setAmountTendered(formatted);
+
+    // Maintain smooth cursor position
+    requestAnimationFrame(() => {
+      if (!input) return;
+      let newCursorPos = 0;
+      let countedDigits = 0;
+      for (let i = 0; i < formatted.length; i++) {
+        if (/[\d.]/.test(formatted[i])) {
+          countedDigits++;
+        }
+        if (countedDigits === digitsBeforeCursor) {
+          newCursorPos = i + 1;
+          break;
+        }
+      }
+      if (newCursorPos > 0 && newCursorPos <= formatted.length) {
+        try {
+          input.setSelectionRange(newCursorPos, newCursorPos);
+        } catch {
+          // Ignore selection range errors
+        }
+      }
+    });
+  };
+
   const enabledPaymentMethods = React.useMemo(() => {
     const defaultButtons: Array<{ name: string; label: string; color: "default" | "primary" | "secondary" | "success" | "warning" }> = [
       { name: "Cash", label: "Cash", color: "default" },
@@ -512,10 +574,33 @@ export const PosModule: React.FC<PosModuleProps> = ({
  const [showReceiptModal, setShowReceiptModal] = useState(false);
  const [activeReceipt, setActiveReceipt] = useState<Sale | null>(null);
 
- const receiptItems = React.useMemo(() => {
- if (!activeReceipt) return [];
- return saleItems.filter((item) => item.saleId === activeReceipt.id && !item.isDeleted);
- }, [activeReceipt, saleItems]);
+  const receiptItems: any[] = React.useMemo(() => {
+    if (!activeReceipt) return [];
+    // 1. Direct embedded items on activeReceipt
+    if (Array.isArray((activeReceipt as any).items) && (activeReceipt as any).items.length > 0) {
+      return (activeReceipt as any).items;
+    }
+    if (Array.isArray((activeReceipt as any).saleItems) && (activeReceipt as any).saleItems.length > 0) {
+      return (activeReceipt as any).saleItems;
+    }
+    // 2. Query from saleItems state
+    const matched = saleItems.filter((item) => item.saleId === activeReceipt.id && !item.isDeleted);
+    if (matched.length > 0) return matched;
+
+    // 3. Fallback: check transaction outbox service
+    try {
+      const outbox = transactionOutboxService.getItems();
+      for (const it of outbox) {
+        const outboxItems = it.payload?.saleItems || it.payload?.items || it.payload?.sale?.items;
+        if (Array.isArray(outboxItems)) {
+          const found = outboxItems.filter((item: any) => item.saleId === activeReceipt.id && !item.isDeleted);
+          if (found.length > 0) return found;
+        }
+      }
+    } catch (_) {}
+
+    return [];
+  }, [activeReceipt, saleItems]);
 
  const activeReceiptMember = React.useMemo(() => {
  if (!activeReceipt || !activeReceipt.customerName) return null;
@@ -907,7 +992,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  // Change computation effect
  useEffect(() => {
- const tendered = parseFloat(amountTendered) || 0;
+ const tendered = parseTenderAmount(amountTendered);
  if (tendered >= grandTotal) {
  setChangeAmount(parseFloat((tendered - grandTotal).toFixed(2)));
  setErrorMessage("");
@@ -1130,25 +1215,24 @@ export const PosModule: React.FC<PosModuleProps> = ({
       showToast("Your active cart is currently empty.");
       return;
     }
-    const tenderIdx = document.getElementById("cash-tendered-field") as HTMLInputElement | null;
-    const parsedTender = parseFloat(amountTendered || "0");
-    const isCashValid = paymentMethod === "Cash" && !isNaN(parsedTender) && parsedTender >= grandTotal;
-    const isNonCash = paymentMethod !== "Cash";
-
-    if (isCashValid || isNonCash) {
-      clientCheckout();
-    } else {
-      if (paymentMethod === "Cash" && (!amountTendered || parsedTender < grandTotal)) {
-        setAmountTendered(grandTotal.toString());
-      }
+    const parsedTender = parseTenderAmount(amountTendered);
+    if (paymentMethod === "Cash" && grandTotal > 0 && (parsedTender < grandTotal || !amountTendered.trim())) {
+      showToast(`Amount tendered (₱${parsedTender.toFixed(2)}) must be equal or greater than Grand Total (₱${grandTotal.toFixed(2)}).`);
+      const tenderInput = document.getElementById("cash-tendered-field") as HTMLInputElement | null;
       try {
         const checkSection = document.getElementById("checkout-action-panel");
         checkSection?.scrollIntoView({ behavior: "smooth" });
-        setTimeout(() => tenderIdx?.focus(), 100);
+        setTimeout(() => tenderInput?.focus(), 100);
       } catch (scrollErr) {
-        console.debug('[POS Settle] Scroll into view error (non-fatal):', scrollErr);
+        console.debug('[POS Settle] Scroll into view error:', scrollErr);
       }
+      return;
     }
+    if (paymentMethod !== "Cash" && paymentMethod !== "Member Credit" && !paymentRef.trim()) {
+      showToast(`Reference number or approval code is required for ${paymentMethod}.`);
+      return;
+    }
+    clientCheckout();
   };
 
  const handleReprintLastReceipt = () => {
@@ -1383,14 +1467,14 @@ export const PosModule: React.FC<PosModuleProps> = ({
  }
 
  if (paymentMethod === "Cash") {
- const tendered = parseFloat(amountTendered) || 0;
- if (tendered < grandTotal) {
- setErrorMessage(
- `Tendered cash must equal or exceed total amount ₱${grandTotal.toFixed(2)}`,
- );
- return;
- }
- }
+    const tendered = parseTenderAmount(amountTendered);
+    if (grandTotal > 0 && (tendered < grandTotal || !amountTendered.trim())) {
+      setErrorMessage(
+        `EXECUTION BLOCKED: Amount Tendered (₱${tendered.toFixed(2)}) must be equal or greater than Grand Total (₱${grandTotal.toFixed(2)}).`,
+      );
+      return;
+    }
+  }
 
   if (paymentMethod !== "Cash" && paymentMethod !== "Member Credit") {
     if (!paymentRef.trim()) {
@@ -1459,7 +1543,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
     finalNotes,
     finalDiscount,
     paymentMethod,
-    parseFloat(amountTendered) || netPayable,
+    parseTenderAmount(amountTendered) || netPayable,
     vat,
     idempKey,
     discountType,
@@ -1471,11 +1555,35 @@ export const PosModule: React.FC<PosModuleProps> = ({
   );
   setPointsToRedeem(0);
 
- setDeliveryNotes(customerNotes || "");
- setDeliveryCustomerName(customerName || "");
- setPendingSaleForFulfillment(completedInvoice);
- setFulfillmentType("TakeHome");
- setShowFulfillmentModal(true);
+  // Ensure snapshot items are embedded for immediate and flawless receipt generation
+  const snapshotSaleItems = (completedInvoice as any).items || cart.map((item, idx) => {
+    const branchStockRec = getBranchStockRecord(item.product, activePosBranchId || currentUser?.branchAssignmentId || "B1", branchStock, branches);
+    const basePrice = branchStockRec && branchStockRec.sellingPriceOverride !== undefined && branchStockRec.sellingPriceOverride > 0
+      ? branchStockRec.sellingPriceOverride
+      : item.product.sellingPrice;
+    const unitPrice = (item as any).overridePrice !== undefined ? (item as any).overridePrice : basePrice;
+    const lineSubtotal = unitPrice * item.quantity;
+    const itemDiscount = (item as any).discountAmount || 0;
+    return {
+      id: `SLI-${completedInvoice.id}-${idx}`,
+      saleId: completedInvoice.id,
+      productId: item.product.id,
+      productName: item.product.productName,
+      unitPrice,
+      quantity: item.quantity,
+      discount: itemDiscount,
+      total: lineSubtotal - itemDiscount,
+      isDeleted: false,
+    };
+  });
+  (completedInvoice as any).items = snapshotSaleItems;
+  (completedInvoice as any).saleItems = snapshotSaleItems;
+
+  setDeliveryNotes(customerNotes || "");
+  setDeliveryCustomerName(customerName || "");
+  setPendingSaleForFulfillment(completedInvoice);
+  setFulfillmentType("TakeHome");
+  setShowFulfillmentModal(true);
 
  handleCancelSale();
  showToast("Payment Completed. Please assign receipt fulfillment.");
@@ -2088,7 +2196,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
         {receiptItems.length > 0 ? (
           <>
-            {receiptItems.map((it, idx) => (
+            {receiptItems.map((it: any, idx: number) => (
               <div
                 key={idx}
                 className="text-foreground space-y-0.5 pt-1.5 pb-1.5 border-b border-dotted border-divider/10 last:border-0"
@@ -2114,7 +2222,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
             <div className="flex justify-between font-extrabold text-[9.5px] border-t border-dashed border-divider/30 pt-1.5 mt-1 text-foreground">
               <span>Total Items Bought:</span>
               <span className="font-mono text-primary font-black">
-                {receiptItems.reduce((sum, item) => sum + (item.quantity || 0), 0)} pcs ({receiptItems.length} {receiptItems.length === 1 ? 'line' : 'lines'})
+                {receiptItems.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0)} pcs ({receiptItems.length} {receiptItems.length === 1 ? 'line' : 'lines'})
               </span>
             </div>
           </>
@@ -2152,7 +2260,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         </div>
         {activeReceipt && (Number(activeReceipt.discount) || 0) > 0 && (
           <div className="flex justify-between text-primary font-bold">
-            <span>BIR Discount Applied:</span>
+            <span>Discount Applied:</span>
             <span>-{formatCurrency(activeReceipt.discount)}</span>
           </div>
         )}
@@ -2372,7 +2480,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 font-sans">
-            {receiptItems.map((it, idx) => (
+            {receiptItems.map((it: any, idx: number) => (
               <tr key={idx}>
                 <td className="py-0.5 font-bold text-black">{it.productName}</td>
                 <td className="py-0.5 text-right font-mono font-bold">{it.quantity} pcs</td>
@@ -2386,7 +2494,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
             <tr className="border-t border-black text-[8.5px] font-black">
               <td className="py-1 text-black">Total Items Bought:</td>
               <td className="py-1 text-right font-mono text-black">
-                {receiptItems.reduce((sum, item) => sum + (item.quantity || 0), 0)} pcs ({receiptItems.length} {receiptItems.length === 1 ? 'line' : 'lines'})
+                {receiptItems.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0)} pcs ({receiptItems.length} {receiptItems.length === 1 ? 'line' : 'lines'})
               </td>
               <td></td>
             </tr>
@@ -3212,7 +3320,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
                   onClick={() => {
                     setPaymentMethod(method.name as any);
                     if (method.name !== "Cash") {
-                      setAmountTendered(Math.abs(grandTotal).toString());
+                      setAmountTendered(formatTenderInput(Math.abs(grandTotal).toFixed(2)));
                     } else {
                       setAmountTendered("");
                     }
@@ -3230,18 +3338,54 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
         {/* Amount Tendered */}
         <div className="sm:col-span-6 space-y-1.5 font-sans">
-          <label className="text-[10px] font-bold text-default-500 uppercase tracking-wider pl-1 block font-sans">
-            Amount Tendered (PHP)
-          </label>
-          <input
-            id="cash-tendered-field"
-            type="number"
-            disabled={paymentMethod !== "Cash"}
-            value={amountTendered ?? ''}
-            onChange={(e) => setAmountTendered(e.target.value)}
-            placeholder={grandTotal.toFixed(0)}
-            className="w-full bg-content1 border border-divider/60 focus:border-primary px-3.5 py-2 text-xs text-foreground font-bold tracking-tight focus:outline-none transition-colors disabled:opacity-45 disabled:cursor-not-allowed rounded-xl font-sans tabular-nums h-9 shadow-inner"
-          />
+          <div className="flex items-center justify-between">
+            <label className="text-[10px] font-bold text-default-500 uppercase tracking-wider pl-1 block font-sans">
+              Amount Tendered (PHP)
+            </label>
+            {paymentMethod === "Cash" && (
+              <button
+                type="button"
+                onClick={() => setAmountTendered(formatTenderInput(grandTotal.toFixed(2)))}
+                className="text-[10px] font-black uppercase text-primary hover:underline cursor-pointer transition-colors"
+              >
+                Exact Cash (₱{(Number(grandTotal) || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })})
+              </button>
+            )}
+          </div>
+          <div className="relative flex items-center">
+            <span className="absolute left-3.5 text-base sm:text-xl font-black text-default-400 font-mono select-none pointer-events-none">
+              ₱
+            </span>
+            <input
+              id="cash-tendered-field"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              disabled={paymentMethod !== "Cash"}
+              value={amountTendered ?? ''}
+              onChange={handleTenderInputChange}
+              placeholder={(Number(grandTotal) || 0).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+              className="w-full bg-content1 border-2 border-divider/60 focus:border-primary pl-8 sm:pl-9 pr-3.5 py-2.5 text-base sm:text-2xl text-foreground font-black tracking-tight focus:outline-none transition-all disabled:opacity-45 disabled:cursor-not-allowed rounded-2xl font-mono tabular-nums h-12 sm:h-14 shadow-inner"
+            />
+          </div>
+          {paymentMethod === "Cash" && amountTendered.trim() !== "" && (
+            <div className="pt-0.5 pl-1">
+              {parseTenderAmount(amountTendered) < grandTotal ? (
+                <span className="text-[11px] font-bold text-rose-500 flex items-center gap-1 font-mono">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
+                  Short by ₱{(grandTotal - parseTenderAmount(amountTendered)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              ) : (
+                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-mono">
+                  <CheckCircle2 className="h-3 w-3 shrink-0" />
+                  Change: ₱{(parseTenderAmount(amountTendered) - grandTotal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -3275,7 +3419,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
         </div>
       )}
 
-      {paymentMethod === "Cash" && parseFloat(amountTendered) >= grandTotal && (
+      {paymentMethod === "Cash" && parseTenderAmount(amountTendered) >= grandTotal && (
         <div className="p-2.5 px-3.5 bg-success-50 dark:bg-success-500/15 border border-success-500/30 text-success-700 dark:text-success-300 rounded-xl flex justify-between items-center text-xs font-bold animate-fade-in">
           <span className="text-[10px] font-bold uppercase tracking-wider text-success-700 dark:text-success-300">
             CHANGE DISPENSE:
@@ -3464,28 +3608,53 @@ export const PosModule: React.FC<PosModuleProps> = ({
       )}
 
       {/* Action Row */}
-      <div className="pt-1 flex gap-2.5">
-        <HeroButton
-          variant="flat"
-          color="default"
-          radius="xl"
-          onClick={handleCancelSale}
-          className="px-4 font-semibold text-xs h-11 shrink-0"
-        >
-          Cancel Order
-        </HeroButton>
-        <HeroButton
-          variant="solid"
-          color="primary"
-          radius="xl"
-          disabled={cart.length === 0 || isCheckingOut}
-          onClick={clientCheckout}
-          startIcon={isCheckingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
-          className="flex-1 font-bold text-xs uppercase tracking-wider h-11 shadow-md"
-        >
-          {isCheckingOut ? "Processing..." : "Execute Settlement (F7)"}
-        </HeroButton>
-      </div>
+      {(() => {
+        const parsedTendered = parseTenderAmount(amountTendered);
+        const isCash = paymentMethod === "Cash";
+        const isCashSufficient = isCash
+          ? (grandTotal <= 0 ? true : parsedTendered >= grandTotal && Boolean(amountTendered.trim()))
+          : true;
+        const isNonCashValid = (isCash || paymentMethod === "Member Credit")
+          ? true
+          : Boolean(paymentRef.trim());
+        const isExecuteSettlementDisabled =
+          cart.length === 0 ||
+          isCheckingOut ||
+          !isCashSufficient ||
+          !isNonCashValid;
+
+        return (
+          <div className="pt-1 flex gap-2.5">
+            <HeroButton
+              variant="flat"
+              color="default"
+              radius="xl"
+              onClick={handleCancelSale}
+              className="px-4 font-semibold text-xs h-11 shrink-0"
+            >
+              Cancel Order
+            </HeroButton>
+            <HeroButton
+              variant="solid"
+              color="primary"
+              radius="xl"
+              disabled={isExecuteSettlementDisabled}
+              onClick={clientCheckout}
+              startIcon={isCheckingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : undefined}
+              className="flex-1 font-bold text-xs uppercase tracking-wider h-11 shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
+              title={
+                !isCashSufficient
+                  ? `Amount Tendered (₱${parsedTendered.toFixed(2)}) must be equal or greater than Grand Total (₱${grandTotal.toFixed(2)})`
+                  : !isNonCashValid
+                  ? `Payment reference number is required for ${paymentMethod}`
+                  : undefined
+              }
+            >
+              {isCheckingOut ? "Processing..." : "Execute Settlement (F7)"}
+            </HeroButton>
+          </div>
+        );
+      })()}
     </div>
   </div>
   </div>

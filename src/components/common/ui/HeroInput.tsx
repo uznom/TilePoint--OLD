@@ -25,6 +25,13 @@ export interface HeroInputProps extends Omit<React.InputHTMLAttributes<HTMLInput
   fullWidth?: boolean;
   className?: string;
   wrapperClassName?: string;
+  classNames?: {
+    base?: string;
+    inputWrapper?: string;
+    input?: string;
+    label?: string;
+    helperWrapper?: string;
+  };
   id?: string;
 }
 
@@ -50,6 +57,7 @@ export const HeroInput = React.forwardRef<HTMLInputElement, HeroInputProps>(
       fullWidth = true,
       className = '',
       wrapperClassName = '',
+      classNames,
       id,
       value,
       defaultValue,
@@ -120,12 +128,12 @@ export const HeroInput = React.forwardRef<HTMLInputElement, HeroInputProps>(
     const showClear = isClearable && Boolean(value) && !effectiveDisabled && !effectiveReadOnly;
 
     return (
-      <div data-slot="input-group" className={`input-group flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${wrapperClassName}`}>
+      <div data-slot="input-group" className={`input-group flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${wrapperClassName} ${classNames?.base || ''}`}>
         {label && (
           <label
             htmlFor={inputId}
             data-slot="label"
-            className="text-xs font-semibold text-foreground dark:text-default-200 select-none flex items-center gap-1 font-sans tracking-tight"
+            className={`text-xs font-semibold text-foreground dark:text-default-200 select-none flex items-center gap-1 font-sans tracking-tight ${classNames?.label || ''}`}
           >
             <span>{label}</span>
             {isRequired && <span className="text-danger">*</span>}
@@ -136,7 +144,7 @@ export const HeroInput = React.forwardRef<HTMLInputElement, HeroInputProps>(
           data-slot="input-wrapper"
           className={`relative flex items-center gap-2 transition-all duration-150 ${getRadiusClasses()} ${getSizeClasses()} ${getVariantClasses()} ${
             effectiveDisabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
-          } ${className}`}
+          } ${classNames?.inputWrapper || ''} ${className}`}
         >
           {startContent && <div data-slot="start-content" className="shrink-0 text-default-400 flex items-center">{startContent}</div>}
 
@@ -150,7 +158,7 @@ export const HeroInput = React.forwardRef<HTMLInputElement, HeroInputProps>(
             onChange={handleChange}
             disabled={effectiveDisabled}
             readOnly={effectiveReadOnly}
-            className="w-full h-full bg-transparent text-foreground placeholder:text-default-400 outline-none border-none p-0 focus:ring-0 text-inherit font-medium"
+            className={`w-full h-full bg-transparent text-foreground placeholder:text-default-400 outline-none border-none p-0 focus:ring-0 text-inherit font-medium ${classNames?.input || ''}`}
             {...props}
           />
 

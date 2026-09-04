@@ -86,12 +86,17 @@ export const PosShiftModal: React.FC<PosShiftModalProps> = ({
               type="number"
               step="any"
               required
-              placeholder="e.g. 1000.00"
+              size="lg"
+              placeholder="0.00"
               value={startCashInput}
               onValueChange={(val) => setStartCashInput(val)}
               radius="lg"
               variant="flat"
-              className="text-center font-black text-base"
+              startContent={<span className="text-xl sm:text-2xl font-black text-default-400 font-mono select-none">₱</span>}
+              classNames={{
+                input: "text-xl sm:text-2xl font-black font-mono text-center tracking-tight",
+                inputWrapper: "h-14 sm:h-16 shadow-inner border border-divider/40",
+              }}
             />
             <div className="grid grid-cols-4 gap-1.5 pt-1">
               {[500, 1000, 2000, 3000].map((amt) => (

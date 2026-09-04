@@ -843,6 +843,9 @@ export function useDbOperationsModule({
         };
       });
 
+      (newSale as any).items = newSaleItems;
+      (newSale as any).saleItems = newSaleItems;
+
       setSales((prev) => [newSale, ...prev]);
       setSaleItems((prev) => [...prev, ...newSaleItems]);
 

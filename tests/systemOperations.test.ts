@@ -103,4 +103,101 @@ describe('System Operations, Security & Midnight Reset Suite', () => {
       expect(zeroedBranchStock.every((bs) => bs.quantity === 0)).toBe(true);
     });
   });
+
+  describe('Payment Methods & Discount Schemes Switch Guards', () => {
+    it('blocks disabling the last remaining active payment method', () => {
+      let paymentMethods = [
+        { id: 'pm_cash', name: 'Cash', isEnabled: true, isActive: true },
+        { id: 'pm_gcash', name: 'GCash', isEnabled: false, isActive: false },
+      ];
+
+      const togglePaymentMethod = (id: string, enabled?: boolean): boolean => {
+        const target = paymentMethods.find((p) => p.id === id);
+        if (!target) return false;
+        const next = enabled !== undefined ? enabled : !target.isEnabled;
+        if (!next) {
+          const activeCount = paymentMethods.filter((p) => p.isEnabled).length;
+          if (activeCount <= 1 && target.isEnabled) {
+            return false; // blocked
+          }
+        }
+        paymentMethods = paymentMethods.map((p) =>
+          p.id === id ? { ...p, isEnabled: next, isActive: next } : p
+        );
+        return true;
+      };
+
+      // Disabling the only active payment method (Cash) must fail
+      const result = togglePaymentMethod('pm_cash', false);
+      expect(result).toBe(false);
+      expect(paymentMethods.find((p) => p.id === 'pm_cash')?.isEnabled).toBe(true);
+
+      // Enabling GCash first should succeed
+      const enableGcash = togglePaymentMethod('pm_gcash', true);
+      expect(enableGcash).toBe(true);
+      expect(paymentMethods.filter((p) => p.isEnabled).length).toBe(2);
+
+      // Now Cash can be disabled since GCash is active
+      const disableCash = togglePaymentMethod('pm_cash', false);
+      expect(disableCash).toBe(true);
+      expect(paymentMethods.find((p) => p.id === 'pm_cash')?.isEnabled).toBe(false);
+      expect(paymentMethods.find((p) => p.id === 'pm_gcash')?.isEnabled).toBe(true);
+    });
+
+    it('blocks deleting the last remaining active payment method', () => {
+      let paymentMethods = [
+        { id: 'pm_cash', name: 'Cash', isEnabled: true },
+        { id: 'pm_card', name: 'Card', isEnabled: false },
+      ];
+
+      const deletePaymentMethod = (id: string): boolean => {
+        const target = paymentMethods.find((p) => p.id === id);
+        if (!target) return false;
+        if (target.isEnabled) {
+          const activeCount = paymentMethods.filter((p) => p.isEnabled).length;
+          if (activeCount <= 1) {
+            return false; // blocked
+          }
+        }
+        paymentMethods = paymentMethods.filter((p) => p.id !== id);
+        return true;
+      };
+
+      // Attempting to delete Cash (the only active method) must fail
+      expect(deletePaymentMethod('pm_cash')).toBe(false);
+      expect(paymentMethods.length).toBe(2);
+
+      // Deleting the disabled Card method should succeed
+      expect(deletePaymentMethod('pm_card')).toBe(true);
+      expect(paymentMethods.length).toBe(1);
+    });
+
+    it('allows toggling discount schemes and keeps isEnabled/isActive in sync', () => {
+      let discountSchemes = [
+        { id: 'disc_senior', name: 'Senior Citizen', isEnabled: true, isActive: true },
+        { id: 'disc_pwd', name: 'PWD', isEnabled: true, isActive: true },
+      ];
+
+      const toggleDiscountScheme = (id: string, enabled?: boolean) => {
+        discountSchemes = discountSchemes.map((ds) => {
+          if (ds.id !== id) return ds;
+          const next = enabled !== undefined ? enabled : !ds.isEnabled;
+          return { ...ds, isEnabled: next, isActive: next };
+        });
+      };
+
+      // Disabling both discount schemes is permitted (promotional discounts are optional)
+      toggleDiscountScheme('disc_senior', false);
+      expect(discountSchemes.find((d) => d.id === 'disc_senior')?.isEnabled).toBe(false);
+      expect(discountSchemes.find((d) => d.id === 'disc_senior')?.isActive).toBe(false);
+
+      toggleDiscountScheme('disc_pwd', false);
+      expect(discountSchemes.every((d) => !d.isEnabled && !d.isActive)).toBe(true);
+
+      // Re-enabling Senior Citizen
+      toggleDiscountScheme('disc_senior', true);
+      expect(discountSchemes.find((d) => d.id === 'disc_senior')?.isEnabled).toBe(true);
+      expect(discountSchemes.find((d) => d.id === 'disc_senior')?.isActive).toBe(true);
+    });
+  });
 });
