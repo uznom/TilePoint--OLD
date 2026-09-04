@@ -17,6 +17,12 @@ import {
   UserCheck,
   Printer
 } from 'lucide-react';
+import { FumadocsHelpCenter } from './tutorials/FumadocsHelpCenter';
+
+export interface TutorialOnboardingProps {
+  darkMode?: boolean;
+  onNavigate?: (tab: string) => void;
+}
 
 interface TutorialTopic {
   id: string;
@@ -133,7 +139,8 @@ const TUTORIALS_DATA: TutorialTopic[] = [
   }
 ];
 
-export const TutorialOnboarding: React.FC = () => {
+export const TutorialOnboarding: React.FC<TutorialOnboardingProps> = ({ darkMode, onNavigate }) => {
+  const [activeTabMode, setActiveTabMode] = useState<'docs' | 'walkthrough'>('docs');
   const [selectedTopicId, setSelectedTopicId] = useState('pos');
   const [activeStepIdx, setActiveStepIdx] = useState(0);
 
@@ -595,7 +602,47 @@ export const TutorialOnboarding: React.FC = () => {
 
   return (
     <div className="space-y-6 w-full min-h-full p-1 sm:p-2 md:p-4 text-left" id="tilepoint-tutorials-panel">
-      {/* Dynamic Header Badge */}
+      {/* Top Level Mode Switcher Tabs */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-1.5 bg-zinc-100 dark:bg-zinc-800/80 rounded-2xl border border-zinc-200/60 dark:border-white/10 shadow-2xs">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            id="tutorial-tab-docs"
+            onClick={() => setActiveTabMode('docs')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTabMode === 'docs'
+                ? 'bg-white dark:bg-zinc-900 text-primary shadow-xs font-black'
+                : 'text-default-500 hover:text-foreground'
+            }`}
+          >
+            <BookOpen className="h-4 w-4 text-primary" />
+            <span>Help & Documentation (SOP)</span>
+          </button>
+          <button
+            type="button"
+            id="tutorial-tab-walkthrough"
+            onClick={() => setActiveTabMode('walkthrough')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTabMode === 'walkthrough'
+                ? 'bg-white dark:bg-zinc-900 text-primary shadow-xs font-black'
+                : 'text-default-500 hover:text-foreground'
+            }`}
+          >
+            <Sparkles className="h-4 w-4 text-amber-500" />
+            <span>Interactive Walkthroughs</span>
+          </button>
+        </div>
+
+        <div className="text-[11px] font-mono text-default-400 pr-3 hidden sm:block">
+          {activeTabMode === 'docs' ? 'Fumadocs Knowledge Base' : '4 Onboarding Modules'}
+        </div>
+      </div>
+
+      {activeTabMode === 'docs' ? (
+        <FumadocsHelpCenter darkMode={darkMode} onNavigate={onNavigate} />
+      ) : (
+        <div className="space-y-6">
+          {/* Dynamic Header Badge */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/70 dark:border-white/10 shadow-elevation-soft relative overflow-hidden">
         <div className="space-y-1 relative z-10">
           <div className="inline-flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20 font-mono">
@@ -767,6 +814,8 @@ export const TutorialOnboarding: React.FC = () => {
           </div>
         </div>
       </div>
+        </div>
+      )}
     </div>
   );
 };
