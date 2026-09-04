@@ -119,6 +119,24 @@ export function parseRowFromMysql(tableName, row) {
     }
   });
 
+  // Normalize SQL datetime strings ('YYYY-MM-DD HH:mm:ss') to standard ISO 8601 strings ('YYYY-MM-DDTHH:mm:ss.000Z')
+  const dateCols = [
+    'createdAt', 'updatedAt', 'timestamp', 'dateTime', 'date', 'deliveryDate',
+    'transferredAt', 'reportedAt', 'closedAt', 'openedAt', 'lastActive', 'expirationDate',
+    'manufacturingDate', 'receivedAt', 'duePaymentDate', 'deletedAt'
+  ];
+  Object.keys(res).forEach(col => {
+    if (col.endsWith('At') || col.endsWith('Date') || dateCols.includes(col)) {
+      const val = res[col];
+      if (typeof val === 'string') {
+        const sqlDateMatch = val.match(/^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})$/);
+        if (sqlDateMatch) {
+          res[col] = `${sqlDateMatch[1]}T${sqlDateMatch[2]}.000Z`;
+        }
+      }
+    }
+  });
+
   return res;
 }
 

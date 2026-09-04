@@ -26,6 +26,8 @@ import { motion } from "motion/react";
 import React,{ useEffect,useMemo,useState } from "react";
 import { encryptString,getSecuritySecretKey,useDb } from "../context/DbContext";
 import { saveFileToBackup } from "../lib/fileBackupHelper";
+import { isSameBranch } from "../lib/branchUtils";
+import { extractDateOnly } from "../utils/dateUtils";
 import { UserRole } from "../types/db";
 import { ToastNotification } from "./ToastNotification";
 import { HeaderBar } from "./common/HeaderBar";
@@ -56,6 +58,15 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
   const [selectedBranchId, setSelectedBranchId] = useState(() => {
     return currentUser?.branchAssignmentId || "B1";
   });
+
+  // Sync selected branch if currentUser or branches hydrate asynchronously
+  useEffect(() => {
+    if (currentUser?.branchAssignmentId && (!selectedBranchId || selectedBranchId === "B1")) {
+      setSelectedBranchId(currentUser.branchAssignmentId);
+    } else if (branches && branches.length > 0 && (!selectedBranchId || selectedBranchId === "B1" || !branches.some((b) => b.id === selectedBranchId))) {
+      setSelectedBranchId(currentUser?.branchAssignmentId || branches[0].id);
+    }
+  }, [currentUser, branches, selectedBranchId]);
 
   // Expand states for detailed tables
   const [showSalesList, setShowSalesList] = useState(true);
@@ -123,20 +134,18 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
     // Filter non-voided sales for this branch and date
     const localSales = allSales.filter((s) => {
       if (!s || s.isDeleted) return false;
-      if (s.branchId !== targetBranchId) return false;
-      return s.createdAt && s.createdAt.split("T")[0] === reportingDate;
+      const branchMatches = s.branchId === targetBranchId || isSameBranch(s.branchId, targetBranchId, branches) || (branches && branches.length <= 1);
+      if (!branchMatches) return false;
+      return extractDateOnly(s.createdAt) === reportingDate;
     });
 
     const localSaleItems = allSaleItems.filter((item) => {
       if (!item) return false;
       const parentSale = allSales.find((s) => s && s.id === item.saleId);
-      return (
-        parentSale &&
-        parentSale.branchId === targetBranchId &&
-        !parentSale.isDeleted &&
-        parentSale.createdAt &&
-        parentSale.createdAt.split("T")[0] === reportingDate
-      );
+      if (!parentSale || parentSale.isDeleted) return false;
+      const branchMatches = parentSale.branchId === targetBranchId || isSameBranch(parentSale.branchId, targetBranchId, branches) || (branches && branches.length <= 1);
+      if (!branchMatches) return false;
+      return extractDateOnly(parentSale.createdAt) === reportingDate;
     });
 
     // Compute revenue, discounts, vat
@@ -172,8 +181,9 @@ export const DailyReconciliationModule: React.FC<DailyReconciliationModuleProps>
     // Expenses for the branch on selected date
     const branchExpenses = allExpenses.filter((e) => {
       if (!e || e.isDeleted) return false;
-      if (e.branchId !== targetBranchId) return false;
-      return e.dateTime && e.dateTime.split("T")[0] === reportingDate;
+      const branchMatches = e.branchId === targetBranchId || isSameBranch(e.branchId, targetBranchId, branches) || (branches && branches.length <= 1);
+      if (!branchMatches) return false;
+      return extractDateOnly(e.dateTime) === reportingDate;
     });
 
     const totalExpenses = branchExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);

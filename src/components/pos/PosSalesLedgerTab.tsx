@@ -53,8 +53,8 @@ export const PosSalesLedgerTab: React.FC<PosSalesLedgerTabProps> = ({
       const cashierMatch = (sale.cashierName || "").toLowerCase().includes(q);
       if (!numMatch && !custMatch && !cashierMatch) return false;
     }
-    if (filterPaymentMethod && filterPaymentMethod !== "ALL") {
-      if (sale.paymentMethod !== filterPaymentMethod) return false;
+    if (filterPaymentMethod && filterPaymentMethod.toUpperCase() !== "ALL") {
+      if ((sale.paymentMethod || "").toLowerCase() !== filterPaymentMethod.toLowerCase()) return false;
     }
     if (filterDate) {
       const saleDate = (sale.createdAt || "").slice(0, 10);

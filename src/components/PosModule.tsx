@@ -343,7 +343,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  null,
  );
  const [ledgerSearchQuery, setLedgerSearchQuery] = useState("");
- const [ledgerPaymentFilter, setLedgerPaymentFilter] = useState<string>("All");
+ const [ledgerPaymentFilter, setLedgerPaymentFilter] = useState<string>("ALL");
  const [ledgerDateFilter, setLedgerDateFilter] = useState<string>("");
  const { fontClass: receiptFontClass } = useReceiptFontSize();
 

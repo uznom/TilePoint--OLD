@@ -1070,8 +1070,23 @@ export function useDbSyncModule({
                 pointsRedeemed: Number(s.pointsRedeemed) || 0,
                 isDeleted: Boolean(s.isDeleted),
               }));
-              setSales(cleanSales);
-              try { localStorage.setItem("tp_sales", JSON.stringify(cleanSales)); } catch (_) {}
+
+              // Merge any pending outbox sales that are still in-flight
+              const pendingOutboxItems = transactionOutboxService.getItems()
+                .filter(it => (it.status === 'pending' || it.status === 'processing'));
+
+              const pendingSales = pendingOutboxItems
+                .filter(it => it.txType === 'POS_CHECKOUT' || it.endpoint?.includes('/sales'))
+                .map(it => it.payload?.sale || it.payload)
+                .filter(Boolean);
+
+              const serverSaleIds = new Set(cleanSales.map((s: any) => s.id));
+              const missingPendingSales = pendingSales.filter((ps: any) => ps.id && !serverSaleIds.has(ps.id));
+
+              const mergedSales = [...missingPendingSales, ...cleanSales];
+
+              setSales(mergedSales);
+              try { localStorage.setItem("tp_sales", JSON.stringify(mergedSales)); } catch (_) {}
             }
 
             // 2. sale_items
@@ -1085,8 +1100,25 @@ export function useDbSyncModule({
                 discount: Number(it.discount) || 0,
                 isDeleted: Boolean(it.isDeleted),
               }));
-              setSaleItems(cleanItems);
-              try { localStorage.setItem("tp_sale_items", JSON.stringify(cleanItems)); } catch (_) {}
+
+              const pendingOutboxItems = transactionOutboxService.getItems()
+                .filter(it => (it.status === 'pending' || it.status === 'processing'));
+
+              const pendingSaleItems: any[] = [];
+              pendingOutboxItems.forEach(it => {
+                const items = it.payload?.items || it.payload?.sale?.items;
+                if (Array.isArray(items)) {
+                  pendingSaleItems.push(...items);
+                }
+              });
+
+              const serverItemIds = new Set(cleanItems.map((it: any) => it.id));
+              const missingPendingItems = pendingSaleItems.filter((pi: any) => pi.id && !serverItemIds.has(pi.id));
+
+              const mergedItems = [...missingPendingItems, ...cleanItems];
+
+              setSaleItems(mergedItems);
+              try { localStorage.setItem("tp_sale_items", JSON.stringify(mergedItems)); } catch (_) {}
             }
 
             // 3. shifts

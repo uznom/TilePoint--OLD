@@ -1,4 +1,5 @@
-import { getBranchOptionLabel } from '../lib/branchUtils';
+import { getBranchOptionLabel, isSameBranch } from '../lib/branchUtils';
+import { extractDateOnly } from '../utils/dateUtils';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -525,86 +526,93 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
 
  // Aggregate stats of untransmitted local sales for the selected date on active branch
  const compiledLocalSalesData = useMemo(() => {
-  const targetBranchId = currentBranchMeta?.id || (branches && branches[0]?.id) || '';
-  const localSales = sales.filter(s => {
-  if (s.isDeleted) return false;
-  if (s.branchId !== targetBranchId) return false;
-  const saleDate = s.createdAt.split("T")[0];
-  return saleDate === reportingDate;
-  });
-
-  const localSaleItems = saleItems.filter(item => {
-  const parentSale = sales.find(s => s.id === item.saleId);
-  return parentSale && parentSale.branchId === targetBranchId && !parentSale.isDeleted && parentSale.createdAt.split("T")[0] === reportingDate;
-  });
-
-  const sumGrandTotal = localSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
-  const sumVat = localSales.reduce((acc, s) => acc + (Number(s.vat) || 0), 0);
-  const sumDiscount = localSales.reduce((acc, s) => acc + (Number(s.discount) || 0), 0);
-
-  // 1. FILTER EXPENSES
-  const localExpenses = expenses.filter(exp => {
-   if (exp.isDeleted) return false;
-   if (exp.branchId !== targetBranchId) return false;
-   const expDate = exp.dateTime ? exp.dateTime.split("T")[0] : "";
-   return expDate === reportingDate;
-  });
-  const totalExpensesAmount = localExpenses.reduce((acc, exp) => acc + (exp.amount || 0), 0);
-
-  // 2. FILTER CARGO DELIVERIES
-  const localDeliveries = deliveries.filter(del => {
-   if (del.branchId !== targetBranchId) return false;
-   const delDate = del.deliveryDate || (del.createdAt ? del.createdAt.split("T")[0] : "");
-   return delDate === reportingDate;
-  });
-
-  // 3. FILTER PURCHASE ORDERS (PO)
-  const localPOs = purchaseOrders.filter(po => {
-   if (po.branchId !== targetBranchId) return false;
-   const poDate = po.createdAt ? po.createdAt.split("T")[0] : "";
-   return poDate === reportingDate;
-  });
-
-  // 4. CALCULATE COGS FOR P&L
-  let totalCogs = 0;
-  localSaleItems.forEach(item => {
-   const prod = products.find(p => p.id === item.productId);
-   const cost = prod ? prod.costPrice : 0;
-   totalCogs += item.quantity * cost;
-  });
-
-  const pandlData = {
-   revenue: sumGrandTotal,
-   cogs: totalCogs,
-   expenses: totalExpensesAmount,
-   netProfit: sumGrandTotal - totalCogs - totalExpensesAmount
-  };
-
-  // 5. CALCULATE HOURLY HEATMAP (24 hours)
-  const heatmapData = Array.from({ length: 24 }, (_, hour) => {
-   const hourlySales = localSales.filter(s => {
-    const saleHour = (s.createdAt && !isNaN(new Date(s.createdAt).getTime()) ? new Date(s.createdAt).getHours() : 0);
-    return saleHour === hour;
+   const targetBranchId = currentBranchMeta?.id || (branches && branches[0]?.id) || '';
+   const localSales = sales.filter(s => {
+     if (s.isDeleted) return false;
+     const branchMatches = s.branchId === targetBranchId || isSameBranch(s.branchId, targetBranchId, branches) || (branches && branches.length <= 1);
+     if (!branchMatches) return false;
+     const saleDate = extractDateOnly(s.createdAt);
+     return saleDate === reportingDate;
    });
-   const hourlyCount = hourlySales.length;
-   const hourlyAmount = hourlySales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
-   return { hour, count: hourlyCount, amount: hourlyAmount };
-  });
 
-  // 6. FILTER BOA (Audit Logs as Book of Accounts)
-  const localBOALogs = auditLogs.filter(log => {
-   const logDate = (log.createdAt || log.timestamp || "").split("T")[0];
-   return logDate === reportingDate;
-  }).map(log => ({
-   id: log.id,
-   type: log.actionCode || "SYSTEM_LOG",
-   module: log.module || "System",
-   description: log.description || "",
-   userName: log.userName || log.username || "System",
-   timestamp: log.createdAt || log.timestamp || new Date().toISOString()
-  }));
+   const localSaleItems = saleItems.filter(item => {
+     const parentSale = sales.find(s => s.id === item.saleId);
+     if (!parentSale || parentSale.isDeleted) return false;
+     const branchMatches = parentSale.branchId === targetBranchId || isSameBranch(parentSale.branchId, targetBranchId, branches) || (branches && branches.length <= 1);
+     if (!branchMatches) return false;
+     return extractDateOnly(parentSale.createdAt) === reportingDate;
+   });
 
-  return {
+   const sumGrandTotal = localSales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+   const sumVat = localSales.reduce((acc, s) => acc + (Number(s.vat) || 0), 0);
+   const sumDiscount = localSales.reduce((acc, s) => acc + (Number(s.discount) || 0), 0);
+
+   // 1. FILTER EXPENSES
+   const localExpenses = expenses.filter(exp => {
+     if (exp.isDeleted) return false;
+     const branchMatches = exp.branchId === targetBranchId || isSameBranch(exp.branchId, targetBranchId, branches) || (branches && branches.length <= 1);
+     if (!branchMatches) return false;
+     const expDate = extractDateOnly(exp.dateTime);
+     return expDate === reportingDate;
+   });
+   const totalExpensesAmount = localExpenses.reduce((acc, exp) => acc + (exp.amount || 0), 0);
+
+   // 2. FILTER CARGO DELIVERIES
+   const localDeliveries = deliveries.filter(del => {
+     const branchMatches = del.branchId === targetBranchId || isSameBranch(del.branchId, targetBranchId, branches) || (branches && branches.length <= 1);
+     if (!branchMatches) return false;
+     const delDate = extractDateOnly(del.deliveryDate || del.createdAt);
+     return delDate === reportingDate;
+   });
+
+   // 3. FILTER PURCHASE ORDERS (PO)
+   const localPOs = purchaseOrders.filter(po => {
+     const branchMatches = po.branchId === targetBranchId || isSameBranch(po.branchId, targetBranchId, branches) || (branches && branches.length <= 1);
+     if (!branchMatches) return false;
+     const poDate = extractDateOnly(po.createdAt);
+     return poDate === reportingDate;
+   });
+
+   // 4. CALCULATE COGS FOR P&L
+   let totalCogs = 0;
+   localSaleItems.forEach(item => {
+     const prod = products.find(p => p.id === item.productId);
+     const cost = prod ? prod.costPrice : 0;
+     totalCogs += item.quantity * cost;
+   });
+
+   const pandlData = {
+     revenue: sumGrandTotal,
+     cogs: totalCogs,
+     expenses: totalExpensesAmount,
+     netProfit: sumGrandTotal - totalCogs - totalExpensesAmount
+   };
+
+   // 5. CALCULATE HOURLY HEATMAP (24 hours)
+   const heatmapData = Array.from({ length: 24 }, (_, hour) => {
+     const hourlySales = localSales.filter(s => {
+       const saleHour = (s.createdAt && !isNaN(new Date(s.createdAt.replace(' ', 'T')).getTime()) ? new Date(s.createdAt.replace(' ', 'T')).getHours() : 0);
+       return saleHour === hour;
+     });
+     const hourlyCount = hourlySales.length;
+     const hourlyAmount = hourlySales.reduce((acc, s) => acc + (Number(s.grandTotal) || 0), 0);
+     return { hour, count: hourlyCount, amount: hourlyAmount };
+   });
+
+   // 6. FILTER BOA (Audit Logs as Book of Accounts)
+   const localBOALogs = auditLogs.filter(log => {
+     const logDate = extractDateOnly(log.createdAt || log.timestamp);
+     return logDate === reportingDate;
+   }).map(log => ({
+     id: log.id,
+     type: log.actionCode || "SYSTEM_LOG",
+     module: log.module || "System",
+     description: log.description || "",
+     userName: log.userName || log.username || "System",
+     timestamp: log.createdAt || log.timestamp || new Date().toISOString()
+   }));
+
+   return {
   sales: localSales,
   saleItems: localSaleItems,
   count: localSales.length,

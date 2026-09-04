@@ -118,9 +118,38 @@ class TransactionOutboxService {
   /**
    * Loads outbox items from localStorage and migrates any legacy queues
    */
-  private loadFromStorage() { this.items = []; }
+  private loadFromStorage() {
+    if (typeof window === 'undefined') {
+      this.items = [];
+      return;
+    }
+    try {
+      const raw = localStorage.getItem('tp_transaction_outbox_queue');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          this.items = parsed.map((item: OutboxRecord) => ({
+            ...item,
+            status: item.status === 'processing' ? 'pending' : item.status,
+          }));
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('[Outbox] Failed to load from storage:', e);
+    }
+    this.items = [];
+  }
 
-  private saveToStorage() { }
+  private saveToStorage() {
+    if (typeof window === 'undefined') return;
+    try {
+      const toSave = this.items.filter(it => it.status !== 'completed').slice(-100);
+      localStorage.setItem('tp_transaction_outbox_queue', JSON.stringify(toSave));
+    } catch (e) {
+      console.warn('[Outbox] Failed to save to storage:', e);
+    }
+  }
 
   public enqueue(options: EnqueueOutboxOptions): OutboxRecord {
     const now = Date.now();
