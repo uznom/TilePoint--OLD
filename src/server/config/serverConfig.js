@@ -178,7 +178,7 @@ export const TABLE_COLUMNS = {
   branch_stock: ['id', 'branchId', 'productId', 'quantity', 'lowStockThreshold', 'lowStockThresholdOverride', 'sellingPriceOverride', 'version', 'updatedAt'],
   shifts: ['id', 'branchId', 'cashierId', 'cashierName', 'openedAt', 'closedAt', 'startCash', 'endCash', 'cashCount', 'status', 'notes', 'variance', 'shiftSalesTotal', 'shiftVatTotal', 'shiftDiscountTotal', 'shiftSalesCount'],
   sales: ['id', 'saleNumber', 'shiftId', 'branchId', 'cashierId', 'cashierName', 'customerName', 'customerAddress', 'customerTin', 'businessStyle', 'subtotal', 'vat', 'discount', 'grandTotal', 'paymentMethod', 'amountTendered', 'changeAmount', 'notes', 'isDeleted', 'deletedAt', 'idempotencyKey', 'discountType', 'pointsEarned', 'pointsRedeemed', 'createdAt', 'updatedAt'],
-  sale_items: ['id', 'saleId', 'productId', 'productName', 'quantity', 'unitPrice', 'total', 'isDeleted', 'deletedAt'],
+  sale_items: ['id', 'saleId', 'productId', 'productName', 'quantity', 'unitPrice', 'discount', 'discountType', 'total', 'isDeleted', 'deletedAt'],
   purchase_orders: ['id', 'poNumber', 'supplierId', 'supplierName', 'totalAmount', 'status', 'notes', 'branchId', 'requestedBy', 'date', 'isDeleted', 'deletedAt', 'idempotencyKey', 'paymentMode', 'termStartDate', 'termEndDate', 'termsLength', 'createdAt', 'updatedAt'],
   purchase_order_items: ['id', 'poId', 'productId', 'productName', 'quantityOrdered', 'quantityReceived', 'unitCost', 'totalCost', 'costPrice', 'quantityRequested', 'isDeleted', 'deletedAt'],
   stock_transfers: ['id', 'transferNo', 'fromBranchId', 'toBranchId', 'branchId', 'transferType', 'requestedBy', 'status', 'reason', 'approvedBy', 'isDeleted', 'deletedAt', 'timestamp', 'createdAt', 'updatedAt'],

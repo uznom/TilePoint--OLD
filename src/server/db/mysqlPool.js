@@ -158,6 +158,8 @@ export async function initDatabaseSchema() {
     await ensureColumn('sales', 'customerAddress', 'TEXT NULL');
     await ensureColumn('sales', 'customerTin', 'VARCHAR(100) NULL');
     await ensureColumn('sales', 'businessStyle', 'VARCHAR(255) NULL');
+    await ensureColumn('sale_items', 'discount', 'DECIMAL(14, 2) NOT NULL DEFAULT 0.00');
+    await ensureColumn('sale_items', 'discountType', 'VARCHAR(64) NULL');
 
     // Column constraints and type alignments
     await modifyColumn('sales', 'shiftId', 'VARCHAR(64) NULL');

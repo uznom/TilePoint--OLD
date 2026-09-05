@@ -276,6 +276,8 @@ CREATE TABLE IF NOT EXISTS `sale_items` (
   `productName` VARCHAR(255) NOT NULL,
   `quantity` DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
   `unitPrice` DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+  `discount` DECIMAL(14, 2) NOT NULL DEFAULT 0.00,
+  `discountType` VARCHAR(64) NULL,
   `total` DECIMAL(14, 2) NOT NULL DEFAULT 0.00,
   `isDeleted` TINYINT(1) NOT NULL DEFAULT 0,
   `deletedAt` DATETIME NULL,

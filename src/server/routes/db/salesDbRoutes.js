@@ -216,26 +216,56 @@ router.post(['/sales', '/mysql/sales', '/sqlite/sales'], express.json(), async (
 
     if (Array.isArray(sale.items) && sale.items.length > 0) {
       for (const item of sale.items) {
-        await conn.execute(`
-          INSERT INTO sale_items (
-            id, saleId, productId, productName, quantity, unitPrice, discount, discountType, total
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON DUPLICATE KEY UPDATE
-            quantity = VALUES(quantity),
-            unitPrice = VALUES(unitPrice),
-            discount = VALUES(discount),
-            total = VALUES(total)
-        `, [
-          item.id || `${sale.id}_${Math.random().toString(36).substr(2, 9)}`,
-          sale.id,
-          item.productId,
-          item.productName || 'Product',
-          Number(item.quantity || 1),
-          Number(item.unitPrice || 0),
-          Number(item.discountAmount || 0),
-          item.discountType || 'NONE',
-          Number(item.subtotal || item.total || 0)
-        ]);
+        try {
+          await conn.execute(`
+            INSERT INTO sale_items (
+              id, saleId, productId, productName, quantity, unitPrice, discount, discountType, total
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+              quantity = VALUES(quantity),
+              unitPrice = VALUES(unitPrice),
+              discount = VALUES(discount),
+              discountType = VALUES(discountType),
+              total = VALUES(total)
+          `, [
+            item.id || `${sale.id}_${Math.random().toString(36).substr(2, 9)}`,
+            sale.id,
+            item.productId,
+            item.productName || 'Product',
+            Number(item.quantity || 1),
+            Number(item.unitPrice || 0),
+            Number(item.discountAmount || item.discount || 0),
+            item.discountType || 'NONE',
+            Number(item.subtotal || item.total || 0)
+          ]);
+        } catch (itemErr) {
+          if (
+            itemErr.code === 'ER_BAD_FIELD_ERROR' ||
+            itemErr.errno === 1054 ||
+            (itemErr.message && itemErr.message.toLowerCase().includes('unknown column'))
+          ) {
+            // Fallback for MySQL schema without discount or discountType
+            await conn.execute(`
+              INSERT INTO sale_items (
+                id, saleId, productId, productName, quantity, unitPrice, total
+              ) VALUES (?, ?, ?, ?, ?, ?, ?)
+              ON DUPLICATE KEY UPDATE
+                quantity = VALUES(quantity),
+                unitPrice = VALUES(unitPrice),
+                total = VALUES(total)
+            `, [
+              item.id || `${sale.id}_${Math.random().toString(36).substr(2, 9)}`,
+              sale.id,
+              item.productId,
+              item.productName || 'Product',
+              Number(item.quantity || 1),
+              Number(item.unitPrice || 0),
+              Number(item.subtotal || item.total || 0)
+            ]);
+          } else {
+            throw itemErr;
+          }
+        }
       }
     }
 

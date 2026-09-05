@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Sale, User } from "../../types/db";
 import { formatCurrency } from "../../utils/formatters";
-import { Search, Eye, Printer, ShieldAlert, DollarSign, Receipt, Tag, AlertTriangle, RefreshCw } from "lucide-react";
+import { Search, Eye, Printer, ShieldAlert, DollarSign, Receipt, Tag, AlertTriangle, RefreshCw, FileSpreadsheet } from "lucide-react";
 import { HeroButton, HeroSelect, HeroInput, HeroDateRangePicker, HeroTable } from "../common/ui";
+import { TablePagination } from "../TablePagination";
 
 export interface PosSalesLedgerTabProps {
   sales: Sale[];
@@ -39,33 +40,63 @@ export const PosSalesLedgerTab: React.FC<PosSalesLedgerTabProps> = ({
   onExportCsv,
   onRefreshSales,
 }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const activeSales = sales.filter((s) => !s.isDeleted);
   const voidedSales = sales.filter((s) => s.isDeleted);
 
   const totalRevenue = activeSales.reduce((sum, s) => sum + (s.grandTotal || 0), 0);
   const totalDiscounts = activeSales.reduce((sum, s) => sum + (s.discount || 0), 0);
 
-  const filteredSales = sales.filter((sale) => {
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      const numMatch = (sale.saleNumber || "").toLowerCase().includes(q);
-      const custMatch = (sale.customerName || "").toLowerCase().includes(q);
-      const cashierMatch = (sale.cashierName || "").toLowerCase().includes(q);
-      if (!numMatch && !custMatch && !cashierMatch) return false;
-    }
-    if (filterPaymentMethod && filterPaymentMethod.toUpperCase() !== "ALL") {
-      if ((sale.paymentMethod || "").toLowerCase() !== filterPaymentMethod.toLowerCase()) return false;
-    }
-    if (filterDate) {
-      const saleDate = (sale.createdAt || "").slice(0, 10);
-      if (filterDateEnd) {
-        if (saleDate < filterDate || saleDate > filterDateEnd) return false;
-      } else {
-        if (saleDate !== filterDate) return false;
+  // Filter transactions
+  const filteredSales = useMemo(() => {
+    return sales.filter((sale) => {
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const numMatch = (sale.saleNumber || "").toLowerCase().includes(q);
+        const custMatch = (sale.customerName || "").toLowerCase().includes(q);
+        const cashierMatch = (sale.cashierName || "").toLowerCase().includes(q);
+        if (!numMatch && !custMatch && !cashierMatch) return false;
       }
-    }
-    return true;
-  });
+      if (filterPaymentMethod && filterPaymentMethod.toUpperCase() !== "ALL") {
+        if ((sale.paymentMethod || "").toLowerCase() !== filterPaymentMethod.toLowerCase()) return false;
+      }
+      if (filterDate) {
+        const saleDate = (sale.createdAt || "").slice(0, 10);
+        if (filterDateEnd) {
+          if (saleDate < filterDate || saleDate > filterDateEnd) return false;
+        } else {
+          if (saleDate !== filterDate) return false;
+        }
+      }
+      return true;
+    });
+  }, [sales, searchQuery, filterPaymentMethod, filterDate, filterDateEnd]);
+
+  // Sort by default to newest transactions to oldest
+  const sortedSales = useMemo(() => {
+    return [...filteredSales].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
+  }, [filteredSales]);
+
+  // Reset pagination to page 1 whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterPaymentMethod, filterDate, filterDateEnd, pageSize]);
+
+  // Pagination calculation
+  const totalItems = sortedSales.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+  const paginatedSales = useMemo(() => {
+    const startIndex = (safeCurrentPage - 1) * pageSize;
+    return sortedSales.slice(startIndex, startIndex + pageSize);
+  }, [sortedSales, safeCurrentPage, pageSize]);
 
   return (
     <div className="space-y-6 animate-fade-in text-left">
@@ -163,6 +194,35 @@ export const PosSalesLedgerTab: React.FC<PosSalesLedgerTabProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 bg-content2 px-2.5 py-1 rounded-full border border-divider/30">
+            <span className="text-[10px] font-bold text-default-500 uppercase tracking-wider">Per Page:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => setPageSize(Number(e.target.value))}
+              aria-label="Transactions per page"
+              className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer"
+            >
+              <option value={10} className="bg-content1 text-foreground">10</option>
+              <option value={25} className="bg-content1 text-foreground">25</option>
+              <option value={50} className="bg-content1 text-foreground">50</option>
+              <option value={100} className="bg-content1 text-foreground">100</option>
+            </select>
+          </div>
+
+          {onExportCsv && (
+            <HeroButton
+              size="sm"
+              variant="flat"
+              color="default"
+              radius="full"
+              onClick={onExportCsv}
+              startIcon={<FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />}
+              className="font-bold text-xs"
+            >
+              Export
+            </HeroButton>
+          )}
+
           {onRefreshSales && (
             <HeroButton
               size="sm"
@@ -180,90 +240,124 @@ export const PosSalesLedgerTab: React.FC<PosSalesLedgerTabProps> = ({
       </div>
 
       {/* Sales Table */}
-      <HeroTable isStriped className="min-w-full">
-        <HeroTable.Header>
-          <HeroTable.Column>Invoice Reference</HeroTable.Column>
-          <HeroTable.Column>Customer</HeroTable.Column>
-          <HeroTable.Column>Cashier</HeroTable.Column>
-          <HeroTable.Column>Payment Tender</HeroTable.Column>
-          <HeroTable.Column>Valuation</HeroTable.Column>
-          <HeroTable.Column>Status</HeroTable.Column>
-          <HeroTable.Column align="end">Actions</HeroTable.Column>
-        </HeroTable.Header>
-        <HeroTable.Body>
-          {filteredSales.length === 0 ? (
-            <HeroTable.Row isHoverable={false}>
-              <HeroTable.Cell colSpan={7} className="p-8 text-center text-default-500 font-medium">
-                No transactions match the selected filter criteria.
-              </HeroTable.Cell>
-            </HeroTable.Row>
-          ) : (
-            filteredSales.map((sale) => (
-              <HeroTable.Row key={sale.id}>
-                <HeroTable.Cell>
-                  <span className="font-black font-mono text-primary block">
-                    #{sale.saleNumber || sale.id}
-                  </span>
-                  <span className="text-[10px] text-default-500">
-                    {sale.createdAt ? new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}
-                  </span>
-                </HeroTable.Cell>
-                <HeroTable.Cell className="font-bold text-foreground">{sale.customerName || "Walk-In Customer"}</HeroTable.Cell>
-                <HeroTable.Cell className="text-default-500 font-medium">{sale.cashierName || "Terminal Cashier"}</HeroTable.Cell>
-                <HeroTable.Cell>
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-content2 border border-divider/30 text-foreground">
-                    {sale.paymentMethod || "Cash"}
-                  </span>
-                </HeroTable.Cell>
-                <HeroTable.Cell className="font-mono font-black text-foreground">
-                  {formatCurrency(sale.grandTotal || 0)}
-                </HeroTable.Cell>
-                <HeroTable.Cell>
-                  {sale.isDeleted ? (
-                    <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-500 border border-rose-500/20">
-                      Voided
-                    </span>
-                  ) : (
-                    <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                      Cleared
-                    </span>
-                  )}
-                </HeroTable.Cell>
-                <HeroTable.Cell align="end">
-                  <div className="flex items-center justify-end gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => onViewReceipt(sale)}
-                      className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-primary transition-colors cursor-pointer"
-                      title="View Official Receipt"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onPrintReceipt(sale)}
-                      className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer"
-                      title="Print Receipt"
-                    >
-                      <Printer className="h-4 w-4" />
-                    </button>
-                    {!sale.isDeleted && (
-                      <button
-                        type="button"
-                        onClick={() => onOpenVoidModal(sale)}
-                        className="p-1.5 rounded-xl hover:bg-rose-500/10 text-default-500 hover:text-rose-500 transition-colors cursor-pointer"
-                        title="Void / Refund Invoice"
-                      >
-                        <ShieldAlert className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
+      <div className="space-y-4">
+        <HeroTable isStriped className="min-w-full">
+          <HeroTable.Header>
+            <HeroTable.Column>Invoice Reference</HeroTable.Column>
+            <HeroTable.Column>Customer</HeroTable.Column>
+            <HeroTable.Column>Cashier</HeroTable.Column>
+            <HeroTable.Column>Payment Tender</HeroTable.Column>
+            <HeroTable.Column>Valuation</HeroTable.Column>
+            <HeroTable.Column>Status</HeroTable.Column>
+            <HeroTable.Column align="end">Actions</HeroTable.Column>
+          </HeroTable.Header>
+          <HeroTable.Body>
+            {paginatedSales.length === 0 ? (
+              <HeroTable.Row isHoverable={false}>
+                <HeroTable.Cell colSpan={7} className="p-8 text-center text-default-500 font-medium">
+                  No transactions match the selected filter criteria.
                 </HeroTable.Cell>
               </HeroTable.Row>
-            ))
-          )}
-        </HeroTable.Body>
-      </HeroTable>
+            ) : (
+              paginatedSales.map((sale) => (
+                <HeroTable.Row key={sale.id}>
+                  <HeroTable.Cell>
+                    <span className="font-black font-mono text-primary block">
+                      #{sale.saleNumber || sale.id}
+                    </span>
+                    <span className="text-[10px] text-default-500">
+                      {sale.createdAt ? (
+                        <>
+                          <span className="font-semibold text-foreground/80">
+                            {new Date(sale.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                          {" · "}
+                          {new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </>
+                      ) : "N/A"}
+                    </span>
+                  </HeroTable.Cell>
+                  <HeroTable.Cell className="font-bold text-foreground">{sale.customerName || "Walk-In Customer"}</HeroTable.Cell>
+                  <HeroTable.Cell className="text-default-500 font-medium">{sale.cashierName || "Terminal Cashier"}</HeroTable.Cell>
+                  <HeroTable.Cell>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-content2 border border-divider/30 text-foreground">
+                      {sale.paymentMethod || "Cash"}
+                    </span>
+                  </HeroTable.Cell>
+                  <HeroTable.Cell className="font-mono font-black text-foreground">
+                    {formatCurrency(sale.grandTotal || 0)}
+                  </HeroTable.Cell>
+                  <HeroTable.Cell>
+                    {sale.isDeleted ? (
+                      <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                        Voided
+                      </span>
+                    ) : (
+                      <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                        Cleared
+                      </span>
+                    )}
+                  </HeroTable.Cell>
+                  <HeroTable.Cell align="end">
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onViewReceipt(sale)}
+                        className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-primary transition-colors cursor-pointer"
+                        title="View Official Receipt"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onPrintReceipt(sale)}
+                        className="p-1.5 rounded-xl hover:bg-content2 text-default-500 hover:text-foreground transition-colors cursor-pointer"
+                        title="Print Receipt"
+                      >
+                        <Printer className="h-4 w-4" />
+                      </button>
+                      {!sale.isDeleted && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenVoidModal(sale)}
+                          className="p-1.5 rounded-xl hover:bg-rose-500/10 text-default-500 hover:text-rose-500 transition-colors cursor-pointer"
+                          title="Void / Refund Invoice"
+                        >
+                          <ShieldAlert className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  </HeroTable.Cell>
+                </HeroTable.Row>
+              ))
+            )}
+          </HeroTable.Body>
+        </HeroTable>
+
+        {/* Pagination & Count Controls */}
+        {totalItems > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 px-1">
+            <div className="text-xs text-default-500 font-medium">
+              Showing{" "}
+              <span className="font-bold text-foreground">
+                {(safeCurrentPage - 1) * pageSize + 1}
+              </span>{" "}
+              to{" "}
+              <span className="font-bold text-foreground">
+                {Math.min(safeCurrentPage * pageSize, totalItems)}
+              </span>{" "}
+              of <span className="font-bold text-foreground">{totalItems}</span> transactions
+            </div>
+            <TablePagination
+              currentPage={safeCurrentPage}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemName="transactions"
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 };
