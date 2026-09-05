@@ -307,23 +307,25 @@ export const PosModule: React.FC<PosModuleProps> = ({
  setShowAddMemberModal(false);
  };
 
- // Find the last closed shift at this branch to pre-fill starting cash
- const previouslyClosedShift = React.useMemo(() => {
- if (!shifts || shifts.length === 0) return null;
- return (
- [...shifts]
- .filter(
- (s) =>
- s.status === "CLOSED" &&
- s.branchId === currentUser?.branchAssignmentId,
- )
- .sort(
- (a, b) =>
- new Date(b.closedAt || 0).getTime() -
- new Date(a.closedAt || 0).getTime(),
- )[0] || null
- );
- }, [shifts, currentUser?.branchAssignmentId]);
+  const previouslyClosedShift = React.useMemo(() => {
+    if (!shifts || shifts.length === 0) return null;
+    const effectiveBranchId = currentUser?.branchAssignmentId && currentUser.branchAssignmentId !== "consolidated" && currentUser.branchAssignmentId !== "ALL"
+      ? currentUser.branchAssignmentId
+      : (activePosBranchId || (branches && branches[0]?.id) || "B1");
+    return (
+      [...shifts]
+        .filter(
+          (s) =>
+            s.status === "CLOSED" &&
+            (s.branchId === effectiveBranchId || s.branchId === currentUser?.branchAssignmentId || s.branchId === "B1"),
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.closedAt || 0).getTime() -
+            new Date(a.closedAt || 0).getTime(),
+        )[0] || null
+    );
+  }, [shifts, currentUser?.branchAssignmentId, activePosBranchId, branches]);
 
  // Pre-fill starting cash when modal opens
  React.useEffect(() => {
@@ -1725,15 +1727,19 @@ export const PosModule: React.FC<PosModuleProps> = ({
 
  // Close shift function
  const handleCloseShiftSubmit = (e: React.FormEvent) => {
- e.preventDefault();
- const endingVal = parseFloat(closeShiftCashInput) || 0;
- closeShift(endingVal);
- setCloseShiftCashInput("");
- setShowCloseShiftModal(false);
- showToast(
- `Shift closed successfully. Current register drawer has been locked.`,
- );
- };
+    e.preventDefault();
+    const endingVal = parseFloat(closeShiftCashInput) || 0;
+    closeShift(endingVal);
+    setCloseShiftCashInput("");
+    setShowCloseShiftModal(false);
+    showToast(
+      `Shift closed successfully. Current register drawer has been locked.`,
+    );
+    // Reset the dismissed state so the auto-prompt useEffect will re-trigger
+    // when the user next navigates to checkout mode, but do NOT force the
+    // modal open here — let the drawer close cleanly first.
+    setHasDismissedShiftPrompt(false);
+  };
 
  const handleSaveCustomerName = (e: React.FormEvent) => {
  e.preventDefault();

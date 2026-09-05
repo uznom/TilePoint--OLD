@@ -17,6 +17,7 @@ import {
   ShoppingCart,
   Calculator,
   LayoutDashboard,
+  BarChart3,
   TrendingUp,
   Building2,
   Users,
@@ -85,6 +86,8 @@ const getSubTabIcon = (subId: string): LucideIcon => {
       return Calculator;
     case 'dashboard':
       return LayoutDashboard;
+    case 'product-trends':
+      return BarChart3;
     case 'profit-analytics':
       return TrendingUp;
     case 'branches':

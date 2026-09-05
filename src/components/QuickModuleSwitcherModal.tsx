@@ -6,6 +6,7 @@
 import {
   Check,
   Command,
+  BarChart3,
   HelpCircle,
   History,
   Keyboard,
@@ -51,6 +52,15 @@ const MODULE_SHORTCUT_MAP: ModuleShortcut[] = [
     shortcut: "Ctrl + 1",
     roles: [UserRole.ADMIN, UserRole.MANAGER],
     description: "Live branch KPI metrics, gross revenue, and transaction velocity",
+  },
+  {
+    id: "product-trends",
+    name: "Product Trend Analytics (Top Sellers & Velocity)",
+    category: "Analytics",
+    icon: BarChart3,
+    shortcut: "Trends",
+    roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.CASHIER, UserRole.STAFF],
+    description: "Best-selling products, sales velocity, monthly & yearly comparisons, dead stock",
   },
   {
     id: "pos",

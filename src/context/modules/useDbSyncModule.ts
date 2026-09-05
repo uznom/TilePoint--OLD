@@ -1171,8 +1171,62 @@ export function useDbSyncModule({
                 shiftDiscountTotal: Number(s.shiftDiscountTotal) || 0,
                 shiftSalesCount: Number(s.shiftSalesCount) || 0,
               }));
-              setShifts(cleanShifts);
-              try { localStorage.setItem("tp_shifts", JSON.stringify(cleanShifts)); } catch (_) {}
+
+              // Merge any pending outbox shifts that are still in-flight
+              const pendingOutboxItems = transactionOutboxService.getItems()
+                .filter(it => (it.status === 'pending' || it.status === 'processing'));
+
+              const pendingShifts = pendingOutboxItems
+                .flatMap(it => {
+                  if (Array.isArray(it.payload?.shifts)) return it.payload.shifts;
+                  if (it.payload?.shift) return [it.payload.shift];
+                  return [];
+                })
+                .filter(Boolean);
+
+              // Merge local state / storage shifts to ensure closed shifts or newly opened shifts aren't reverted
+              let localShifts: any[] = [];
+              try {
+                const raw = localStorage.getItem("tp_shifts");
+                if (raw) localShifts = JSON.parse(raw);
+              } catch (_) {}
+
+              const shiftMap = new Map<string, any>();
+              // 1. Server shifts
+              cleanShifts.forEach((s: any) => {
+                if (s && s.id) shiftMap.set(s.id, s);
+              });
+
+              // 2. Overlay local storage shifts (preserve local CLOSED status and newer timestamps)
+              if (Array.isArray(localShifts)) {
+                localShifts.forEach((ls: any) => {
+                  if (!ls || !ls.id) return;
+                  const existing = shiftMap.get(ls.id);
+                  if (!existing) {
+                    shiftMap.set(ls.id, ls);
+                  } else {
+                    if (ls.status === 'CLOSED' && existing.status !== 'CLOSED') {
+                      shiftMap.set(ls.id, { ...existing, ...ls, status: 'CLOSED' });
+                    } else if (new Date(ls.closedAt || 0).getTime() > new Date(existing.closedAt || 0).getTime()) {
+                      shiftMap.set(ls.id, { ...existing, ...ls });
+                    }
+                  }
+                });
+              }
+
+              // 3. Overlay pending outbox shifts
+              pendingShifts.forEach((ps: any) => {
+                if (!ps || !ps.id) return;
+                const existing = shiftMap.get(ps.id);
+                shiftMap.set(ps.id, { ...(existing || {}), ...ps });
+              });
+
+              const mergedShifts = Array.from(shiftMap.values()).sort(
+                (a, b) => new Date(b.openedAt || 0).getTime() - new Date(a.openedAt || 0).getTime()
+              );
+
+              setShifts(mergedShifts);
+              try { localStorage.setItem("tp_shifts", JSON.stringify(mergedShifts)); } catch (_) {}
             }
 
             // 4. movements

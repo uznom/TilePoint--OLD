@@ -34,6 +34,7 @@ import {
   LazyTransmittalModule as TransmittalModule,
   LazyTutorialOnboarding as TutorialOnboarding,
   LazyUsersModule as UsersModule,
+  LazyProductTrendsModule as ProductTrendsModule,
   performTabTransitionCleanup,
   scheduleIdlePrefetch,
   trackModuleVisit,
@@ -194,6 +195,7 @@ const sidebarCategoryTree = [
     icon: LayoutDashboard,
     subItems: [
       { id: "dashboard", name: "Branch Dashboard", roles: ADMIN_MANAGER },
+      { id: "product-trends", name: "Product Trend Analytics", roles: ALL_ROLES },
       { id: "profit-analytics", name: "P&L Accounting Desk", roles: ADMIN_MANAGER },
     ],
   },
@@ -794,6 +796,9 @@ function AppContent() {
       birReports: "reconciliation-transmission",
       adminProfit: "profit-analytics",
       procurement: "procurement-po",
+      trends: "product-trends",
+      producttrends: "product-trends",
+      "product-trend": "product-trends",
     };
     const resolvedTab = aliasMap[tabId] || tabId;
     if (resolvedTab === activeTab) return;
@@ -1051,6 +1056,10 @@ function AppContent() {
                           getBranchName={getBranchName}
                           showToastMsg={showToastMsg}
                         />
+                      )}
+
+                      {(activeTab === "product-trends" || activeTab === "trends" || activeTab === "producttrends") && (
+                        <ProductTrendsModule darkMode={darkMode} />
                       )}
 
                       {activeTab === "pos" && (

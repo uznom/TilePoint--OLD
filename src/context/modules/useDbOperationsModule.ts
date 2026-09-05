@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import {
   Sale,
   SaleItem,
@@ -911,8 +911,8 @@ export function useDbOperationsModule({
       setMovements((prev) => [...newMovements, ...prev]);
 
       if (activeShift) {
-        setShifts((prev) =>
-          prev.map((s) => {
+        setShifts((prev) => {
+          const nextShifts = prev.map((s) => {
             if (s.id === activeShift.id) {
               return {
                 ...s,
@@ -923,8 +923,12 @@ export function useDbOperationsModule({
               };
             }
             return s;
-          })
-        );
+          });
+          try {
+            localStorage.setItem("tp_shifts", JSON.stringify(nextShifts));
+          } catch (_) {}
+          return nextShifts;
+        });
       }
 
       addAuditLog(
@@ -1209,8 +1213,8 @@ export function useDbOperationsModule({
       });
 
       if (activeShift && targetSale.shiftId === activeShift.id) {
-        setShifts((prev) =>
-          prev.map((s) => {
+        setShifts((prev) => {
+          const nextShifts = prev.map((s) => {
             if (s.id === activeShift.id) {
               return {
                 ...s,
@@ -1224,8 +1228,12 @@ export function useDbOperationsModule({
               };
             }
             return s;
-          })
-        );
+          });
+          try {
+            localStorage.setItem("tp_shifts", JSON.stringify(nextShifts));
+          } catch (_) {}
+          return nextShifts;
+        });
       }
 
       if (targetSale.paymentMethod === "Member Credit") {
@@ -1311,68 +1319,6 @@ export function useDbOperationsModule({
   );
 
   // --- SHIFTS ---
-  const openShift = useCallback(
-    (startCash: number) => {
-      if (!currentUser) return;
-      const existingOpenShift = shifts.find(
-        (s) =>
-          s.cashierId === currentUser.id &&
-          (s.status === "OPEN" || s.status === "Open" || (!s.closedAt && s.status !== "CLOSED"))
-      );
-
-      if (existingOpenShift) {
-        alert(
-          `Shift Drawer Notice: Account "${currentUser.fullName}" already has an active open shift drawer (${existingOpenShift.id}). You must close the current shift drawer before opening a new one.`
-        );
-        return;
-      }
-
-      const shiftId = `SH-${Date.now()}`;
-      const newShift: Shift = {
-        id: shiftId,
-        cashierId: currentUser.id,
-        cashierName: currentUser.fullName,
-        branchId: currentUser.branchAssignmentId || "B1",
-        status: "OPEN",
-        startCash,
-        endCash: 0,
-        cashCount: 0,
-        variance: 0,
-        openedAt: new Date().toISOString(),
-        closedAt: undefined,
-        shiftSalesCount: 0,
-        shiftSalesTotal: 0,
-        shiftVatTotal: 0,
-        shiftDiscountTotal: 0,
-      };
-
-      setShifts((prev) => [
-        newShift,
-        ...prev.map((s) => {
-          if (
-            s.cashierId === currentUser.id &&
-            (s.status === "OPEN" || s.status === "Open" || (!s.closedAt && s.status !== "CLOSED"))
-          ) {
-            return {
-              ...s,
-              status: "CLOSED" as ShiftStatus,
-              closedAt: new Date().toISOString(),
-            };
-          }
-          return s;
-        }),
-      ]);
-
-      addAuditLog(
-        "SHIFT_OPEN",
-        `Opened drawer shift (${shiftId}) with starting cash of ₱${startCash.toFixed(2)}`,
-        "Shifts",
-        shiftId
-      );
-    },
-    [currentUser, shifts, addAuditLog]
-  );
-
   const getShiftReportStats = useCallback(
     (shift: Shift) => {
       const shiftSales = sales.filter((s) => {
@@ -1425,6 +1371,160 @@ export function useDbOperationsModule({
     [sales, expenses]
   );
 
+  // --- AUTO-CLOSE STALE SHIFTS ---
+  // Detect shifts opened on a prior calendar day that were left open, auto-close with preserved safe balance
+  useEffect(() => {
+    const now = new Date();
+    const todayStr = now.toDateString();
+    const startOfTodayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    const staleShifts = shifts.filter((s) => {
+      if (s.status === "CLOSED") return false;
+      if (s.closedAt) return false;
+      const openDate = new Date(s.openedAt);
+      if (isNaN(openDate.getTime())) return false;
+      return openDate.toDateString() !== todayStr && openDate.getTime() < startOfTodayMs;
+    });
+
+    if (staleShifts.length > 0) {
+      const closedStaleList: Shift[] = [];
+      const updatedList = shifts.map((s) => {
+        const isStale = staleShifts.some((st) => st.id === s.id);
+        if (!isStale) return s;
+
+        const stats = getShiftReportStats(s);
+        const openDateObj = new Date(s.openedAt);
+        const autoCloseDate = new Date(
+          openDateObj.getFullYear(),
+          openDateObj.getMonth(),
+          openDateObj.getDate(),
+          23,
+          59,
+          59
+        );
+        const closedAt = autoCloseDate.toISOString();
+        const expectedEndCash = stats.expectedEndCash;
+
+        const closedShift: Shift = {
+          ...s,
+          status: "CLOSED" as ShiftStatus,
+          endCash: expectedEndCash,
+          cashCount: expectedEndCash,
+          variance: 0,
+          shiftSalesTotal: stats.netTotal,
+          shiftSalesCount: stats.salesCount,
+          shiftVatTotal: stats.vatTotal,
+          shiftDiscountTotal: stats.discountTotal,
+          closedAt,
+        };
+        closedStaleList.push(closedShift);
+        return closedShift;
+      });
+
+      setShifts(updatedList);
+      try {
+        localStorage.setItem("tp_shifts", JSON.stringify(updatedList));
+        sessionStorage.removeItem("tilepoint_dismissed_shift_prompt");
+      } catch (_) {}
+
+      enqueueTransaction({
+        id: `tx-shift-autoclose-${Date.now()}`,
+        type: "ATOMIC_TRANSACTION",
+        txType: "SHIFT_AUTO_CLOSE",
+        timestamp: Date.now(),
+        payload: {
+          shifts: closedStaleList,
+        },
+      });
+
+      staleShifts.forEach((s) => {
+        addAuditLog(
+          "SHIFT_AUTO_CLOSE",
+          `System auto-closed unclosed shift (${s.id}) from previous date (${new Date(s.openedAt).toLocaleDateString()}). Safe closing balance preserved.`,
+          "Shifts",
+          s.id
+        );
+      });
+    }
+  }, [shifts, getShiftReportStats, enqueueTransaction, addAuditLog]);
+
+  const openShift = useCallback(
+    (startCash: number) => {
+      if (!currentUser) return;
+      const existingOpenShift = shifts.find(
+        (s) =>
+          s.cashierId === currentUser.id &&
+          (s.status === "OPEN" || s.status === "Open" || (!s.closedAt && s.status !== "CLOSED"))
+      );
+
+      if (existingOpenShift) {
+        alert(
+          `Shift Drawer Notice: Account "${currentUser.fullName}" already has an active open shift drawer (${existingOpenShift.id}). You must close the current shift drawer before opening a new one.`
+        );
+        return;
+      }
+
+      const shiftId = `SH-${Date.now()}`;
+      const newShift: Shift = {
+        id: shiftId,
+        cashierId: currentUser.id,
+        cashierName: currentUser.fullName,
+        branchId: currentUser.branchAssignmentId || "B1",
+        status: "OPEN",
+        startCash,
+        endCash: 0,
+        cashCount: 0,
+        variance: 0,
+        openedAt: new Date().toISOString(),
+        closedAt: undefined,
+        shiftSalesCount: 0,
+        shiftSalesTotal: 0,
+        shiftVatTotal: 0,
+        shiftDiscountTotal: 0,
+      };
+
+      const updatedShifts = [
+        newShift,
+        ...shifts.map((s) => {
+          if (
+            s.cashierId === currentUser.id &&
+            (s.status === "OPEN" || s.status === "Open" || (!s.closedAt && s.status !== "CLOSED"))
+          ) {
+            return {
+              ...s,
+              status: "CLOSED" as ShiftStatus,
+              closedAt: new Date().toISOString(),
+            };
+          }
+          return s;
+        }),
+      ];
+
+      setShifts(updatedShifts);
+      try {
+        localStorage.setItem("tp_shifts", JSON.stringify(updatedShifts));
+      } catch (_) {}
+
+      enqueueTransaction({
+        id: `tx-shift-open-${shiftId}`,
+        type: "ATOMIC_TRANSACTION",
+        txType: "SHIFT_OPEN",
+        timestamp: Date.now(),
+        payload: {
+          shifts: [newShift],
+        },
+      });
+
+      addAuditLog(
+        "SHIFT_OPEN",
+        `Opened drawer shift (${shiftId}) with starting cash of ₱${startCash.toFixed(2)}`,
+        "Shifts",
+        shiftId
+      );
+    },
+    [currentUser, shifts, enqueueTransaction, addAuditLog]
+  );
+
   const closeShift = useCallback(
     (cashCount: number) => {
       if (!activeShift) return;
@@ -1437,31 +1537,51 @@ export function useDbOperationsModule({
       const variance = cashCount - expectedEndCash;
       const nowIso = new Date().toISOString();
 
-      setShifts((prev) =>
-        prev.map((s) => {
-          if (
-            s.id === activeShift.id ||
-            (currentUser &&
-              s.cashierId === currentUser.id &&
-              (s.status === "OPEN" || s.status === "Open" || (!s.closedAt && s.status !== "CLOSED")))
-          ) {
-            return {
-              ...s,
-              status: "CLOSED" as ShiftStatus,
-              endCash: s.id === activeShift.id ? expectedEndCash : s.endCash,
-              cashCount: s.id === activeShift.id ? cashCount : s.cashCount,
-              variance: s.id === activeShift.id ? variance : s.variance,
-              shiftSalesTotal: s.id === activeShift.id ? statsResult.netTotal : s.shiftSalesTotal,
-              shiftSalesCount: s.id === activeShift.id ? statsResult.salesCount : s.shiftSalesCount,
-              shiftVatTotal: s.id === activeShift.id ? statsResult.vatTotal : s.shiftVatTotal,
-              shiftDiscountTotal:
-                s.id === activeShift.id ? statsResult.discountTotal : s.shiftDiscountTotal,
-              closedAt: s.closedAt || nowIso,
-            };
+      let closedShiftRecord: Shift | null = null;
+      const updatedShifts = shifts.map((s) => {
+        if (
+          s.id === activeShift.id ||
+          (currentUser &&
+            s.cashierId === currentUser.id &&
+            (s.status === "OPEN" || s.status === "Open" || (!s.closedAt && s.status !== "CLOSED")))
+        ) {
+          const closed: Shift = {
+            ...s,
+            status: "CLOSED" as ShiftStatus,
+            endCash: s.id === activeShift.id ? expectedEndCash : s.endCash,
+            cashCount: s.id === activeShift.id ? cashCount : s.cashCount,
+            variance: s.id === activeShift.id ? variance : s.variance,
+            shiftSalesTotal: s.id === activeShift.id ? statsResult.netTotal : s.shiftSalesTotal,
+            shiftSalesCount: s.id === activeShift.id ? statsResult.salesCount : s.shiftSalesCount,
+            shiftVatTotal: s.id === activeShift.id ? statsResult.vatTotal : s.shiftVatTotal,
+            shiftDiscountTotal:
+              s.id === activeShift.id ? statsResult.discountTotal : s.shiftDiscountTotal,
+            closedAt: s.closedAt || nowIso,
+          };
+          if (s.id === activeShift.id) {
+            closedShiftRecord = closed;
           }
-          return s;
-        })
-      );
+          return closed;
+        }
+        return s;
+      });
+
+      setShifts(updatedShifts);
+      try {
+        localStorage.setItem("tp_shifts", JSON.stringify(updatedShifts));
+      } catch (_) {}
+
+      if (closedShiftRecord) {
+        enqueueTransaction({
+          id: `tx-shift-close-${activeShift.id}-${Date.now()}`,
+          type: "ATOMIC_TRANSACTION",
+          txType: "SHIFT_CLOSE",
+          timestamp: Date.now(),
+          payload: {
+            shifts: [closedShiftRecord],
+          },
+        });
+      }
 
       addAuditLog(
         "SHIFT_CLOSE",
@@ -1470,30 +1590,52 @@ export function useDbOperationsModule({
         activeShift.id
       );
     },
-    [activeShift, currentUser, generateSystemSnapshot, getShiftReportStats, addAuditLog]
+    [activeShift, currentUser, shifts, generateSystemSnapshot, getShiftReportStats, enqueueTransaction, addAuditLog]
   );
 
   const forceCloseAllShifts = useCallback(() => {
     const nowIso = new Date().toISOString();
-    setShifts((prev) =>
-      prev.map((s) => {
-        if (s.status === "OPEN" || s.status === "Open" || !s.closedAt || s.status !== "CLOSED") {
-          return {
-            ...s,
-            status: "CLOSED" as ShiftStatus,
-            closedAt: s.closedAt || nowIso,
-          };
-        }
-        return s;
-      })
-    );
+    const closedList: Shift[] = [];
+    const updatedShifts = shifts.map((s) => {
+      if (s.status === "OPEN" || s.status === "Open" || !s.closedAt || s.status !== "CLOSED") {
+        const stats = getShiftReportStats(s);
+        const closed: Shift = {
+          ...s,
+          status: "CLOSED" as ShiftStatus,
+          endCash: stats.expectedEndCash,
+          cashCount: s.cashCount || stats.expectedEndCash,
+          closedAt: s.closedAt || nowIso,
+        };
+        closedList.push(closed);
+        return closed;
+      }
+      return s;
+    });
+
+    setShifts(updatedShifts);
+    try {
+      localStorage.setItem("tp_shifts", JSON.stringify(updatedShifts));
+    } catch (_) {}
+
+    if (closedList.length > 0) {
+      enqueueTransaction({
+        id: `tx-shift-force-close-${Date.now()}`,
+        type: "ATOMIC_TRANSACTION",
+        txType: "SHIFT_FORCE_CLOSE",
+        timestamp: Date.now(),
+        payload: {
+          shifts: closedList,
+        },
+      });
+    }
+
     addAuditLog(
       "SHIFT_FORCE_CLOSE_ALL",
       "Forced closure of all open/unclosed drawer shifts via System Operations Center.",
       "Shifts",
       "ALL"
     );
-  }, [addAuditLog]);
+  }, [shifts, getShiftReportStats, enqueueTransaction, addAuditLog]);
 
   // --- PURCHASE ORDERS ---
   const createPurchaseOrder = useCallback(

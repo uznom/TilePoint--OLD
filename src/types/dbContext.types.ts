@@ -155,6 +155,7 @@ export interface DbContextType {
   poItems: PurchaseOrderItem[];
   transmittals: Transmittal[];
   shifts: Shift[];
+  setShifts: React.Dispatch<React.SetStateAction<Shift[]>>;
   sales: Sale[];
   saleItems: SaleItem[];
   movements: InventoryMovement[];

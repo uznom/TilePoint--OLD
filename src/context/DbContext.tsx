@@ -447,6 +447,7 @@ export const DbProviderInternal: React.FC<{ children: React.ReactNode }> = ({
       poItems: operationsModule.poItems,
       transmittals: operationsModule.transmittals,
       shifts: operationsModule.shifts,
+      setShifts: operationsModule.setShifts,
       sales: operationsModule.sales,
       saleItems: operationsModule.saleItems,
       movements: operationsModule.movements,

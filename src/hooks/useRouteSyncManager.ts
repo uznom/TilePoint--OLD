@@ -5,6 +5,7 @@ import { UserRole } from '../types/db';
 
 export const TAB_TO_PATH: Record<string, string> = {
   dashboard: '/dashboard',
+  'product-trends': '/product-trends',
   'profit-analytics': '/analytics',
   pos: '/pos',
   ledger: '/ledger',
@@ -63,6 +64,8 @@ export const TAB_TO_PATH: Record<string, string> = {
 export const PATH_TO_TAB: Record<string, string> = {
   '/': 'dashboard',
   '/dashboard': 'dashboard',
+  '/product-trends': 'product-trends',
+  '/trends': 'product-trends',
   '/analytics': 'profit-analytics',
   '/pos': 'pos',
   '/ledger': 'ledger',
@@ -168,6 +171,8 @@ const CANONICAL_TAB_MAP: Record<string, string> = {
   'members-search-sales': 'members-search-sales',
   deliveries: 'deliveries-panel',
   'deliveries-panel': 'deliveries-panel',
+  'product-trends': 'product-trends',
+  trends: 'product-trends',
   analytics: 'profit-analytics',
   'profit-analytics': 'profit-analytics',
   shifts: 'shift',

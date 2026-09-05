@@ -82,6 +82,7 @@ const MODULE_LOADERS: Record<string, ModuleLoader> = {
   'bir-senior5': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
   'bir-regular': () => import('./StoreOperationsModule').then((m) => resolveModule(m, 'StoreOperationsModule')),
   tutorials: () => import('./TutorialOnboarding').then((m) => resolveModule(m, 'TutorialOnboarding')),
+  'product-trends': () => import('./ProductTrendsModule').then((m) => resolveModule(m, 'ProductTrendsModule')),
 };
 
 const PATH_ALIAS_MAP: Record<string, string> = {
@@ -97,6 +98,8 @@ const PATH_ALIAS_MAP: Record<string, string> = {
   supplier: 'suppliers-manage',
   expenses: 'expenses-add',
   adjustments: 'adjustments-return',
+  trends: 'product-trends',
+  producttrends: 'product-trends',
 };
 
 /**
@@ -169,6 +172,7 @@ export const LazyDailyReconciliationModule = React.lazy(() => getOrLoadModule('d
 export const LazyReconciliationTransmissionModule = React.lazy(() => getOrLoadModule('reconciliation-transmission'));
 export const LazyDamageRegisterModule = React.lazy(() => getOrLoadModule('damage-register'));
 export const LazyTutorialOnboarding = React.lazy(() => getOrLoadModule('tutorials'));
+export const LazyProductTrendsModule = React.lazy(() => getOrLoadModule('product-trends'));
 
 // Priority Tiers for pre-fetching during app idle time
 export const HIGH_PRIORITY_MODULES = ['pos', 'dashboard', 'shift', 'calculator', 'inventory'];

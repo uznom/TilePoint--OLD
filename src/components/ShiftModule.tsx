@@ -29,19 +29,62 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
   const { fontClass: receiptFontClass } = useReceiptFontSize();
   const {
     shifts,
+    setShifts,
     activeShift,
     openShift,
     closeShift,
     getShiftReportStats,
     currentUser,
-    addAuditLog
+    addAuditLog,
+    syncFromSharedServer
   } = useDb();
+
+  // Sync shifts from server on mount and re-hydrate from localStorage to ensure
+  // the Historic Shift Audit Ledger always shows the latest data, even if shifts
+  // were modified from POS and the state didn't propagate cleanly.
+  React.useEffect(() => {
+    // Re-hydrate from localStorage in case of stale React state
+    try {
+      const stored = localStorage.getItem('tp_shifts');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setShifts((prev: any[]) => {
+            // Merge: prefer localStorage entries that are newer or missing from state
+            const stateMap = new Map(prev.map((s: any) => [s.id, s]));
+            let changed = false;
+            parsed.forEach((ls: any) => {
+              const existing = stateMap.get(ls.id);
+              if (!existing) {
+                stateMap.set(ls.id, ls);
+                changed = true;
+              } else if (ls.closedAt && !existing.closedAt) {
+                // localStorage has a closed version, state has open — update
+                stateMap.set(ls.id, ls);
+                changed = true;
+              }
+            });
+            return changed ? Array.from(stateMap.values()) : prev;
+          });
+        }
+      }
+    } catch (_) {}
+
+    // Also trigger a server sync for remote consistency
+    if (typeof syncFromSharedServer === 'function') {
+      syncFromSharedServer(true).catch(() => {});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Find the last closed shift at this branch to pre-fill starting cash
   const previouslyClosedShift = React.useMemo(() => {
     if (!shifts || shifts.length === 0 || !currentUser) return null;
+    const effectiveBranchId = currentUser?.branchAssignmentId && currentUser.branchAssignmentId !== 'consolidated' && currentUser.branchAssignmentId !== 'ALL'
+      ? currentUser.branchAssignmentId
+      : 'B1';
     return [...shifts]
-      .filter(s => s.status === 'CLOSED' && s.branchId === currentUser?.branchAssignmentId)
+      .filter(s => s.status === 'CLOSED' && (s.branchId === effectiveBranchId || s.branchId === currentUser?.branchAssignmentId || s.branchId === 'B1'))
       .sort((a, b) => new Date(b.closedAt || 0).getTime() - new Date(a.closedAt || 0).getTime())[0] || null;
   }, [shifts, currentUser]);
 
@@ -90,7 +133,11 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
     if (shiftSortDescriptors.length > 0) {
       return sortShiftData(shifts);
     }
-    return shifts;
+    return [...shifts].sort((a, b) => {
+      const timeA = new Date(a.openedAt || 0).getTime();
+      const timeB = new Date(b.openedAt || 0).getTime();
+      return timeB - timeA;
+    });
   }, [shifts, shiftSortDescriptors, sortShiftData]);
 
   const showToast = (msg: string) => {
@@ -460,7 +507,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
               {sortedShifts
                 .slice((shiftPage - 1) * shiftPageSize, shiftPage * shiftPageSize)
                 .map((s, idx) => (
-                  <tr key={idx} className="hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition font-medium">
+                  <tr key={s.id || idx} className="hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50 transition font-medium">
                     <td className="py-3 px-3.5 font-bold text-primary font-mono text-[11px]">{s.id}</td>
                     <td className="py-3 px-3.5">{s.cashierName}</td>
                     <td className="py-3 px-3.5 text-right font-mono">{formatCurrency(s.startCash)}</td>
@@ -638,6 +685,7 @@ export const ShiftModule: React.FC<ShiftModuleProps> = ({ darkMode: _darkMode })
                 window.print();
                 closeShift(expectedEndCash); // auto closes shift at precision
                 setShowZReport(false);
+                showToast(`Shift closed and sealed via Z-Report with ₱${expectedEndCash.toFixed(2)}.`);
               }}
               color="primary"
               variant="solid"
