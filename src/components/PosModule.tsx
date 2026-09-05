@@ -4665,7 +4665,7 @@ export const PosModule: React.FC<PosModuleProps> = ({
  initial={{ opacity: 0, scale: 0.95, y: 15 }}
  animate={{ opacity: 1, scale: 1, y: 0 }}
  exit={{ opacity: 0, scale: 0.95, y: 15 }}
- className="relative w-full max-w-md rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-background flex flex-col space-y-4"
+ className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-divider/30 p-6 z-20 shadow-2xl bg-background flex flex-col space-y-4"
  >
  <div className="flex justify-between items-center border-b border-divider/20 pb-3">
  <div className="flex items-center gap-2">

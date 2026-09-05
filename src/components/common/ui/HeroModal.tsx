@@ -12,6 +12,7 @@ export interface HeroModalProps {
   isDismissable?: boolean;
   hideCloseButton?: boolean;
   backdrop?: 'transparent' | 'opaque' | 'blur';
+  scrollBehavior?: 'inside' | 'outside' | 'auto';
   zIndex?: number;
   containerClassName?: string;
   className?: string;
@@ -31,6 +32,7 @@ export const HeroModal: React.FC<HeroModalProps> & {
   isDismissable = true,
   hideCloseButton = false,
   backdrop = 'blur',
+  scrollBehavior = 'auto',
   zIndex = 50,
   containerClassName = '',
   className = '',
@@ -51,6 +53,27 @@ export const HeroModal: React.FC<HeroModalProps> & {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, isDismissable, onClose]);
+
+  // Check if children contain a dedicated HeroModal.Body or custom scroll container
+  const hasDedicatedBody = React.useMemo(() => {
+    let found = false;
+    React.Children.forEach(children, (child) => {
+      if (!React.isValidElement(child)) return;
+      if (
+        child.type === HeroModal.Body ||
+        child.type === HeroModal.Content ||
+        (child.props as any)?.['data-slot'] === 'body' ||
+        (typeof child.props === 'object' &&
+          child.props &&
+          'className' in child.props &&
+          typeof (child.props as any).className === 'string' &&
+          (child.props as any).className.includes('overflow-y-auto'))
+      ) {
+        found = true;
+      }
+    });
+    return found;
+  }, [children]);
 
   const getSizeClasses = () => {
     switch (size) {
@@ -90,13 +113,27 @@ export const HeroModal: React.FC<HeroModalProps> & {
     }
   };
 
+  // Determine scrolling behavior
+  const getScrollClasses = () => {
+    if (scrollBehavior === 'outside') {
+      return 'overflow-visible';
+    }
+    if (scrollBehavior === 'inside') {
+      return 'overflow-y-auto overflow-x-hidden flex flex-col max-h-[90vh] min-h-0 scrollbar-thin';
+    }
+    // 'auto' mode: If no dedicated Body exists, make the dialog card scrollable
+    return hasDedicatedBody
+      ? 'overflow-hidden flex flex-col max-h-[90vh] min-h-0'
+      : 'overflow-y-auto overflow-x-hidden flex flex-col max-h-[90vh] min-h-0 scrollbar-thin';
+  };
+
   const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <div
           id={id}
           style={{ zIndex }}
-          className={`fixed inset-0 flex items-center justify-center p-4 sm:p-6 overflow-y-auto ${containerClassName}`}
+          className={`fixed inset-0 flex items-center justify-center p-3 sm:p-6 overflow-y-auto ${containerClassName}`}
         >
           {/* Backdrop */}
           <motion.div
@@ -116,7 +153,7 @@ export const HeroModal: React.FC<HeroModalProps> & {
             exit={{ opacity: 0, scale: 0.96, y: 8 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             data-slot="dialog"
-            className={`modal__dialog modal__dialog--scroll-inside relative z-10 w-full ${getSizeClasses()} bg-white dark:bg-zinc-900 rounded-3xl shadow-elevation-modal border border-zinc-200/80 dark:border-white/10 overflow-hidden flex flex-col max-h-[90vh] min-h-0 ${className}`}
+            className={`modal__dialog modal__dialog--scroll-inside relative z-10 w-full my-auto shrink-0 ${getSizeClasses()} bg-white dark:bg-zinc-900 rounded-3xl shadow-elevation-modal border border-zinc-200/80 dark:border-white/10 ${getScrollClasses()} ${className}`}
           >
             {!hideCloseButton && (
               <button

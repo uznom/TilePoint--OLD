@@ -1989,7 +1989,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  initial={{ scale: 0.95, opacity: 0 }}
  animate={{ scale: 1, opacity: 1 }}
  exit={{ scale: 0.95, opacity: 0 }}
- className="bg-content1 border border-divider/30 rounded-2xl max-w-lg w-full text-left overflow-hidden shadow-2xl relative z-60 font-sans"
+ className="bg-content1 border border-divider/30 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto flex flex-col text-left shadow-2xl relative z-60 font-sans"
  >
  <div className="px-6 py-4.5 bg-gradient-to-r from-content1 to-content2 border-b border-divider/20 flex items-center justify-between">
  <div>
@@ -2108,7 +2108,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
  initial={{ scale: 0.95, opacity: 0 }}
  animate={{ scale: 1, opacity: 1 }}
  exit={{ scale: 0.95, opacity: 0 }}
- className="bg-content1 border border-divider/30 rounded-2xl max-w-xl w-full text-left overflow-hidden shadow-2xl relative z-50 font-sans"
+ className="bg-content1 border border-divider/30 rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto flex flex-col text-left shadow-2xl relative z-50 font-sans"
  >
   <div className="px-6 py-4.5 bg-content3 border-b border-divider/20 flex items-center justify-between">
   <div>
@@ -2278,7 +2278,7 @@ export const SalesTransmissionModule: React.FC<SalesTransmissionModuleProps> = (
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-content1 border border-divider/30 rounded-2xl max-w-lg w-full text-left overflow-hidden shadow-2xl relative z-50 font-sans"
+        className="bg-content1 border border-divider/30 rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto flex flex-col text-left shadow-2xl relative z-50 font-sans"
       >
         <div className="px-6 py-4.5 bg-content1 border-b border-divider/15 flex items-center justify-between">
           <div>
