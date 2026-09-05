@@ -1160,10 +1160,10 @@ export const UsersModule: React.FC<UsersModuleProps> = ({ darkMode: _darkMode })
           <div className="flex gap-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-xs">
             <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
             <div className="space-y-1 text-foreground">
-              <span className="font-bold text-amber-600 dark:text-amber-400 block">Single-Device Active Terminal Policy</span>
+              <span className="font-bold text-amber-600 dark:text-amber-400 block">Active Terminal Concurrency Policy</span>
               <p className="text-default-500 leading-relaxed">
-                Staff accounts operate under strict single-session concurrency to prevent audit log collisions.
-                Logging in on a new device will supersede previous active sessions.
+                Staff and cashier accounts operate under strict single-session concurrency to prevent audit log collisions.
+                Admin accounts support concurrent multi-device logins across terminals.
               </p>
             </div>
           </div>

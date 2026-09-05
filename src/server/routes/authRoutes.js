@@ -85,12 +85,15 @@ router.post('/login', authLimiter, async (req, res) => {
     const clientDeviceInfo = deviceInfo || req.headers['x-client-info'] || '';
     const durationMinutes = parseInt(maxDurationMinutes, 10) || DEFAULT_SESSION_MAX_DURATION_MINUTES;
 
-    const existingActiveSession = activeSessions.find(s => {
+    const isAdmin = String(targetUser.role || '').toLowerCase() === 'admin';
+
+    // Single-device session concurrency check for non-admin accounts
+    const existingActiveSession = !isAdmin ? activeSessions.find(s => {
       if (s.userId !== targetUser.id) return false;
       const lastActiveTime = new Date(s.lastActive || 0).getTime();
       const isActive = (now - lastActiveTime) < SESSION_IDLE_TIMEOUT_MS;
       return isActive && s.id !== incomingSessionId;
-    });
+    }) : null;
 
     const verifiedSessionId = incomingSessionId;
     const sessionToken = generateServerSessionToken(targetUser, verifiedSessionId, durationMinutes * 60 * 1000);
@@ -115,7 +118,7 @@ router.post('/login', authLimiter, async (req, res) => {
       maxDurationMinutes: durationMinutes
     };
 
-    // If an existing session was active on another terminal, notify it immediately via SSE and Socket.io
+    // If an existing session was active on another terminal (non-admin), notify it immediately via SSE and Socket.io
     if (existingActiveSession) {
       console.log(`[Auth] User ${targetUser.username} logged in from new terminal ${verifiedSessionId}. Superseding previous session ${existingActiveSession.id}`);
       const supersededPayload = {
@@ -483,9 +486,14 @@ router.all(['/logout', '/session'], async (req, res, next) => {
     const payload = verifyAndExtractToken(req);
     const sessionId = req.body?.sessionId || req.query?.sessionId || payload?.sessionId || req.headers['x-client-id'] || req.headers['x-session-id'];
     const userId = payload?.id || req.body?.userId || req.query?.userId;
+    const isAdmin = String(payload?.role || '').toLowerCase() === 'admin';
 
     if (sessionId || userId) {
-      await removeActiveSessionRecord(sessionId, userId);
+      if (isAdmin && sessionId) {
+        await removeActiveSessionRecord(sessionId, null, true);
+      } else {
+        await removeActiveSessionRecord(sessionId, userId, isAdmin);
+      }
     }
 
     res.clearCookie('tp_session', { path: '/' });

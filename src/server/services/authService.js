@@ -277,10 +277,14 @@ export async function saveActiveSessionRecord(session) {
     maxDurationMinutes: maxDuration
   };
 
+  const isAdmin = String(session.role || '').toLowerCase() === 'admin';
+
   if (getIsMysqlActive() || getMysqlEnforced()) {
     try {
-      // Enforce strict single-device concurrency: prune any prior sessions for this account
-      await pool.query('DELETE FROM `active_sessions` WHERE `userId` = ? AND `id` != ?', [session.userId, session.id]);
+      // Enforce strict single-device concurrency for non-admin accounts: prune prior sessions
+      if (!isAdmin) {
+        await pool.query('DELETE FROM `active_sessions` WHERE `userId` = ? AND `id` != ?', [session.userId, session.id]);
+      }
       await upsertRecordMysql('active_sessions', {
         ...sessionRow,
         lastActive: new Date(sessionRow.lastActive),
@@ -293,7 +297,11 @@ export async function saveActiveSessionRecord(session) {
   }
 
   try {
-    alasql('DELETE FROM active_sessions WHERE id = ? OR userId = ?', [session.id, session.userId]);
+    if (!isAdmin) {
+      alasql('DELETE FROM active_sessions WHERE id = ? OR userId = ?', [session.id, session.userId]);
+    } else {
+      alasql('DELETE FROM active_sessions WHERE id = ?', [session.id]);
+    }
     upsertRecordAlasql('active_sessions', sessionRow);
   } catch (_) {}
 
@@ -308,20 +316,22 @@ export async function saveActiveSessionRecord(session) {
   if (existingIdx >= 0) {
     sessions[existingIdx] = { ...sessions[existingIdx], ...sessionRow };
   } else {
-    sessions = sessions.filter(s => s.userId !== session.userId);
+    if (!isAdmin) {
+      sessions = sessions.filter(s => s.userId !== session.userId);
+    }
     sessions.push(sessionRow);
   }
   db.tp_active_sessions = sessions;
   writeDbFile(db);
 }
 
-export async function removeActiveSessionRecord(sessionId, userId) {
+export async function removeActiveSessionRecord(sessionId, userId, isAdmin = false) {
   if (getIsMysqlActive() || getMysqlEnforced()) {
     try {
-      if (sessionId && userId) {
-        await pool.query('DELETE FROM `active_sessions` WHERE `id` = ? OR `userId` = ?', [sessionId, userId]);
-      } else if (sessionId) {
+      if (sessionId && (!userId || isAdmin)) {
         await pool.query('DELETE FROM `active_sessions` WHERE `id` = ?', [sessionId]);
+      } else if (sessionId && userId) {
+        await pool.query('DELETE FROM `active_sessions` WHERE `id` = ? OR `userId` = ?', [sessionId, userId]);
       } else if (userId) {
         await pool.query('DELETE FROM `active_sessions` WHERE `userId` = ?', [userId]);
       }

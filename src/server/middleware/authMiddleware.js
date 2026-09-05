@@ -122,9 +122,13 @@ export async function verifySessionAndCheckConcurrency(req) {
 
   const activeSessions = await getActiveSessionsList();
   const currentSessionId = incomingSessionId || payload.sessionId;
+  const isAdmin = String(dbUser.role || payload.role || '').toLowerCase() === 'admin';
 
-  // Enforce single-device session concurrency by checking against the active session for this user
-  const userSession = activeSessions.find(s => s.userId === payload.id);
+  // For admin users, find their specific session on this device first; fallback to any active session for this user
+  // For non-admin accounts, enforce single-device session concurrency
+  const userSession = isAdmin
+    ? (activeSessions.find(s => s.userId === payload.id && s.id === currentSessionId) || activeSessions.find(s => s.userId === payload.id))
+    : activeSessions.find(s => s.userId === payload.id);
 
   if (!userSession) {
     return {
@@ -137,8 +141,8 @@ export async function verifySessionAndCheckConcurrency(req) {
     };
   }
 
-  // Concurrency Validation Check: If the active session in DB belongs to a newer login, supersede this session
-  if (currentSessionId && userSession.id !== currentSessionId) {
+  // Concurrency Validation Check: If the active session in DB belongs to a newer login, supersede this session (non-admins only)
+  if (!isAdmin && currentSessionId && userSession.id !== currentSessionId) {
     return {
       valid: false,
       status: 401,
