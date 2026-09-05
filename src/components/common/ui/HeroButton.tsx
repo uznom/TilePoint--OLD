@@ -248,9 +248,21 @@ export const HeroButton: React.FC<HeroButtonProps> = ({
         </span>
       ) : (
         <>
-          {effectiveStartIcon && <span className="shrink-0" data-slot="start-content">{effectiveStartIcon}</span>}
-          {children && <span>{children}</span>}
-          {effectiveEndIcon && <span className="shrink-0" data-slot="end-content">{effectiveEndIcon}</span>}
+          {effectiveStartIcon && (
+            <span className="inline-flex items-center justify-center shrink-0 self-center" data-slot="start-content">
+              {effectiveStartIcon}
+            </span>
+          )}
+          {children && (
+            <span className="inline-flex items-center justify-center gap-1.5 self-center">
+              {children}
+            </span>
+          )}
+          {effectiveEndIcon && (
+            <span className="inline-flex items-center justify-center shrink-0 self-center" data-slot="end-content">
+              {effectiveEndIcon}
+            </span>
+          )}
         </>
       )}
     </button>

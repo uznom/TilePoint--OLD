@@ -239,7 +239,13 @@ export const HeroAutocomplete: React.FC<HeroAutocompleteProps> = ({
       {isOpen && (
         <div
           ref={listRef}
-          className={`absolute ${getPositionClasses()} z-[9999] min-w-full max-w-[calc(100vw-24px)] max-h-60 overflow-y-auto rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.18)] p-1.5 animate-scale-in text-foreground backdrop-blur-md font-sans scrollbar-thin`}
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          style={{
+            overscrollBehavior: 'contain',
+            WebkitOverflowScrolling: 'touch',
+          }}
+          className={`absolute ${getPositionClasses()} z-[9999] min-w-full max-w-[calc(100vw-24px)] max-h-60 overflow-y-auto overscroll-contain touch-pan-y rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.18)] p-1.5 animate-scale-in text-foreground backdrop-blur-md font-sans scrollbar-thin`}
         >
           {filteredItems.length > 0 ? (
             filteredItems.map((item, index) => {

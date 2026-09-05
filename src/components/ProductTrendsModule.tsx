@@ -9,7 +9,7 @@
  * with Year vs Previous Year comparison), and slow-mover identification.
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   TrendingUp,
   Trophy,
@@ -178,6 +178,7 @@ export const ProductTrendsModule: React.FC<ProductTrendsModuleProps> = ({ darkMo
   const [periodMode, setPeriodMode] = useState<PeriodMode>('monthly');
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0-indexed
+  const [compareYear, setCompareYear] = useState<number | null>(now.getFullYear() - 1);
   const [topN, setTopN] = useState(20);
   const [tableViewMode, setTableViewMode] = useState<TableViewMode>('currentTop');
   const [trafficTimeline, setTrafficTimeline] = useState<TrafficTimelineMode>('hourly');
@@ -185,6 +186,11 @@ export const ProductTrendsModule: React.FC<ProductTrendsModuleProps> = ({ darkMo
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [hoveredTrajectoryIndex, setHoveredTrajectoryIndex] = useState<number | null>(null);
   const [hoveredTrafficIndex, setHoveredTrafficIndex] = useState<number | null>(null);
+
+  // Automatically synchronize compareYear when selectedYear changes, defaulting to selectedYear - 1
+  useEffect(() => {
+    setCompareYear(selectedYear - 1);
+  }, [selectedYear]);
 
   // Available years from sales data
   const availableYears = useMemo(() => {
@@ -199,6 +205,16 @@ export const ProductTrendsModule: React.FC<ProductTrendsModuleProps> = ({ darkMo
     });
     return Array.from(yearsSet).sort((a, b) => b - a);
   }, [sales]);
+
+  // Available comparison years strictly earlier than selectedYear
+  const availableCompareYears = useMemo(() => {
+    const past = availableYears.filter((yr) => yr < selectedYear);
+    if (!past.includes(selectedYear - 1)) {
+      past.push(selectedYear - 1);
+      past.sort((a, b) => b - a);
+    }
+    return past;
+  }, [availableYears, selectedYear]);
 
   // ── Build a map of valid sale IDs → sale records & dates ────────────
   const validSaleMap = useMemo(() => {
@@ -504,19 +520,21 @@ export const ProductTrendsModule: React.FC<ProductTrendsModuleProps> = ({ darkMo
     });
   }, [sales, periodMode, selectedYear, selectedMonth]);
 
-  const prevYearPeriodSales = useMemo(() => {
+  const comparePeriodSales = useMemo(() => {
+    if (compareYear === null) return [];
     return sales.filter((s) => {
       if (s.isDeleted || (s as any).isVoided) return false;
       const raw = s.createdAt || (s as any).created_at || (s as any).date;
       if (!raw) return false;
       const d = parseDate(raw);
-      const targetYear = selectedYear - 1;
       if (periodMode === 'monthly') {
-        return d.getFullYear() === targetYear && d.getMonth() === selectedMonth;
+        return d.getFullYear() === compareYear && d.getMonth() === selectedMonth;
       }
-      return d.getFullYear() === targetYear;
+      return d.getFullYear() === compareYear;
     });
-  }, [sales, periodMode, selectedYear, selectedMonth]);
+  }, [sales, periodMode, compareYear, selectedMonth]);
+
+  const hasCompareTransactions = compareYear !== null && comparePeriodSales.length > 0;
 
   const trafficBuckets = useMemo((): TrafficBucket[] => {
     if (trafficTimeline === 'hourly') {
@@ -527,10 +545,12 @@ export const ProductTrendsModule: React.FC<ProductTrendsModuleProps> = ({ darkMo
           const d = parseDate(s.createdAt || (s as any).created_at || (s as any).date);
           return d.getHours() === hr;
         });
-        const prevMatched = prevYearPeriodSales.filter((s) => {
-          const d = parseDate(s.createdAt || (s as any).created_at || (s as any).date);
-          return d.getHours() === hr;
-        });
+        const prevMatched = hasCompareTransactions
+          ? comparePeriodSales.filter((s) => {
+              const d = parseDate(s.createdAt || (s as any).created_at || (s as any).date);
+              return d.getHours() === hr;
+            })
+          : [];
 
         const rev = matched.reduce((sum, s) => sum + Number(s.grandTotal || (s as any).subtotal || 0), 0);
         const prevRev = prevMatched.reduce((sum, s) => sum + Number(s.grandTotal || (s as any).subtotal || 0), 0);
@@ -555,10 +575,12 @@ export const ProductTrendsModule: React.FC<ProductTrendsModuleProps> = ({ darkMo
           const d = parseDate(s.createdAt || (s as any).created_at || (s as any).date);
           return d.getDay() === dayIdx;
         });
-        const prevMatched = prevYearPeriodSales.filter((s) => {
-          const d = parseDate(s.createdAt || (s as any).created_at || (s as any).date);
-          return d.getDay() === dayIdx;
-        });
+        const prevMatched = hasCompareTransactions
+          ? comparePeriodSales.filter((s) => {
+              const d = parseDate(s.createdAt || (s as any).created_at || (s as any).date);
+              return d.getDay() === dayIdx;
+            })
+          : [];
 
         const rev = matched.reduce((sum, s) => sum + Number(s.grandTotal || (s as any).subtotal || 0), 0);
         const prevRev = prevMatched.reduce((sum, s) => sum + Number(s.grandTotal || (s as any).subtotal || 0), 0);
@@ -585,10 +607,12 @@ export const ProductTrendsModule: React.FC<ProductTrendsModuleProps> = ({ darkMo
           const d = parseDate(s.createdAt || (s as any).created_at || (s as any).date);
           return d.getDate() === day;
         });
-        const prevMatched = prevYearPeriodSales.filter((s) => {
-          const d = parseDate(s.createdAt || (s as any).created_at || (s as any).date);
-          return d.getDate() === day;
-        });
+        const prevMatched = hasCompareTransactions
+          ? comparePeriodSales.filter((s) => {
+              const d = parseDate(s.createdAt || (s as any).created_at || (s as any).date);
+              return d.getDate() === day;
+            })
+          : [];
 
         const rev = matched.reduce((sum, s) => sum + Number(s.grandTotal || (s as any).subtotal || 0), 0);
         const prevRev = prevMatched.reduce((sum, s) => sum + Number(s.grandTotal || (s as any).subtotal || 0), 0);
@@ -611,10 +635,12 @@ export const ProductTrendsModule: React.FC<ProductTrendsModuleProps> = ({ darkMo
           const d = parseDate(s.createdAt || (s as any).created_at || (s as any).date);
           return d.getMonth() === mIdx;
         });
-        const prevMatched = prevYearPeriodSales.filter((s) => {
-          const d = parseDate(s.createdAt || (s as any).created_at || (s as any).date);
-          return d.getMonth() === mIdx;
-        });
+        const prevMatched = hasCompareTransactions
+          ? comparePeriodSales.filter((s) => {
+              const d = parseDate(s.createdAt || (s as any).created_at || (s as any).date);
+              return d.getMonth() === mIdx;
+            })
+          : [];
 
         const rev = matched.reduce((sum, s) => sum + Number(s.grandTotal || (s as any).subtotal || 0), 0);
         const prevRev = prevMatched.reduce((sum, s) => sum + Number(s.grandTotal || (s as any).subtotal || 0), 0);
@@ -631,10 +657,10 @@ export const ProductTrendsModule: React.FC<ProductTrendsModuleProps> = ({ darkMo
         };
       });
     }
-  }, [trafficTimeline, selectedPeriodSales, prevYearPeriodSales, periodMode, selectedYear, selectedMonth]);
+  }, [trafficTimeline, selectedPeriodSales, comparePeriodSales, hasCompareTransactions, periodMode, selectedYear, selectedMonth]);
 
   const maxTrafficCount = Math.max(
-    ...trafficBuckets.map((b) => Math.max(b.transactions, b.prevTransactions)),
+    ...trafficBuckets.map((b) => (hasCompareTransactions ? Math.max(b.transactions, b.prevTransactions) : b.transactions)),
     1
   );
 
@@ -643,10 +669,10 @@ export const ProductTrendsModule: React.FC<ProductTrendsModuleProps> = ({ darkMo
   }, [trafficBuckets]);
 
   const totalTrafficCurrent = selectedPeriodSales.length;
-  const totalTrafficPrev = prevYearPeriodSales.length;
-  const trafficYoYGrowth = totalTrafficPrev > 0
-    ? ((totalTrafficCurrent - totalTrafficPrev) / totalTrafficPrev) * 100
-    : totalTrafficCurrent > 0 ? 100 : 0;
+  const totalTrafficCompare = comparePeriodSales.length;
+  const trafficYoYGrowth = hasCompareTransactions && totalTrafficCompare > 0
+    ? ((totalTrafficCurrent - totalTrafficCompare) / totalTrafficCompare) * 100
+    : 0;
 
   // Labels
   const periodLabel = periodMode === 'monthly'
@@ -756,7 +782,7 @@ export const ProductTrendsModule: React.FC<ProductTrendsModuleProps> = ({ darkMo
           </p>
         </div>
 
-        {/* Clean Export CSV button placement */}
+        {/* Clean Export CSV button placement with aligned icon */}
         <div className="flex items-center gap-2 shrink-0">
           <HeroButton
             variant="solid"
@@ -764,19 +790,19 @@ export const ProductTrendsModule: React.FC<ProductTrendsModuleProps> = ({ darkMo
             size="sm"
             radius="full"
             onClick={handleExportCSV}
-            className="text-xs font-bold px-4 shadow-sm"
+            startContent={<Download className="h-3.5 w-3.5 shrink-0" />}
+            className="text-xs font-bold px-4 shadow-sm inline-flex items-center justify-center"
           >
-            <Download className="h-3.5 w-3.5 mr-1.5" />
             Export CSV
           </HeroButton>
         </div>
       </div>
 
       {/* ── HEROUI V3 PERIOD FILTER TOOLBAR ─────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl p-3.5 shadow-elevation-soft">
+      <div className="relative z-20 flex flex-col md:flex-row md:items-center justify-between gap-3.5 bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl p-3.5 shadow-elevation-soft">
         <div className="flex items-center gap-3 flex-wrap">
           {/* Monthly / Yearly Mode Toggle */}
-          <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-1 rounded-full border border-zinc-200/50 dark:border-white/5 shadow-2xs">
+          <div className="flex items-center bg-zinc-100 dark:bg-zinc-800 p-1 rounded-full border border-zinc-200/50 dark:border-white/5 shadow-2xs shrink-0">
             {(['monthly', 'yearly'] as PeriodMode[]).map((mode) => (
               <button
                 key={mode}
@@ -793,55 +819,57 @@ export const ProductTrendsModule: React.FC<ProductTrendsModuleProps> = ({ darkMo
             ))}
           </div>
 
-          {/* HeroUI v3 Year Select */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-semibold text-default-400">Year:</span>
-            <HeroSelect
-              size="sm"
-              radius="full"
-              variant="bordered"
-              fullWidth={false}
-              wrapperClassName="w-28 shrink-0"
-              className="text-xs font-bold"
-              value={String(selectedYear)}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              items={availableYears.map((yr) => ({
-                key: String(yr),
-                label: String(yr),
-                value: String(yr),
-              }))}
-            />
-          </div>
-
-          {/* HeroUI v3 Month Select (only in monthly mode) */}
-          {periodMode === 'monthly' && (
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-default-400">Month:</span>
+          {/* HeroUI v3 Year Select with dedicated fixed container */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs font-bold text-default-500 whitespace-nowrap">Year:</span>
+            <div className="w-28 shrink-0">
               <HeroSelect
                 size="sm"
                 radius="full"
                 variant="bordered"
-                fullWidth={false}
-                wrapperClassName="w-36 shrink-0"
+                fullWidth
                 className="text-xs font-bold"
-                value={String(selectedMonth)}
-                onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                items={MONTH_NAMES.map((name, idx) => ({
-                  key: String(idx),
-                  label: name,
-                  value: String(idx),
+                value={String(selectedYear)}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                items={availableYears.map((yr) => ({
+                  key: String(yr),
+                  label: String(yr),
+                  value: String(yr),
                 }))}
               />
+            </div>
+          </div>
+
+          {/* HeroUI v3 Month Select (only in monthly mode) */}
+          {periodMode === 'monthly' && (
+            <div className="flex items-center gap-2 shrink-0 ml-2 sm:ml-3">
+              <span className="text-xs font-bold text-default-500 whitespace-nowrap">Month:</span>
+              <div className="w-36 shrink-0">
+                <HeroSelect
+                  size="sm"
+                  radius="full"
+                  variant="bordered"
+                  fullWidth
+                  className="text-xs font-bold"
+                  value={String(selectedMonth)}
+                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                  items={MONTH_NAMES.map((name, idx) => ({
+                    key: String(idx),
+                    label: name,
+                    value: String(idx),
+                  }))}
+                />
+              </div>
             </div>
           )}
         </div>
 
         {/* Target and Benchmark Period Context Badges */}
-        <div className="flex items-center gap-2 text-xs">
-          <span className="px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-[11px] font-bold">
+        <div className="flex items-center gap-2 text-xs flex-wrap shrink-0">
+          <span className="px-3 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20 text-[11px] font-bold whitespace-nowrap">
             Target: {periodLabel}
           </span>
-          <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 text-[11px] font-bold hidden sm:inline-flex">
+          <span className="px-3 py-1.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 text-[11px] font-bold whitespace-nowrap">
             Benchmark: {prevYearPeriodLabel}
           </span>
         </div>
@@ -1134,34 +1162,71 @@ export const ProductTrendsModule: React.FC<ProductTrendsModuleProps> = ({ darkMo
         </div>
       </div>
 
-      {/* ── ROW 2: CUSTOMER TRAFFIC & VELOCITY TIMELINES (YEAR VS PREVIOUS YEAR) ── */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl p-5 shadow-elevation-soft space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* ── ROW 2: CUSTOMER TRAFFIC & VELOCITY TIMELINES (DYNAMIC YEAR COMPARISON) ── */}
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 rounded-2xl p-5 shadow-elevation-soft space-y-4 relative z-10">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3.5">
           <div>
             <h3 className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5 font-mono">
               <Clock className="h-4 w-4 text-primary" />
               Customer Footfall & Purchasing Velocity Timelines
             </h3>
             <p className="text-[10px] text-default-400 mt-0.5">
-              Compare footfall traffic and rush hour shopping velocity between {selectedYear} and {selectedYear - 1}
+              {hasCompareTransactions
+                ? `Comparing footfall traffic and rush hour shopping velocity between ${selectedYear} and ${compareYear}`
+                : compareYear !== null
+                ? `Footfall traffic and rush hour shopping velocity for ${selectedYear} (No comparison transactions recorded for ${compareYear})`
+                : `Footfall traffic and rush hour shopping velocity for ${selectedYear}`}
             </p>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
             {/* Year Legend Chips */}
-            <div className="flex items-center gap-2 text-[10px] font-semibold">
-              <span className="flex items-center gap-1 text-primary">
+            <div className="flex items-center gap-2 text-[10px] font-semibold shrink-0">
+              <span className="flex items-center gap-1 text-primary whitespace-nowrap">
                 <span className="w-2.5 h-2.5 rounded-full bg-primary inline-block" />
                 {selectedYear} (This Year)
               </span>
-              <span className="flex items-center gap-1 text-purple-600 dark:text-purple-400">
-                <span className="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block" />
-                {selectedYear - 1} (Previous Year)
-              </span>
+              {hasCompareTransactions ? (
+                <span className="flex items-center gap-1 text-purple-600 dark:text-purple-400 whitespace-nowrap">
+                  <span className="w-2.5 h-2.5 rounded-full bg-purple-500 inline-block" />
+                  {compareYear} (Comparison)
+                </span>
+              ) : compareYear !== null ? (
+                <span className="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[9px] font-bold border border-amber-500/20 whitespace-nowrap">
+                  No {compareYear} data
+                </span>
+              ) : null}
+            </div>
+
+            {/* Dynamic Comparison Year Selector with dedicated fixed container */}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs font-bold text-default-500 whitespace-nowrap">Compare:</span>
+              <div className="w-40 shrink-0">
+                <HeroSelect
+                  size="sm"
+                  radius="full"
+                  variant="bordered"
+                  fullWidth
+                  className="text-xs font-bold"
+                  value={compareYear !== null ? String(compareYear) : 'none'}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCompareYear(val === 'none' ? null : Number(val));
+                  }}
+                  items={[
+                    ...availableCompareYears.map((yr) => ({
+                      key: String(yr),
+                      label: yr === selectedYear - 1 ? `${yr} (Default)` : String(yr),
+                      value: String(yr),
+                    })),
+                    { key: 'none', label: 'None (Solo)', value: 'none' },
+                  ]}
+                />
+              </div>
             </div>
 
             {/* Timeline View Mode Selector */}
-            <div className="flex items-center bg-zinc-100 dark:bg-zinc-800/80 p-0.5 rounded-full border border-zinc-200/50 dark:border-white/5 shadow-2xs">
+            <div className="flex items-center bg-zinc-100 dark:bg-zinc-800/80 p-0.5 rounded-full border border-zinc-200/50 dark:border-white/5 shadow-2xs shrink-0 ml-2">
               {[
                 { id: 'hourly', label: 'Hourly Rush' },
                 { id: 'dayOfWeek', label: 'Day of Week' },
@@ -1184,35 +1249,50 @@ export const ProductTrendsModule: React.FC<ProductTrendsModuleProps> = ({ darkMo
           </div>
         </div>
 
-        {/* Traffic Highlight Metrics Comparing This Year vs Previous Year */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+        {/* Traffic Highlight Metrics */}
+        <div className={`grid gap-3 pt-1 ${hasCompareTransactions ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}>
           <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/50 dark:border-white/5 rounded-xl">
             <div className="text-[10px] text-default-500 font-semibold uppercase">{selectedYear} Orders</div>
             <div className="text-base font-bold text-foreground font-mono mt-0.5">
               {totalTrafficCurrent.toLocaleString()} checkouts
             </div>
           </div>
-          <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/50 dark:border-white/5 rounded-xl">
-            <div className="text-[10px] text-default-500 font-semibold uppercase">{selectedYear - 1} Orders</div>
-            <div className="text-base font-bold text-purple-600 dark:text-purple-400 font-mono mt-0.5">
-              {totalTrafficPrev.toLocaleString()} checkouts
-            </div>
-          </div>
-          <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/50 dark:border-white/5 rounded-xl">
-            <div className="text-[10px] text-default-500 font-semibold uppercase">YoY Footfall Momentum</div>
-            <div className="mt-0.5 flex items-center gap-1 text-base font-bold font-mono">
-              <ChangeIndicator value={trafficYoYGrowth} />
-            </div>
-          </div>
+
+          {hasCompareTransactions && (
+            <>
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/50 dark:border-white/5 rounded-xl">
+                <div className="text-[10px] text-default-500 font-semibold uppercase">{compareYear} Orders</div>
+                <div className="text-base font-bold text-purple-600 dark:text-purple-400 font-mono mt-0.5">
+                  {totalTrafficCompare.toLocaleString()} checkouts
+                </div>
+              </div>
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/50 dark:border-white/5 rounded-xl">
+                <div className="text-[10px] text-default-500 font-semibold uppercase">YoY Footfall Momentum</div>
+                <div className="mt-0.5 flex items-center gap-1 text-base font-bold font-mono">
+                  <ChangeIndicator value={trafficYoYGrowth} />
+                </div>
+              </div>
+            </>
+          )}
+
           <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/50 dark:border-white/5 rounded-xl">
             <div className="text-[10px] text-default-500 font-semibold uppercase">Busiest Window</div>
             <div className="text-base font-bold text-primary font-mono mt-0.5 truncate">
               {busiestTrafficBucket?.label || 'N/A'} ({busiestTrafficBucket?.transactions || 0} orders)
             </div>
           </div>
+
+          {!hasCompareTransactions && (
+            <div className="p-3 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/50 dark:border-white/5 rounded-xl">
+              <div className="text-[10px] text-default-500 font-semibold uppercase">Comparison Status</div>
+              <div className="text-xs font-semibold text-default-400 font-sans mt-1">
+                {compareYear !== null ? `No ${compareYear} data in period` : 'Comparison disabled'}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Dual-Pillar Histogram: This Year (Blue) vs Previous Year (Purple) */}
+        {/* Dynamic Pillar Histogram: Dual Pillars (When compare transactions exist) or Single Pillar (When none) */}
         <div className="pt-2">
           <div className="flex items-end gap-1 sm:gap-2.5 h-36 sm:h-44 pt-4">
             {trafficBuckets.map((bucket, idx) => {
@@ -1230,28 +1310,45 @@ export const ProductTrendsModule: React.FC<ProductTrendsModuleProps> = ({ darkMo
                   onMouseEnter={() => setHoveredTrafficIndex(idx)}
                   onMouseLeave={() => setHoveredTrafficIndex(null)}
                 >
-                  {/* Tooltip with Both Years Comparison */}
+                  {/* Tooltip */}
                   {isHovered && (
                     <div className="absolute -top-20 left-1/2 -translate-x-1/2 z-30 bg-zinc-900 text-white text-[10px] font-bold p-2.5 rounded-xl shadow-2xl pointer-events-none whitespace-nowrap text-center border border-white/10 animate-fade-in">
                       <div className="text-primary-300 font-extrabold">{bucket.subLabel || bucket.label}</div>
-                      <div className="mt-1 flex items-center justify-center gap-2 font-mono">
-                        <span className="text-emerald-400">{selectedYear}: {bucket.transactions} orders</span>
-                        <span className="text-purple-400">{selectedYear - 1}: {bucket.prevTransactions} orders</span>
-                      </div>
-                      <div className="text-[9px] text-zinc-400 font-normal mt-0.5">
-                        Revenue: {formatCurrency(bucket.revenue)} vs {formatCurrency(bucket.prevRevenue)}
-                      </div>
-                      <div className="text-[9px] font-bold mt-0.5">
-                        <ChangeIndicator value={diffGrowth} /> YoY Traffic
-                      </div>
+                      {hasCompareTransactions ? (
+                        <>
+                          <div className="mt-1 flex items-center justify-center gap-2 font-mono">
+                            <span className="text-emerald-400">{selectedYear}: {bucket.transactions} orders</span>
+                            <span className="text-purple-400">{compareYear}: {bucket.prevTransactions} orders</span>
+                          </div>
+                          <div className="text-[9px] text-zinc-400 font-normal mt-0.5">
+                            Revenue: {formatCurrency(bucket.revenue)} vs {formatCurrency(bucket.prevRevenue)}
+                          </div>
+                          <div className="text-[9px] font-bold mt-0.5">
+                            <ChangeIndicator value={diffGrowth} /> YoY Traffic
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="mt-1 font-mono text-emerald-400">
+                            {selectedYear}: {bucket.transactions} orders
+                          </div>
+                          <div className="text-[9px] text-zinc-400 font-normal mt-0.5">
+                            Revenue: {formatCurrency(bucket.revenue)} &bull; Avg: {formatCurrency(bucket.avgTicket)}
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
 
-                  {/* Dual Pillars Side-by-Side */}
-                  <div className="w-full flex items-end justify-center gap-0.5 sm:gap-1 h-full">
+                  {/* Dual or Single Pillars */}
+                  <div className="w-full flex items-end justify-center gap-0.5 sm:gap-1.5 h-full">
                     {/* Current Year Pillar */}
                     <div
-                      className={`w-full max-w-[14px] sm:max-w-[18px] rounded-t-sm transition-all duration-200 ${
+                      className={`rounded-t-sm transition-all duration-200 ${
+                        hasCompareTransactions
+                          ? 'w-full max-w-[14px] sm:max-w-[18px]'
+                          : 'w-full max-w-[22px] sm:max-w-[28px]'
+                      } ${
                         isHovered
                           ? 'bg-primary'
                           : bucket.transactions > 0
@@ -1264,21 +1361,24 @@ export const ProductTrendsModule: React.FC<ProductTrendsModuleProps> = ({ darkMo
                       }}
                       title={`${selectedYear}: ${bucket.transactions} checkouts`}
                     />
-                    {/* Previous Year Pillar */}
-                    <div
-                      className={`w-full max-w-[14px] sm:max-w-[18px] rounded-t-sm transition-all duration-200 ${
-                        isHovered
-                          ? 'bg-purple-500'
-                          : bucket.prevTransactions > 0
-                          ? 'bg-purple-500/80 dark:bg-purple-400/70'
-                          : 'bg-zinc-200/40 dark:bg-zinc-800/40'
-                      }`}
-                      style={{
-                        height: `${Math.max(prevHeightPct, bucket.prevTransactions > 0 ? 6 : 2)}%`,
-                        minHeight: '3px',
-                      }}
-                      title={`${selectedYear - 1}: ${bucket.prevTransactions} checkouts`}
-                    />
+
+                    {/* Comparison Year Pillar — Dynamically hidden if no comparison transactions exist */}
+                    {hasCompareTransactions && (
+                      <div
+                        className={`w-full max-w-[14px] sm:max-w-[18px] rounded-t-sm transition-all duration-200 ${
+                          isHovered
+                            ? 'bg-purple-500'
+                            : bucket.prevTransactions > 0
+                            ? 'bg-purple-500/80 dark:bg-purple-400/70'
+                            : 'bg-zinc-200/40 dark:bg-zinc-800/40'
+                        }`}
+                        style={{
+                          height: `${Math.max(prevHeightPct, bucket.prevTransactions > 0 ? 6 : 2)}%`,
+                          minHeight: '3px',
+                        }}
+                        title={`${compareYear}: ${bucket.prevTransactions} checkouts`}
+                      />
+                    )}
                   </div>
 
                   {/* Label */}

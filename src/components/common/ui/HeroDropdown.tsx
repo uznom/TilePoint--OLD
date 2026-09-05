@@ -130,8 +130,8 @@ export const HeroDropdownSelect: React.FC<HeroDropdownSelectProps> = ({
           </span>
         </span>
 
-        {/* Right segmented chevron block with divider and tint */}
-        <span className={`flex items-center justify-center bg-default-200/50 dark:bg-content3/50 border-l border-divider/40 dark:border-white/10 text-default-500 group-hover:text-foreground transition-colors ${getChevronPadding()}`}>
+        {/* Right seamless chevron icon without mismatched background */}
+        <span className={`flex items-center justify-center bg-transparent text-default-400 group-hover:text-foreground transition-colors ${getChevronPadding()}`}>
           <ChevronDown
             className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
               isOpen ? 'rotate-180 text-foreground' : ''
@@ -148,7 +148,13 @@ export const HeroDropdownSelect: React.FC<HeroDropdownSelectProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -4 }}
             transition={{ duration: 0.12 }}
-            className={`absolute ${getPositionClasses()} z-[9999] min-w-full sm:min-w-[150px] max-w-[calc(100vw-24px)] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.14)] p-1.5 max-h-64 overflow-y-auto space-y-0.5 text-foreground backdrop-blur-md font-sans`}
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            style={{
+              overscrollBehavior: 'contain',
+              WebkitOverflowScrolling: 'touch',
+            }}
+            className={`absolute ${getPositionClasses()} z-[9999] min-w-full sm:min-w-[150px] max-w-[calc(100vw-24px)] rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.14)] p-1.5 max-h-64 overflow-y-auto overscroll-contain touch-pan-y space-y-0.5 text-foreground backdrop-blur-md font-sans`}
           >
             {items.map((item) => {
               const isSelected = item.key === selectedKey;

@@ -1029,7 +1029,6 @@ html.dark [data-slot="select-listbox"] {
   position: relative;
   display: flex;
   flex-direction: column;
-  width: 100%;
 }
 
 .select__trigger {

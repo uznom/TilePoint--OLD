@@ -898,53 +898,53 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   strokeWidth="3"
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  vectorEffect="non-scaling-stroke"
                 />
-
-                {/* Interactive Points */}
-                {svgPathData.points.map((pt, idx) => (
-                  <g key={idx}>
-                    <circle
-                      cx={pt.x}
-                      cy={pt.y}
-                      r={hoveredPointIndex === idx ? 6 : 4}
-                      className="fill-background stroke-primary transition-all duration-150 cursor-pointer active:scale-[0.98]"
-                      strokeWidth="2.5"
-                      onMouseEnter={() => setHoveredPointIndex(idx)}
-                      onMouseLeave={() => setHoveredPointIndex(null)}
-                    />
-                    {hoveredPointIndex === idx && (
-                      <g>
-                        <rect
-                          x={Math.max(10, Math.min(pt.x - 55, 690))}
-                          y={pt.y - 45}
-                          width="110"
-                          height="36"
-                          rx="8"
-                          className="fill-content1 stroke-divider"
-                          strokeWidth="1"
-                          filter="drop-shadow(0 4px 6px rgba(0,0,0,0.15))"
-                        />
-                        <text
-                          x={Math.max(10, Math.min(pt.x - 55, 690)) + 55}
-                          y={pt.y - 28}
-                          textAnchor="middle"
-                          className="fill-foreground text-[10px] font-black"
-                        >
-                          {formatCurrency(pt.val)}
-                        </text>
-                        <text
-                          x={Math.max(10, Math.min(pt.x - 55, 690)) + 55}
-                          y={pt.y - 15}
-                          textAnchor="middle"
-                          className="fill-default-400 text-[8.5px] font-medium"
-                        >
-                          {chartData.labels[idx]}
-                        </text>
-                      </g>
-                    )}
-                  </g>
-                ))}
               </svg>
+
+              {/* Crisp HTML Interactive Circular Markers & Floating Tooltip (Never distorted into ovals) */}
+              <div className="absolute inset-0 pt-6 pointer-events-none">
+                <div className="relative w-full h-full">
+                  {svgPathData.points.map((pt, idx) => {
+                    const leftPct = (pt.x / 800) * 100;
+                    const topPct = (pt.y / 240) * 100;
+                    const isHovered = hoveredPointIndex === idx;
+
+                    return (
+                      <div
+                        key={idx}
+                        className="absolute pointer-events-auto cursor-pointer -translate-x-1/2 -translate-y-1/2 z-20 group"
+                        style={{ left: `${leftPct}%`, top: `${topPct}%` }}
+                        onMouseEnter={() => setHoveredPointIndex(idx)}
+                        onMouseLeave={() => setHoveredPointIndex(null)}
+                      >
+                        {/* Perfect Circular Dot (Immune to SVG viewBox non-uniform aspect ratio scaling) */}
+                        <div
+                          className={`rounded-full transition-all duration-200 border-2 border-primary bg-background shadow-xs flex items-center justify-center ${
+                            isHovered
+                              ? 'w-4 h-4 ring-4 ring-primary/25 bg-primary scale-110'
+                              : 'w-2.5 h-2.5 hover:scale-125 hover:ring-2 hover:ring-primary/20'
+                          }`}
+                        />
+
+                        {/* Floating Tooltip */}
+                        {isHovered && (
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 z-30 pointer-events-none animate-fade-in">
+                            <div className="bg-zinc-900 text-white px-3 py-1.5 rounded-xl shadow-2xl border border-white/10 text-center whitespace-nowrap">
+                              <div className="text-xs font-extrabold font-mono text-emerald-400">
+                                {formatCurrency(pt.val)}
+                              </div>
+                              <div className="text-[9px] text-zinc-400 font-medium mt-0.5">
+                                {chartData.labels[idx]}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
 
               {/* X-Axis Labels */}
               <div className="flex justify-between items-center text-[10px] font-semibold text-default-400 mt-2 px-3">
